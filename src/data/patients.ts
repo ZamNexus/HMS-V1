@@ -1,0 +1,39 @@
+import type { Patient } from "@/types"
+import { shiftDate } from "@/lib/dateShift"
+
+const RAW_PATIENTS: Patient[] = [
+  { id: 1, mrNo: "MR-2024-0001", name: "Muhammad Usman", fatherName: "Abdul Rehman", dob: "1982-03-15", age: 42, gender: "Male", phone: "0321-4567890", address: "House 12, Street 4, Scheme III, Rawalpindi", area: "Scheme III", city: "Rawalpindi", bloodGroup: "B+", cnic: "37201-1234567-1", guardianRelation: "Self", panelId: null, status: "active", registrationDate: "2024-01-10" },
+  { id: 2, mrNo: "MR-2024-0002", name: "Ayesha Siddiqui", fatherName: "Tariq Siddiqui", dob: "1990-07-22", age: 34, gender: "Female", phone: "0333-9876543", address: "Flat 5A, Bahria Town Phase 8", area: "Bahria Town", city: "Rawalpindi", bloodGroup: "O+", cnic: "37202-9876543-2", guardianRelation: "Father", panelId: null, status: "active", registrationDate: "2024-01-12" },
+  { id: 3, mrNo: "MR-2024-0003", name: "Ahmed Khan", fatherName: "Javed Khan", dob: "1975-11-05", age: 49, gender: "Male", phone: "0311-2345678", address: "Villagers Colony, Chaklala", area: "Chaklala", city: "Rawalpindi", bloodGroup: "A-", cnic: "37201-5678901-3", guardianRelation: "Self", panelId: 1, status: "ipd", registrationDate: "2024-01-15" },
+  { id: 4, mrNo: "MR-2024-0004", name: "Sana Butt", fatherName: "Rashid Butt", dob: "1995-02-18", age: 29, gender: "Female", phone: "0345-1122334", address: "Street 7, Satellite Town", area: "Satellite Town", city: "Rawalpindi", bloodGroup: "AB+", cnic: "37203-1122334-4", guardianRelation: "Husband", panelId: null, status: "active", registrationDate: "2024-01-18" },
+  { id: 5, mrNo: "MR-2024-0005", name: "Muhammad Ali", fatherName: "Nazir Ahmed", dob: "1968-05-30", age: 56, gender: "Male", phone: "0300-5566778", address: "House 22, Westridge I", area: "Westridge", city: "Rawalpindi", bloodGroup: "O-", cnic: "37204-5566778-5", guardianRelation: "Self", panelId: 2, status: "active", registrationDate: "2024-01-20" },
+  { id: 6, mrNo: "MR-2024-0006", name: "Asma Nawaz", fatherName: "Iqbal Nawaz", dob: "2001-09-09", age: 23, gender: "Female", phone: "0333-2233445", address: "Mohalla Jhanda, Pirwadhai", area: "Pirwadhai", city: "Rawalpindi", bloodGroup: "B-", cnic: "37205-2233445-6", guardianRelation: "Father", panelId: null, status: "active", registrationDate: "2024-01-22" },
+  { id: 7, mrNo: "MR-2024-0007", name: "Tariq Mehmood", fatherName: "Ghulam Mehmood", dob: "1958-12-01", age: 66, gender: "Male", phone: "0321-9988776", address: "Street 3, Saddar", area: "Saddar", city: "Rawalpindi", bloodGroup: "A+", cnic: "37206-9988776-7", guardianRelation: "Self", panelId: null, status: "active", registrationDate: "2024-01-25" },
+  { id: 8, mrNo: "MR-2024-0008", name: "Nadia Hussain", fatherName: "Shaukat Hussain", dob: "1988-04-14", age: 36, gender: "Female", phone: "0301-3344556", address: "House 9, Scheme III", area: "Scheme III", city: "Rawalpindi", bloodGroup: "O+", cnic: "37201-3344556-8", guardianRelation: "Self", panelId: 3, status: "active", registrationDate: "2024-01-28" },
+  { id: 9, mrNo: "MR-2024-0009", name: "Rashid Anwar", fatherName: "Anwar Baig", dob: "1979-08-23", age: 45, gender: "Male", phone: "0345-6677889", address: "Bostan Khan Road, Rawalpindi", area: "Scheme III", city: "Rawalpindi", bloodGroup: "B+", cnic: "37202-6677889-9", guardianRelation: "Self", panelId: null, status: "ipd", registrationDate: "2024-02-01" },
+  { id: 10, mrNo: "MR-2024-0010", name: "Uzma Shah", fatherName: "Pervez Shah", dob: "1993-06-11", age: 31, gender: "Female", phone: "0311-7788990", address: "Chaman Colony, Chaklala", area: "Chaklala", city: "Rawalpindi", bloodGroup: "AB-", cnic: "37203-7788990-1", guardianRelation: "Husband", panelId: null, status: "active", registrationDate: "2024-02-03" },
+  { id: 11, mrNo: "MR-2024-0011", name: "Kamran Iqbal", fatherName: "Zafar Iqbal", dob: "1985-01-27", age: 39, gender: "Male", phone: "0300-8899001", address: "Flat 2B, Bahria Town Phase 4", area: "Bahria Town", city: "Rawalpindi", bloodGroup: "O+", cnic: "37204-8899001-2", guardianRelation: "Self", panelId: 1, status: "active", registrationDate: "2024-02-05" },
+  { id: 12, mrNo: "MR-2024-0012", name: "Sumaira Jabeen", fatherName: "Nazeer Ahmed", dob: "1971-10-16", age: 53, gender: "Female", phone: "0333-1231234", address: "Street 11, Westridge III", area: "Westridge", city: "Rawalpindi", bloodGroup: "A+", cnic: "37205-1231234-3", guardianRelation: "Self", panelId: null, status: "active", registrationDate: "2024-02-08" },
+  { id: 13, mrNo: "MR-2024-0013", name: "Faisal Mahmood", fatherName: "Riaz Mahmood", dob: "1962-03-03", age: 62, gender: "Male", phone: "0321-4561230", address: "Mohalla Amar Sidhu, Pirwadhai", area: "Pirwadhai", city: "Rawalpindi", bloodGroup: "B-", cnic: "37206-4561230-4", guardianRelation: "Self", panelId: 2, status: "active", registrationDate: "2024-02-11" },
+  { id: 14, mrNo: "MR-2024-0014", name: "Rabia Aslam", fatherName: "Aslam Pervez", dob: "2005-07-19", age: 19, gender: "Female", phone: "0345-7891230", address: "Street 5, Satellite Town", area: "Satellite Town", city: "Rawalpindi", bloodGroup: "O-", cnic: "37201-7891230-5", guardianRelation: "Father", panelId: null, status: "active", registrationDate: "2024-02-14" },
+  { id: 15, mrNo: "MR-2024-0015", name: "Waqar Younis Awan", fatherName: "Younis Awan", dob: "1955-11-28", age: 69, gender: "Male", phone: "0300-3216540", address: "House 4, Saddar Bazaar", area: "Saddar", city: "Rawalpindi", bloodGroup: "AB+", cnic: "37202-3216540-6", guardianRelation: "Self", panelId: null, status: "active", registrationDate: "2024-02-17" },
+  { id: 16, mrNo: "MR-2024-0016", name: "Mehwish Riaz", fatherName: "Riaz Hussain", dob: "1998-05-08", age: 26, gender: "Female", phone: "0311-6540987", address: "Flat 3C, Bahria Town Phase 8", area: "Bahria Town", city: "Rawalpindi", bloodGroup: "B+", cnic: "37203-6540987-7", guardianRelation: "Husband", panelId: 3, status: "active", registrationDate: "2024-02-19" },
+  { id: 17, mrNo: "MR-2024-0017", name: "Shahzad Bhatti", fatherName: "Bashir Bhatti", dob: "1948-02-02", age: 76, gender: "Male", phone: "0333-9871230", address: "House 17, Chaklala Scheme III", area: "Chaklala", city: "Rawalpindi", bloodGroup: "A-", cnic: "37204-9871230-8", guardianRelation: "Self", panelId: null, status: "ipd", registrationDate: "2024-02-22" },
+  { id: 18, mrNo: "MR-2024-0018", name: "Farah Deeba", fatherName: "Deeba Sultan", dob: "2018-09-30", age: 6, gender: "Female", phone: "0345-3213214", address: "Street 8, Scheme III", area: "Scheme III", city: "Rawalpindi", bloodGroup: "O+", cnic: "", guardianRelation: "Mother", panelId: null, status: "active", registrationDate: "2024-02-25" },
+  { id: 19, mrNo: "MR-2024-0019", name: "Zeeshan Haider", fatherName: "Haider Ali", dob: "1990-12-12", age: 34, gender: "Male", phone: "0300-1597534", address: "Westridge II, Rawalpindi", area: "Westridge", city: "Rawalpindi", bloodGroup: "B+", cnic: "37205-1597534-9", guardianRelation: "Self", panelId: null, status: "inactive", registrationDate: "2024-03-01" },
+  { id: 20, mrNo: "MR-2024-0020", name: "Sadia Imran", fatherName: "Imran Yousaf", dob: "1996-04-25", age: 28, gender: "Female", phone: "0321-7539514", address: "Mohalla Gawal Mandi, Pirwadhai", area: "Pirwadhai", city: "Rawalpindi", bloodGroup: "AB-", cnic: "37206-7539514-1", guardianRelation: "Self", panelId: 1, status: "active", registrationDate: "2024-03-04" },
+]
+
+export const PATIENTS: Patient[] = RAW_PATIENTS.map((p) => ({ ...p, registrationDate: shiftDate(p.registrationDate) }))
+
+export function getPatient(id: number): Patient | undefined {
+  return PATIENTS.find((p) => p.id === id)
+}
+
+export function nextMrNo(): string {
+  const max = PATIENTS.reduce((m, p) => {
+    const n = parseInt(p.mrNo.split("-").pop() ?? "0", 10)
+    return Math.max(m, n)
+  }, 0)
+  return `MR-2024-${String(max + 1).padStart(4, "0")}`
+}

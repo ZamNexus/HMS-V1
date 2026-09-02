@@ -1,0 +1,1063 @@
+<title>HMS Lovable Prompts</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --bg:       #EDF4FA;
+  --card:     #FFFFFF;
+  --code-bg:  #D5E8F4;
+  --sidebar:  #0C1A2E;
+  --sb-h:     #112240;
+  --txt:      #0C1A2E;
+  --txt-2:    #3A5A7A;
+  --txt-3:    #6B8FAE;
+  --accent:   #0FB8D8;
+  --border:   #BFCFDC;
+  --blt:      #D8E8F2;
+  --shadow:   0 1px 3px rgba(12,26,46,.06),0 4px 14px rgba(12,26,46,.07);
+  --r:        6px;
+}
+@media(prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#080F1A;--card:#0E1E33;--code-bg:#071220;
+    --sidebar:#060C16;--sb-h:#0E1E33;
+    --txt:#E0EDF8;--txt-2:#94B8D0;--txt-3:#5E88A8;
+    --accent:#0FB8D8;--border:#1A3350;--blt:#132840;
+    --shadow:0 1px 3px rgba(0,0,0,.28),0 4px 14px rgba(0,0,0,.24);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#080F1A;--card:#0E1E33;--code-bg:#071220;
+  --sidebar:#060C16;--sb-h:#0E1E33;
+  --txt:#E0EDF8;--txt-2:#94B8D0;--txt-3:#5E88A8;
+  --accent:#0FB8D8;--border:#1A3350;--blt:#132840;
+  --shadow:0 1px 3px rgba(0,0,0,.28),0 4px 14px rgba(0,0,0,.24);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:var(--bg);color:var(--txt);
+  display:grid;grid-template-columns:258px 1fr;grid-template-rows:52px 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;background:var(--sidebar);border-bottom:1px solid rgba(15,184,216,.12);
+  display:flex;align-items:center;gap:12px;padding:0 18px 0 22px;position:sticky;top:0;z-index:100}
+.tb-logo{font-family:'DM Mono',monospace;font-size:12.5px;color:var(--accent);font-weight:500;letter-spacing:.04em;white-space:nowrap}
+.tb-sep{width:1px;height:18px;background:rgba(255,255,255,.11)}
+.tb-title{font-size:12.5px;color:rgba(255,255,255,.45);flex:1}
+.tb-badge{font-family:'DM Mono',monospace;font-size:10.5px;padding:3px 9px;border-radius:20px;
+  background:rgba(15,184,216,.14);color:var(--accent);letter-spacing:.04em}
+.ttog{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);color:rgba(255,255,255,.45);
+  border-radius:4px;padding:4px 8px;font-size:12px;cursor:pointer;transition:all .14s;font-family:inherit}
+.ttog:hover{background:rgba(255,255,255,.13);color:rgba(255,255,255,.8)}
+.sidebar{background:var(--sidebar);border-right:1px solid rgba(15,184,216,.09);
+  position:sticky;top:52px;height:calc(100vh - 52px);overflow-y:auto;padding:16px 0 40px;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.08) transparent}
+.sidebar::-webkit-scrollbar{width:3px}
+.sidebar::-webkit-scrollbar-thumb{background:rgba(255,255,255,.09);border-radius:2px}
+.sbl{font-size:9.5px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.22);padding:14px 18px 5px}
+.sbi{display:flex;align-items:flex-start;gap:10px;padding:9px 18px;cursor:pointer;
+  border-left:2px solid transparent;text-decoration:none;transition:background .11s,border-color .11s}
+.sbi:hover{background:rgba(255,255,255,.04)}
+.sbi.active{background:rgba(15,184,216,.09);border-left-color:var(--accent)}
+.sbn{font-family:'DM Mono',monospace;font-size:10.5px;font-weight:500;color:var(--accent);
+  opacity:.65;min-width:16px;margin-top:1px;flex-shrink:0}
+.sbi.active .sbn{opacity:1}
+.sbname{font-size:12px;font-weight:500;color:rgba(255,255,255,.55);line-height:1.3}
+.sbi.active .sbname{color:rgba(255,255,255,.88)}
+.sbdesc{font-size:10.5px;color:rgba(255,255,255,.26);margin-top:1px;line-height:1.4}
+.main{grid-row:2;padding:32px 38px 80px;max-width:870px;overflow-x:hidden}
+.ph{margin-bottom:36px;padding-bottom:24px;border-bottom:1px solid var(--blt)}
+.pe{font-family:'DM Mono',monospace;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:9px}
+.pt{font-size:24px;font-weight:700;color:var(--txt);text-wrap:balance;margin-bottom:8px}
+.ps{font-size:13.5px;color:var(--txt-2);line-height:1.6;max-width:560px}
+.how{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  padding:16px 18px;margin-bottom:36px;display:flex;gap:14px;align-items:flex-start;box-shadow:var(--shadow)}
+.how-i{font-size:16px;flex-shrink:0;margin-top:1px}
+.how-t{font-size:12.5px;font-weight:600;color:var(--txt);margin-bottom:4px}
+.how-b{font-size:12px;color:var(--txt-2);line-height:1.6}
+.how-b code{font-family:'DM Mono',monospace;font-size:11px;background:var(--code-bg);
+  color:var(--accent);padding:1px 5px;border-radius:3px}
+.pc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);
+  box-shadow:var(--shadow);margin-bottom:28px;overflow:hidden}
+.ph2{padding:18px 22px 14px;border-bottom:1px solid var(--blt);display:flex;gap:13px;align-items:flex-start}
+.pnum{font-family:'DM Mono',monospace;font-size:11.5px;font-weight:500;color:var(--accent);
+  background:rgba(15,184,216,.09);border:1px solid rgba(15,184,216,.18);padding:3px 8px;
+  border-radius:4px;flex-shrink:0;margin-top:2px}
+.phr{flex:1;min-width:0}
+.ptit{font-size:14.5px;font-weight:700;color:var(--txt);margin-bottom:4px;text-wrap:balance}
+.pdesc{font-size:12px;color:var(--txt-2);line-height:1.5;margin-bottom:9px}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-size:10px;font-weight:500;padding:2px 7px;border-radius:20px;letter-spacing:.02em}
+.tm{background:var(--code-bg);color:var(--txt-2)}
+.tc{background:rgba(220,38,38,.1);color:#DC2626}
+.td{background:rgba(5,150,105,.1);color:#059669}
+.tu{background:rgba(139,92,246,.1);color:#7C3AED}
+.pbw{position:relative;background:var(--code-bg);border-top:1px solid var(--blt)}
+.cbtn{position:absolute;top:10px;right:12px;font-family:'DM Mono',monospace;font-size:10.5px;
+  font-weight:500;padding:4px 11px;background:var(--card);color:var(--accent);
+  border:1px solid var(--border);border-radius:4px;cursor:pointer;transition:all .13s;z-index:10}
+.cbtn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
+.cbtn.ok{background:#059669;color:#fff;border-color:#059669}
+.pt2{font-family:'DM Mono',monospace;font-size:11.5px;line-height:1.72;color:var(--txt);
+  white-space:pre-wrap;word-break:break-word;padding:16px 52px 16px 18px;
+  overflow-x:auto;max-height:540px;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+.pt2::-webkit-scrollbar{width:4px;height:4px}
+.pt2::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:760px){
+  body{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .main{padding:22px 18px 60px}
+  .tb-title{display:none}
+}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+</style>
+<div class="topbar">
+  <span class="tb-logo">Citi Clinic / HMS</span>
+  <div class="tb-sep"></div>
+  <span class="tb-title">Lovable Prototype Prompts</span>
+  <span class="tb-badge">9 Prompts</span>
+  <button class="ttog" onclick="toggleTheme()">◑</button>
+</div>
+
+<nav class="sidebar">
+  <div class="sbl">Sequence</div>
+  <a class="sbi active" href="#p1" onclick="setA(this)">
+    <span class="sbn">01</span>
+    <div><div class="sbname">Foundation &amp; Shell</div><div class="sbdesc">Auth, routing, design system, data</div></div>
+  </a>
+  <a class="sbi" href="#p2" onclick="setA(this)">
+    <span class="sbn">02</span>
+    <div><div class="sbname">Dashboard</div><div class="sbdesc">KPIs, charts, appointments</div></div>
+  </a>
+  <a class="sbi" href="#p3" onclick="setA(this)">
+    <span class="sbn">03</span>
+    <div><div class="sbname">Patient Module</div><div class="sbdesc">Registration, list, profile, edit</div></div>
+  </a>
+  <a class="sbi" href="#p4" onclick="setA(this)">
+    <span class="sbn">04</span>
+    <div><div class="sbname">Encounters (OPD/IPD)</div><div class="sbdesc">Vitals, prescriptions, discharge</div></div>
+  </a>
+  <a class="sbi" href="#p5" onclick="setA(this)">
+    <span class="sbn">05</span>
+    <div><div class="sbname">Billing</div><div class="sbdesc">6 tabs — invoices, payments, expenses</div></div>
+  </a>
+  <a class="sbi" href="#p6" onclick="setA(this)">
+    <span class="sbn">06</span>
+    <div><div class="sbname">Laboratory</div><div class="sbdesc">Orders, result entry, print</div></div>
+  </a>
+  <a class="sbi" href="#p7" onclick="setA(this)">
+    <span class="sbn">07</span>
+    <div><div class="sbname">Pharmacy</div><div class="sbdesc">Inventory, dispense, history</div></div>
+  </a>
+  <a class="sbi" href="#p8" onclick="setA(this)">
+    <span class="sbn">08</span>
+    <div><div class="sbname">Admin Module</div><div class="sbdesc">Users, doctors, master data</div></div>
+  </a>
+  <a class="sbi" href="#p9" onclick="setA(this)">
+    <span class="sbn">09</span>
+    <div><div class="sbname">Reports</div><div class="sbdesc">7 types, charts, export</div></div>
+  </a>
+</nav>
+<main class="main">
+<div class="ph">
+  <div class="pe">Lovable · Prompt Kit</div>
+  <h1 class="pt">Citi Clinic HMS — Prototype Build Prompts</h1>
+  <p class="ps">Nine sequential prompts for building a production-grade Hospital Management System prototype in Lovable. Start with Prompt 01 in a new project, then paste each subsequent prompt in order — each builds on the previous.</p>
+</div>
+
+<div class="how">
+  <div class="how-i">→</div>
+  <div>
+    <div class="how-t">How to use</div>
+    <div class="how-b">Create a new project at <code>lovable.dev</code>. Paste <strong>Prompt 01</strong> and wait for full generation. Then paste each prompt one at a time in order. Never skip. If something generates incorrectly, correct it before moving to the next prompt.</div>
+  </div>
+</div>
+<div class="pc" id="p1">
+<div class="ph2">
+  <span class="pnum">01</span>
+  <div class="phr">
+    <div class="ptit">Foundation — App Shell, Authentication, Design System &amp; All Dummy Data</div>
+    <div class="pdesc">Sets up the full application scaffold. Must be the first prompt. Establishes design tokens, protected routing, role-based sidebar, and all dummy data arrays referenced by every subsequent module.</div>
+    <div class="tags"><span class="tag tc">Start Here</span><span class="tag tm">Auth</span><span class="tag tm">Routing</span><span class="tag td">Dummy Data</span><span class="tag tu">Design System</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c1')">Copy</button>
+  <pre class="pt2" id="c1">Build a production-grade Hospital Management System (HMS) for Citi Clinic (عيادة المدينة), a multi-specialty clinic at Scheme III, Bostan Khan Road, Rawalpindi, Pakistan.
+
+TECH STACK (do not change):
+- React 18 + TypeScript
+- Vite
+- Tailwind CSS v3
+- shadcn/ui (install all components)
+- React Router v6 with createBrowserRouter
+- React Hook Form + Zod for all forms
+- Lucide React icons throughout
+- date-fns for all date formatting
+- recharts for charts
+
+DESIGN TOKENS — apply as CSS custom properties on :root:
+  --primary:   #1A3C6E  (navy blue — brand)
+  --accent:    #0891B2  (teal — interactive)
+  --success:   #059669  (emerald)
+  --warning:   #D97706  (amber)
+  --danger:    #DC2626  (red)
+  --surface:   #F8FAFC
+  --card:      #FFFFFF
+  --border:    #E2E8F0
+  --txt:       #1E293B
+  --txt-2:     #64748B
+Font: Inter from Google Fonts. Card radius: 8px. Input radius: 6px. Badge radius: 20px.
+
+APP SHELL — persistent layout for all protected routes:
+
+1. LEFT SIDEBAR (fixed, w-60, navy-900 bg):
+   Top: "Citi Clinic" (teal, bold, 15px) + Stethoscope icon (Lucide)
+   Navigation with section labels:
+     MAIN:           Dashboard (LayoutDashboard icon)
+     CLINICAL:       Patients (Users), Encounters (ClipboardList)
+     FINANCIAL:      Billing (Receipt)
+     SERVICES:       Laboratory (FlaskConical), Pharmacy (Pill)
+     ADMINISTRATION: Users (UserCog), Doctors (Stethoscope), Master Data (Settings), Reports (BarChart3)
+   Active state: rounded-md, teal-600 bg, white text + icon.
+   Hover: teal-50 bg.
+   Bottom: user initials avatar (navy circle, white text), full name (bold, 13px), role badge (per-role color pill — see ROLE BADGE COLORS below), Logout button (LogOut icon, logs out + redirects /login).
+
+2. TOP HEADER BAR (h-16, white, sticky, border-b):
+   Left: breadcrumb "Section / Page" in text-secondary 13px.
+   Right: Bell icon with badge "3", live clock (updates every second, format "27 Aug 2026 · 14:32:08"), logged-in user first name.
+
+3. MAIN CONTENT: p-6, max-w-7xl mx-auto.
+
+AUTHENTICATION (/login — full page, no sidebar):
+  Centered card. Logo at top.
+  "Patient Management System" subtitle in text-secondary.
+  Email field (required, email format).
+  Password field (required, show/hide toggle with Eye/EyeOff icons).
+  "Sign In" button (navy, full width).
+  Validate against USERS array (see below).
+  On success: JSON.stringify user → localStorage key "hms_user" → redirect /dashboard.
+  On failure: toast error "Invalid email or password".
+
+DUMMY USERS — src/data/users.ts:
+export const USERS = [
+  {id:1,name:"Dr. Ahmed Raza",email:"admin@citiclinic.pk",password:"admin123",role:"admin",spec:null,fee:null,avatar:"AR"},
+  {id:2,name:"Dr. Sarah Khan",email:"doctor@citiclinic.pk",password:"doctor123",role:"doctor",spec:"General Physician",fee:800,avatar:"SK"},
+  {id:3,name:"Dr. Imran Siddiqui",email:"doctor2@citiclinic.pk",password:"doctor123",role:"doctor",spec:"Cardiologist",fee:1500,avatar:"IS"},
+  {id:4,name:"Dr. Nadia Rehman",email:"doctor3@citiclinic.pk",password:"doctor123",role:"doctor",spec:"Gynaecologist",fee:1200,avatar:"NR"},
+  {id:5,name:"Dr. Aamir Raza",email:"doctor4@citiclinic.pk",password:"doctor123",role:"doctor",spec:"Paediatrician",fee:700,avatar:"AR"},
+  {id:6,name:"Fatima Malik",email:"receptionist@citiclinic.pk",password:"recep123",role:"receptionist",spec:null,fee:null,avatar:"FM"},
+  {id:7,name:"Ali Hassan",email:"billing@citiclinic.pk",password:"billing123",role:"billing",spec:null,fee:null,avatar:"AH"},
+  {id:8,name:"Zara Ahmed",email:"lab@citiclinic.pk",password:"lab123",role:"lab_tech",spec:null,fee:null,avatar:"ZA"},
+  {id:9,name:"Omar Farooq",email:"pharmacy@citiclinic.pk",password:"pharma123",role:"pharmacist",spec:null,fee:null,avatar:"OF"},
+  {id:10,name:"Nurse Hina Baig",email:"nurse@citiclinic.pk",password:"nurse123",role:"nurse",spec:null,fee:null,avatar:"HB"},
+]
+
+ROLE BADGE COLORS (use consistently everywhere):
+  admin        → navy-700 bg, white text, label "Administrator"
+  doctor       → teal-600 bg, white text, label "Doctor"
+  receptionist → emerald-600 bg, white text, label "Receptionist"
+  billing      → amber-600 bg, white text, label "Billing"
+  lab_tech     → purple-600 bg, white text, label "Lab Technician"
+  pharmacist   → orange-600 bg, white text, label "Pharmacist"
+  nurse        → pink-600 bg, white text, label "Nurse"
+
+ROLE-BASED SIDEBAR VISIBILITY:
+  admin        → all items
+  doctor       → Dashboard, Patients, Encounters, Laboratory, Pharmacy
+  receptionist → Dashboard, Patients, Encounters
+  billing      → Dashboard, Patients, Billing, Reports
+  lab_tech     → Dashboard, Laboratory
+  pharmacist   → Dashboard, Pharmacy
+  nurse        → Dashboard, Patients, Encounters, Laboratory
+
+PROTECTED ROUTES — ProtectedRoute component:
+  Read "hms_user" from localStorage. Null → redirect /login.
+
+ALL ROUTES:
+  /login
+  /dashboard
+  /patients, /patients/new, /patients/:id, /patients/:id/edit
+  /encounters, /encounters/new, /encounters/:id, /encounters/:id/discharge
+  /billing, /billing/consultations, /billing/consultations/new
+  /billing/services, /billing/services/new
+  /billing/payments, /billing/receipts, /billing/expenses, /billing/bank
+  /lab/orders, /lab/orders/new, /lab/orders/:id, /lab/orders/:id/results
+  /pharmacy/inventory, /pharmacy/dispense, /pharmacy/history
+  /admin/users, /admin/doctors, /admin/master-data
+  /reports
+
+DUMMY PATIENTS — src/data/patients.ts (20 records):
+Fields: {id, mrNo, name, fatherName, dob, age, gender, phone, address, bloodGroup, cnic, guardianRelation, panelId, status, registrationDate}
+Pakistani names, Rawalpindi addresses (Scheme III, Satellite Town, Saddar, Bahria Town, Westridge, Chaklala, Pirwadhai).
+Phone format: 03XX-XXXXXXX. CNIC: XXXXX-XXXXXXX-X. MR format: MR-2024-XXXX.
+Statuses: 16 active, 3 ipd, 1 inactive. Ages 5–72. Mix of male/female.
+Sample records:
+  {id:1,mrNo:"MR-2024-0001",name:"Muhammad Usman",fatherName:"Abdul Rehman",dob:"1982-03-15",age:42,gender:"Male",phone:"0321-4567890",address:"House 12, Street 4, Scheme III, Rawalpindi",bloodGroup:"B+",cnic:"37201-1234567-1",guardianRelation:"Self",panelId:null,status:"active",registrationDate:"2024-01-10"}
+  {id:2,mrNo:"MR-2024-0002",name:"Ayesha Siddiqui",fatherName:"Tariq Siddiqui",dob:"1990-07-22",age:34,gender:"Female",phone:"0333-9876543",address:"Flat 5A, Bahria Town Phase 8",bloodGroup:"O+",cnic:"37202-9876543-2",guardianRelation:"Father",panelId:null,status:"active",registrationDate:"2024-01-12"}
+  {id:3,mrNo:"MR-2024-0003",name:"Ahmed Khan",fatherName:"Javed Khan",dob:"1975-11-05",age:49,gender:"Male",phone:"0311-2345678",address:"Villagers Colony, Chaklala",bloodGroup:"A-",cnic:"37201-5678901-3",guardianRelation:"Self",panelId:1,status:"ipd",registrationDate:"2024-01-15"}
+  Add 17 more similarly structured records with realistic Pakistani names and Rawalpindi addresses.
+
+DUMMY ENCOUNTERS — src/data/encounters.ts (15 records):
+Fields: {id, encId, patientId, type, doctorId, date, chiefComplaint, diagnosis, vitals:{bp,pulse,temp,weight,spo2}, prescription:[{medicine,dose,route,frequency,duration,instructions}], fee, paymentStatus, status}
+Include: "Acute pharyngitis", "T2DM follow-up", "Essential hypertension", "URTI", "Gastroenteritis", "Dengue fever suspected", "Iron deficiency anaemia", "Pneumonia", "Migraine", "Osteoarthritis knee", "Anxiety disorder", "Vitamin D deficiency", "Dyspepsia", "UTI", "Eczema"
+
+DUMMY MEDICINES — src/data/medicines.ts (30 records):
+Fields: {id, name, generic, category, batchNo, expiry, stock, unit, purchaseRate, saleRate, reorderLevel}
+Include (with low stock flagged): Augmentin 625mg (stock:240), Panadol 500mg (500), Brufen 400mg (180), Amoxil 500mg (stock:8 — LOW), Risek 20mg (300), Ventolin Inhaler (15), Metformin 500mg (400), Amlodipine 5mg (250), Flagyl 400mg (120), Nexium 40mg (90), Ciprofloxacin 500mg (200), Zithromax 250mg (60), Atorvastatin 20mg (180), Losartan 50mg (220), Glucophage 1000mg (150), ORS Sachets (stock:3 — CRITICAL), Paracetamol Syrup 120mg (stock:5 — LOW), Calpol Drops (45), Disprin 300mg (300), Vit C 500mg (400), Folic Acid 5mg (350), Iron 150mg (200), Calcium 600mg (180), Vit D3 50000IU (120), B-Complex (250), Dexamethasone Inj (30), Tramadol 50mg (80), Diclofenac Inj (25), Ranitidine 150mg (160), Domperidone 10mg (130)
+
+DUMMY LAB TESTS — src/data/labTests.ts (15 tests):
+{id, code, name, category, rate, unit, normalRange, turnaroundHours}
+CBC/600, UrineRE/400, RBS/200, FBS/200, LipidProfile/1200, LFTs/1000, KFTs/1000, HbA1c/1200, HepBAg/700, HepCAb/700, Typhoid/500, ESR/300, ECG/500, XRayChest/800, Ultrasound/2500
+
+Create a placeholder component for each route showing the page name in H1 and a "Module coming soon" badge. Wire all sidebar links. Active route highlighted in sidebar. App must be fully navigable before module content is added.</pre>
+</div>
+</div>
+<div class="pc" id="p2">
+<div class="ph2">
+  <span class="pnum">02</span>
+  <div class="phr">
+    <div class="ptit">Dashboard — Role-Adaptive KPIs, Charts &amp; Appointment Table</div>
+    <div class="pdesc">Role-aware dashboard with live greeting, 4 KPI tiles that adapt per role, a weekly bar chart + 7-day revenue area chart, today's 8-row appointment table with status pills, a recent patients panel, and a low-stock alert banner.</div>
+    <div class="tags"><span class="tag tm">Dashboard</span><span class="tag tu">recharts</span><span class="tag td">Role-Adaptive</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c2')">Copy</button>
+  <pre class="pt2" id="c2">Build the /dashboard page using data from dummy arrays. Read current user from localStorage "hms_user".
+
+GREETING HEADER:
+"Good [morning/afternoon/evening], [First Name]" — H1 24px bold. Calculate time-of-day client-side.
+Subtitle: today's date formatted "Wednesday, 27 August 2026" (date-fns).
+Right: "+ New Patient" button (navy → /patients/new) — visible to admin and receptionist only.
+
+KPI TILES ROW (4 equal tiles, white cards, shadow, 8px radius):
+Each tile: label (12px uppercase text-secondary), large value (28px bold navy), trend line (12px), icon top-right in 40px colored circle.
+
+Tile 1 — "Today's OPD Patients" · 24 · Users icon · teal circle · trend "+3 from yesterday" green arrow
+Tile 2 — "Today's Revenue" · "Rs. 42,500" · Banknote icon · emerald circle · "+12% vs yesterday" · visible: admin, billing only
+Tile 3 — "Pending Lab Reports" · 7 · FlaskConical icon · amber circle · "oldest 3h ago" · clickable → /lab/orders
+Tile 4 — "Active IPD Patients" · 3 · BedDouble icon · navy circle · "2 male · 1 female"
+
+ROLE OVERRIDES:
+doctor:       Tile 2 replaced by "My Patients Today: 11" (teal). Filter appointments to current doctorId.
+receptionist: Tile 2 hidden. Tiles 1,3,4 shown.
+lab_tech:     Tile 1="Pending Orders:7", Tile 2="Completed Today:12", Tiles 3+4 hidden. Show pending orders table instead of appointments.
+pharmacist:   All replaced by 2 tiles: "Dispensed Today:18" (emerald) and "Low Stock Items:8" (amber).
+
+CHARTS ROW (two equal columns):
+
+LEFT — "Patient Visits This Week" BarChart (recharts):
+data: [{day:"Mon",count:18},{day:"Tue",count:22},{day:"Wed",count:19},{day:"Thu",count:31},{day:"Fri",count:28},{day:"Sat",count:15},{day:"Sun",count:8}]
+Bar fill #0891B2, rounded tops radius={[4,4,0,0]}, CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0".
+Tooltip: "N patients". No legend. ResponsiveContainer height={200}.
+
+RIGHT — "Revenue — Last 7 Days" AreaChart (recharts):
+data: last 7 dates mapped to [35000,42000,38000,51000,44000,39000,42500].
+linearGradient id="revGrad": top rgba(8,145,178,0.25) → bottom rgba(8,145,178,0).
+Area fill="url(#revGrad)" stroke="#0891B2" strokeWidth={2}.
+Tooltip formatted "Rs. N,NNN". ResponsiveContainer height={200}.
+Visible: admin, billing only. Other roles: show "Top Diagnoses" list instead (top 5 diagnoses from encounters data with count badge).
+
+BOTTOM ROW (2/3 + 1/3 split):
+
+LEFT — "Today's Appointments" table:
+thead: Time | Patient | MR No. | Doctor | Type | Status
+8 rows of static data:
+  09:00 | Kamran Iqbal      | MR-2024-0091 | Dr. Sarah Khan     | OPD       | Completed
+  09:30 | Sana Butt         | MR-2024-0145 | Dr. Sarah Khan     | OPD       | In Progress
+  10:00 | Muhammad Ali      | MR-2024-0203 | Dr. Imran Siddiqui | OPD       | Waiting
+  10:30 | Asma Nawaz        | MR-2024-0067 | Dr. Sarah Khan     | OPD       | Waiting
+  11:00 | Tariq Mehmood     | MR-2024-0312 | Dr. Imran Siddiqui | Cardiology| Waiting
+  11:30 | Nadia Hussain     | MR-2024-0188 | Dr. Nadia Rehman   | Gynae     | Scheduled
+  14:00 | Rashid Anwar      | MR-2024-0099 | Dr. Imran Siddiqui | Follow-up | Scheduled
+  15:00 | Uzma Shah         | MR-2024-0277 | Dr. Sarah Khan     | OPD       | Scheduled
+Status badges: Completed=emerald, In Progress=teal + animated pulse dot, Waiting=amber, Scheduled=slate.
+Row click → /patients/:id (match patient name to dummy data id).
+
+RIGHT — "Recently Registered" panel:
+Title: "Recently Registered", "View all →" link to /patients.
+5 patient cards (most recent registrationDate first from dummy data).
+Each: initials circle (navy, white text, 36px), name bold, MR number (teal, DM Mono 11px), phone text-secondary, date relative ("2 days ago"). Card hover: light teal-50 bg. Clickable → /patients/:id.
+
+LOW STOCK ALERT BANNER (amber-50 bg, amber-200 border, amber-700 text, AlertTriangle icon):
+Show if any medicine stock < reorderLevel from medicines dummy data.
+"Low stock alert — Amoxil 500mg: 8 units · Paracetamol Syrup: 5 units · ORS Sachets: 3 units"
+Right: "View Pharmacy →" link.
+Hidden for lab_tech role.</pre>
+</div>
+</div>
+
+<div class="pc" id="p3">
+<div class="ph2">
+  <span class="pnum">03</span>
+  <div class="phr">
+    <div class="ptit">Patient Module — Registration, List, Profile &amp; Edit</div>
+    <div class="pdesc">Searchable/filterable patient list with pagination, a two-column registration form with auto-MR generation and DOB→age calculation, a tabbed 360° profile page (Summary, Visits, Lab Results, Billing), and an edit form with Zod validation throughout.</div>
+    <div class="tags"><span class="tag tm">Patients</span><span class="tag tu">Forms</span><span class="tag td">CRUD</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c3')">Copy</button>
+  <pre class="pt2" id="c3">Build the complete Patient module.
+
+━━━ /patients — LIST ━━━
+Header: "Patients" H1 + "47 registered patients" subtitle.
+Top bar: search input (name, MR no., phone — live filter) | filter tabs "All | Active | IPD | Inactive" | "+ Register Patient" button (navy → /patients/new).
+
+Table columns: MR No. | Patient Name | Father/Husband | Age · Gender | Phone | Last Visit | Status | Actions
+MR No: DM Mono font, teal. Age · Gender: "42 · M". Last Visit: relative ("3 days ago") or "—".
+Status: Active (emerald), IPD Admitted (teal), Inactive (slate).
+Actions: View (eye icon → /patients/:id), Edit (pencil → /patients/:id/edit), Print Card (printer icon → window.print()).
+Pagination: 10 per page, "Showing 1–10 of 20 patients". Empty state: UserX icon + "No patients found".
+
+━━━ /patients/new — REGISTRATION FORM ━━━
+Title: "Register New Patient". Two-column layout desktop, single column mobile.
+
+SECTION — Personal Information (labelled, light divider between sections):
+  MR Number        auto-generated read-only (MR-2024-0021), DM Mono, teal
+  Registration Date  date picker, default today
+  Full Name        text, required, min 2 chars
+  Father/Husband Name  text
+  Date of Birth    date picker — onChange: auto-calculate and fill Age
+  Age              number, auto-filled, also manually editable
+  Gender           radio: Male | Female | Other
+  CNIC             text, pattern XXXXX-XXXXXXX-X, optional
+  Blood Group      select: A+ A- B+ B- O+ O- AB+ AB- Unknown
+  Phone            text, required, pattern 03XX-XXXXXXX
+  Emergency Contact  text
+
+SECTION — Address:
+  Address          textarea 2 rows
+  Area/Locality    text ("Scheme III")
+  City             text, default "Rawalpindi"
+
+SECTION — Clinical & Administrative:
+  Guardian/Relation  select: Self, Father, Mother, Husband, Wife, Son, Daughter, Other
+  Panel/Insurance    select: None, EFU Insurance, State Life, PTCL Panel, Army Panel, Govt Employee Panel
+  Referred By        text
+  Remarks            textarea 3 rows
+
+SECTION — Actions (right-aligned):
+  Cancel (ghost → /patients) | Save & Print OPD Ticket (teal outline) | Save (navy)
+
+Zod validation: required fields inline error below (red-500, 12px). On save: add to state, toast "Patient MR-2024-0021 registered", redirect /patients/:id.
+
+━━━ /patients/:id — PROFILE ━━━
+HEADER CARD (gradient: navy-900 → teal-800, white text):
+  60px initials avatar, Name H2 22px bold, MR No (DM Mono, teal-200), Age·Gender chip, Blood Group chip, Status badge.
+  Phone, CNIC secondary.
+  Action buttons (white outline): Edit Patient | New Encounter (→ /encounters/new?patientId=:id) | New Lab Order (→ /lab/orders/new?patientId=:id) | Print Card.
+
+TABS: Summary | Visits | Lab Results | Billing
+
+TAB — Summary: registration info, referred by, panel. Last visit card (date, doctor, diagnosis, type badge). Active prescriptions list (last encounter's medicines). Guardian/address block.
+
+TAB — Visits: table Date | Encounter ID | Type | Doctor | Chief Complaint | Diagnosis | Fee | Status. Row click → /encounters/:id.
+
+TAB — Lab Results: table Date | Order No. | Tests | Status | Actions (View, Print if completed).
+
+TAB — Billing: summary bar Total Billed / Paid / Outstanding (red if > 0). Table Date | Invoice No. | Type | Amount | Paid | Balance | Status.
+
+━━━ /patients/:id/edit — EDIT ━━━
+Same form as registration, pre-filled. Save: update state, toast "Patient record updated", redirect /patients/:id.
+"Delete Patient" bottom-left (red outline): confirmation dialog before delete.</pre>
+</div>
+</div>
+<div class="pc" id="p4">
+<div class="ph2">
+  <span class="pnum">04</span>
+  <div class="phr">
+    <div class="ptit">Encounters — OPD / IPD with Vitals, Prescription Builder &amp; Discharge</div>
+    <div class="pdesc">4-step encounter form (patient select → vitals + clinical notes → dynamic prescription builder → billing), encounter detail with 4 tabs, and a full IPD discharge summary form. All clinical data references dummy patients, doctors, and medicines.</div>
+    <div class="tags"><span class="tag tm">Encounters</span><span class="tag tm">OPD</span><span class="tag tm">IPD</span><span class="tag tu">Dynamic Forms</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c4')">Copy</button>
+  <pre class="pt2" id="c4">Build the complete Encounters module.
+
+━━━ /encounters — LIST ━━━
+Header: "Encounters" H1. Filter tabs: All | OPD | IPD | Today | This Week.
+Search by patient name or encounter ID. "+ New Encounter" (navy → /encounters/new).
+Table: Date | Encounter ID | Patient | MR No. | Type | Doctor | Diagnosis | Fee | Status | Actions
+Encounter ID: DM Mono, teal. Type badge: OPD (teal-100) IPD (navy-100). Status: Open (amber), Discharged (green), Cancelled (red).
+Actions: View → /encounters/:id, Print Slip, Edit.
+
+━━━ /encounters/new — 4-STEP FORM ━━━
+Step indicator at top: Patient → Details → Prescription → Billing (horizontal, current step teal, completed steps with checkmark).
+
+STEP 1 — Patient:
+Large search input. On type (min 2 chars): show matching patient cards (name, MR, age/gender, phone). Click to select — locked confirmation card with teal border.
+"+ Register New Patient" link (opens /patients/new in new tab).
+Next → Step 2.
+
+STEP 2 — Encounter Details:
+Encounter Type large toggle: OPD | IPD.
+IPD extra fields (shown when IPD selected): Ward (select: General Ward M, General Ward F, Children Ward, ICU, Private Room), Bed No (text), Admission Type (Emergency | Planned radio).
+Doctor: select from USERS role=doctor. Show name + specialization.
+Date/Time: datetime picker, default now.
+Priority: Normal | Urgent radio.
+
+VITALS (6-col responsive grid, all optional):
+  BP (mmHg) | Pulse (/min) | Temp (°F, placeholder 98.6) | Weight (kg) | SpO2 (%) | RBS mg/dL
+Auto-calculate BMI if Weight + Height entered. Show BMI with classification label.
+
+CLINICAL NOTES:
+  Chief Complaint  textarea 2 rows, REQUIRED
+  History          textarea 3 rows
+  On Examination   textarea 3 rows
+  Diagnosis        textarea 2 rows, REQUIRED — non-functional "ICD-10 Lookup" link (teal)
+  Clinical Notes   textarea 3 rows
+Next → Step 3.
+
+STEP 3 — Prescription Builder:
+Dynamic rows. Each row:
+  [Medicine — searchable select from medicines dummy data] [Dose text] [Route: Oral/IV/IM/Topical/Inhaled/Drops] [Freq: OD/BD/TDS/QDS/SOS/As directed] [Duration text] [Instructions text] [× remove]
+"+Add Medicine" button. Start with 3 empty rows.
+On medicine select: show stock available grey text "Stock: 240 tablets". Amber warning if stock < reorderLevel.
+General Instructions textarea. Follow-up Date picker (optional). Next → Step 4.
+
+STEP 4 — Billing:
+Consultation Fee: auto-fills from selected doctor fee, editable.
+Discount: toggle Flat | % + amount field.
+Net Total: auto-calc, bold teal, large font.
+Payment Status: Paid | Unpaid | Partial radio. If Partial: Amount Received + auto Balance.
+Payment Mode: Cash | Card | Bank Transfer | Insurance.
+Notes: text.
+Buttons: Save Draft (outline) | Save & Print Slip (teal) | Save Encounter (navy).
+On save: add to encounters state, toast "Encounter OPD-2024-0016 saved", redirect /encounters/:id.
+
+━━━ /encounters/:id — DETAIL ━━━
+Header: patient name + MR | encounter ID (DM Mono, teal) | date | doctor | type badge | status badge.
+Actions: Edit | Print Slip | New Lab Order (→ /lab/orders/new?encounterId=:id) | New Invoice | Mark Discharged (IPD only).
+
+TABS — Clinical Notes | Prescription | Billing | Patient History
+
+Clinical Notes tab: vitals in 6-cell stat grid (teal values, large). Then chief complaint, history, examination, diagnosis, notes as labelled sections.
+Prescription tab: table Medicine | Dose | Route | Frequency | Duration | Instructions. "Print Prescription" button.
+Billing tab: invoice summary card (fee, discount, total, paid, balance). Payment history list.
+Patient History tab: all encounters for this patient, most recent first. Date, ID, type badge, doctor, diagnosis, fee per row.
+
+━━━ /encounters/:id/discharge — DISCHARGE ━━━
+Title: "Discharge Summary — [Patient Name]"
+Discharge Date (date picker, default today) | Length of Stay (auto-calculated read-only, e.g. "4 days").
+Discharge Diagnosis (textarea, required).
+Discharge Summary (textarea 8 rows — full clinical narrative).
+Condition on Discharge (select: Recovered, Improved, Stable, Against Medical Advice, Expired).
+Follow-up Date (date picker) | Follow-up Instructions (textarea).
+Discharge Medications: same prescription builder pre-filled from encounter prescription.
+Buttons: Save Draft (outline) | Save & Print Summary (navy).
+On save: update encounter status → "discharged", redirect /encounters/:id.</pre>
+</div>
+</div>
+
+<div class="pc" id="p5">
+<div class="ph2">
+  <span class="pnum">05</span>
+  <div class="phr">
+    <div class="ptit">Billing — Six-Tab Financial Module</div>
+    <div class="pdesc">Full billing hub with date-range filter and daily summary bar. Six tabs: Consultation invoices, Services invoices with dynamic line items, Payments modal, Advance receipts, Expense tracking with category chart, and Bank transaction ledger. All in Rs. format.</div>
+    <div class="tags"><span class="tag tm">Billing</span><span class="tag tm">Invoices</span><span class="tag tm">Payments</span><span class="tag td">Financial</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c5')">Copy</button>
+  <pre class="pt2" id="c5">Build the Billing module. The /billing hub is a full-width tabbed layout.
+
+PERSISTENT TOP BAR (above tabs):
+Date range quick-select: Today | Yesterday | This Week | This Month | Custom.
+Summary line (teal-50 bg, border-b): "Consultations Rs. 19,200 · Services Rs. 14,600 · Expenses Rs. 5,800 · Net Rs. 28,000"
+Currency format: "Rs. 1,200" (no decimals for whole rupees, comma for thousands, tabular nums).
+
+6 TABS: Consultations | Services | Payments | Receipts | Expenses | Bank
+
+━━━ TAB 1 — CONSULTATIONS ━━━
+"+New Consultation Invoice" → /billing/consultations/new.
+Table: Invoice No. (CI-2024-0001) | Date | Patient | MR No. | Doctor | Fee | Discount | Net | Mode | Status | Actions
+Status: Paid (emerald), Unpaid (red), Partial (amber). Actions: View, Print Receipt, Mark Paid.
+15 dummy consultation records.
+
+━━━ /billing/consultations/new ━━━
+Patient search/select. Link to Encounter (optional select). Date. Doctor (auto-fills fee).
+Consultation Fee (editable). Additional Charges (description + amount, optional).
+Subtotal. Discount (toggle Flat | %). Net Total (bold teal, large).
+Payment Mode: Cash | Card | Bank Transfer | Cheque | Insurance.
+Amount Received. Balance (red if > 0). Reference No. (optional). Notes.
+Buttons: Cancel | Save & Print Receipt | Save.
+
+━━━ TAB 2 — SERVICES ━━━
+Same list, invoice format SI-2024-0001. "+ New Services Invoice" → /billing/services/new.
+
+━━━ /billing/services/new ━━━
+Patient select + date + doctor (optional).
+DYNAMIC LINE ITEMS TABLE:
+| Service/Test (searchable from LAB_TESTS + extras) | Rate (auto-fill, editable) | Qty | Amount | Remove |
+"+Add Service" adds row. Extra services beyond lab tests: Dressing (300), IV Drip Setup (200), Nebulisation (400), BP Check (100), Injection Admin (150), Wound Suturing (1500), Plaster (800).
+Subtotal, Discount, Total, Payment fields same as consultations. Buttons: Cancel | Save & Print | Save.
+
+━━━ TAB 3 — PAYMENTS ━━━
+"Record Payment" (navy) opens modal (not new page):
+  Patient select. Payment date. Amount (required). Mode: Cash | Card | Bank | Cheque.
+  Against: Advance | select outstanding invoice. Reference No. Notes. Save & Print Receipt button.
+Table: Receipt No. (PAY-2024-0001) | Date | Patient | Against | Amount | Mode | Received By.
+10 dummy payment records.
+
+━━━ TAB 4 — RECEIPTS ━━━
+"New Receipt" opens modal: Patient, Type (Advance Deposit | Refund | Credit Note), Amount, Date, Notes.
+Table: Receipt No. | Date | Patient | Type | Amount | Balance Remaining.
+Type badges: Advance (teal), Refund (red), Credit Note (amber). 5 dummy records.
+
+━━━ TAB 5 — EXPENSES ━━━
+Two-panel layout: LEFT 65% list + RIGHT 35% chart.
+LEFT: Table Date | Category | Description | Amount | Mode | Entered By | Actions (Edit, Delete).
+Categories: Utilities, Salaries, Supplies, Equipment, Rent, Maintenance, Miscellaneous.
+15 dummy expenses (electricity Rs. 8,500, medical supplies Rs. 3,200, chai Rs. 800, medicine purchase Rs. 22,000, etc.).
+"+ Add Expense" inline form above table: Date | Category | Description | Amount | Mode (Cash/Bank).
+RIGHT: Horizontal BarChart (recharts) — categories Y-axis, amounts X-axis, teal bars. Title: "This Month by Category". Total: "Rs. 58,400".
+
+━━━ TAB 6 — BANK ━━━
+Bank ledger. Table: Date | Description | Debit | Credit | Running Balance.
+Debit: red text. Credit: green text. Balance column: tabular nums, bold.
+8 dummy transactions (cash deposits to Habib Bank, one bank expense).
+Opening balance Rs. 45,000. Auto-compute running balance column.
+"Record Transfer" button: modal with Date, Type (Deposit/Withdrawal), Amount, Description, Bank, Reference.</pre>
+</div>
+</div>
+<div class="pc" id="p6">
+<div class="ph2">
+  <span class="pnum">06</span>
+  <div class="phr">
+    <div class="ptit">Laboratory — Orders, Result Entry with Auto-Flag &amp; Print Report</div>
+    <div class="pdesc">Lab order list with 5-stage status pipeline, new order form with categorised test-selection accordion and live price totalling, per-parameter result entry with automatic H/L flagging against normal ranges, and a print-optimised result report.</div>
+    <div class="tags"><span class="tag tm">Laboratory</span><span class="tag tu">Result Entry</span><span class="tag td">Auto-Flag</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c6')">Copy</button>
+  <pre class="pt2" id="c6">Build the complete Laboratory module.
+
+━━━ /lab/orders — LIST ━━━
+Header: "Laboratory" H1 + amber badge "7 Pending".
+Filter tabs: All | Pending | Collected | In Progress | Completed | Delivered.
+Search: patient name or order number. "+ New Lab Order" (navy → /lab/orders/new).
+Table: Order No. (LB-2024-0001, DM Mono teal) | Date & Time | Patient | MR No. | Tests Summary | Ordered By | Priority | Status | Actions.
+Tests summary: "CBC, Urine R/E +2 more" if >2 tests.
+Priority badge: Urgent (red-100, red-700 text) | Normal (none).
+Status pipeline + badge colors: Pending (amber) → Collected (blue) → In Progress (teal + pulse dot) → Completed (emerald) → Delivered (slate).
+Actions: View (→ /lab/orders/:id), Enter Results (if Collected/In Progress → /lab/orders/:id/results), Print Report (if Completed/Delivered).
+10 dummy lab orders, mix of statuses.
+
+━━━ /lab/orders/new — NEW ORDER ━━━
+Two-column layout (3/5 left + 2/5 right).
+
+LEFT COLUMN:
+Patient search/select (same searchable card UI). Selected patient confirmation card.
+Link to Encounter: optional select from patient's recent encounters.
+Ordering Doctor: select (role=doctor users).
+Collection Date/Time: datetime picker, default now.
+Priority: Normal | Urgent toggle. Urgent = red badge on order.
+Clinical Notes textarea.
+Sample Details (shown after tests selected): Sample Type select (Blood/Urine/Stool/Swab/Sputum/Other), Sample ID (auto-gen SMP-2024-XXXX, read-only), Collected By (auto-fills logged-in user if lab_tech).
+Payment: Discount (flat Rs.), Total auto-calc, Status: Paid | Unpaid | On Account.
+
+RIGHT COLUMN — Test Selection:
+"Select Tests" title + live total "Rs. 1,800" updating as tests checked.
+Tests in accordion by category. Each category: header with "Select All" checkbox + count.
+Each test: checkbox | name | code (DM Mono teal small) | turnaround (grey small) | rate right-aligned.
+Checked tests appear in sticky "Selected" summary at bottom of right column (name + × remove + subtotal).
+Categories: Haematology (CBC, ESR), Biochemistry (RBS, FBS, Lipid, LFTs, KFTs, HbA1c), Serology (Hep B Ag, Hep C Ab, Typhoid), Urine Analysis (Urine R/E), Cardiology (ECG), Radiology (X-Ray, Ultrasound).
+Buttons: Cancel | Save Order (teal) → generate LB-ID, redirect /lab/orders/:id.
+
+━━━ /lab/orders/:id — DETAIL ━━━
+Header card: Order No. (large DM Mono), patient mini-card (name, MR, phone), ordered by, date/time, priority badge, status badge.
+Status action buttons (change by current status):
+  Pending    → "Mark Collected" (teal)
+  Collected  → "Start Processing" (blue) + "Enter Results" (→ /lab/orders/:id/results)
+  In Progress → "Enter Results" (navy)
+  Completed  → "Mark Delivered" (slate) + "Print Report" (printer icon)
+Tests table: Test Name | Code | Category | Sample | Status | Result Summary | Action.
+Result summary: e.g. "Hb: 11.2 g/dL" if entered. Per-test "Enter Result" button.
+
+━━━ /lab/orders/:id/results — RESULT ENTRY ━━━
+Title: "Enter Results — [Patient Name]" + order number.
+For each test in the order, render a card:
+
+MULTI-PARAMETER TESTS (CBC) — parameter table:
+| Parameter          | Result      | Unit     | Normal Range | Flag |
+| Haemoglobin        | [number in] | g/dL     | 12.0–16.0    | auto |
+| TLC                | [number in] | ×10³/µL  | 4.0–11.0     | auto |
+| Platelets          | [number in] | ×10³/µL  | 150–400      | auto |
+| Neutrophils %      | [number in] | %        | 40–70        | auto |
+| Lymphocytes %      | [number in] | %        | 20–40        | auto |
+| Haematocrit (PCV)  | [number in] | %        | 36–46        | auto |
+Flag logic: value > upper → "H" badge (red-100/red-700). value < lower → "L" badge (blue-100/blue-700). Within range → no badge.
+
+SINGLE-VALUE TESTS (RBS, FBS, ESR, etc.) — single row:
+  Result [number input] | Unit [read-only] | Normal Range [read-only] | Flag [auto]
+
+NARRATIVE TESTS (X-Ray, Ultrasound, ECG):
+  "Report / Impression" textarea 4 rows.
+  "Normal Study" checkbox — if checked: fills textarea with "No significant abnormality detected."
+
+Below all tests:
+  "Pathologist's Remarks" textarea (general report comments).
+  Performed By text (auto-fills logged-in user).
+  Verified By text (pathologist/doctor name).
+Buttons: Save Results (outline) | Save & Mark Complete (navy).
+
+━━━ PRINT REPORT (window.print() from order detail) ━━━
+@media print: hide all app chrome (sidebar, header, buttons).
+Show:
+  "Citi Clinic — عيادة المدينة" centered bold 18pt. "Scheme III, Bostan Khan Road, Rawalpindi" 10pt. Horizontal rule.
+  Patient row: Name | MR No. | Age/Gender | Ordering Doctor | Date & Time.
+  For each test: section header (test name, bold) + results table. Abnormal values in bold + asterisk * (no color — print-safe).
+  Pathologist remarks section.
+  Bottom: "Performed by: [name]  ·  Verified by: [name]  ·  Printed: [datetime]"
+  "— REPORT ENDS —" centered.
+  Pathologist signature line right-aligned: "_____________________  Signature & Stamp"</pre>
+</div>
+</div>
+
+<div class="pc" id="p7">
+<div class="ph2">
+  <span class="pnum">07</span>
+  <div class="phr">
+    <div class="ptit">Pharmacy — Inventory, Dispense Workflow &amp; History</div>
+    <div class="pdesc">Three-tab pharmacy: full medicine inventory with expiry/stock-level colour coding and stock adjustment, a two-panel dispense workflow linking to encounter prescriptions with live stock validation and partial-dispense support, and a searchable dispense history.</div>
+    <div class="tags"><span class="tag tm">Pharmacy</span><span class="tag tm">Inventory</span><span class="tag tu">Stock Alerts</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c7')">Copy</button>
+  <pre class="pt2" id="c7">Build the Pharmacy module with 3 tabs: Inventory | Dispense | History.
+
+━━━ TAB 1 — INVENTORY ━━━
+Summary chips (above table): Total: 30 | In Stock: 21 | Low Stock: 8 (amber) | Expiring 30d: 3 (orange).
+Controls: Search (name/generic) | Filter dropdown: All | Low Stock | Out of Stock | Expiring Soon | Expired | "+ Add Medicine" (navy).
+
+Table: Medicine Name (bold) | Generic (italic secondary) | Category | Batch No. | Expiry | Stock | Unit | Rate (Rs.) | Status | Actions.
+Expiry: orange text if within 30 days, red if past.
+Stock: tabular nums. Bold red if 0, bold amber if < reorderLevel.
+Status badge: In Stock (emerald), Low Stock (amber), Out of Stock (red), Expiring Soon (orange), Expired (red-outline).
+Actions: Edit (pencil), Adjust Stock (±), Delete (with confirmation).
+
+STOCK ADJUSTMENT MODAL (on ± click):
+  Medicine name (read-only). Type: radio Add | Remove. Quantity number. Reason text.
+  Save: updates stock in state.
+
+ADD/EDIT MEDICINE MODAL:
+  Medicine Name (required) | Generic Name
+  Category select: Antibiotic, Analgesic, Antidiabetic, Antihypertensive, NSAID, PPI, Bronchodilator, Vitamin/Supplement, Antiemetic, Antifungal, Steroid, Injection, Other
+  Batch No. (required) | Expiry Date (required — warn orange if within 6 months)
+  Stock Quantity (required) | Unit select: Tablet/Capsule/Syrup/Injection/Cream/Inhaler/Drops/Sachet/Other
+  Purchase Rate (Rs.) | Sale Rate (Rs., required) | Reorder Level number | Supplier text | Remarks text.
+
+LOW STOCK BANNER (amber, persistent above table if any medicine below reorderLevel):
+  AlertTriangle icon. "Low stock: Amoxil 500mg (8) · Paracetamol Syrup (5) · ORS Sachets (3)"
+CRITICAL BANNER (red, if any stock = 0): separate red banner.
+
+━━━ TAB 2 — DISPENSE ━━━
+Two-panel: LEFT 58% prescription input | RIGHT 42% confirmation (sticky).
+
+LEFT PANEL:
+Patient search/select.
+"Link Prescription": after patient selected → dropdown "Select Encounter/Prescription" from patient's encounters with prescription data. Toggle: From Encounter | Manual Entry.
+If encounter linked: auto-populate medicine rows from that encounter's prescription field.
+
+MEDICINE ROWS (same dynamic builder as encounters):
+  [Medicine searchable select from medicines] [Prescribed Qty — from prescription if linked] [Instructions — pre-filled if linked]
+"+Add Medicine". Below each select: "Stock: 240 tablets" grey text. Amber warning if stock < prescribed. Red "Out of stock" if stock = 0 (disable row).
+
+General Notes textarea. Pharmacist Remarks textarea.
+
+RIGHT PANEL (updates live):
+"Dispense Summary" title sticky.
+Table:
+| Medicine | Prescribed | To Dispense (editable) | In Stock | Unit Rate | Total |
+To Dispense: editable number, max = prescribed qty. Amber warning badge if partial (< prescribed).
+Subtotal Rs. | Discount % | Net Payable Rs. (large bold).
+Payment Mode: Cash | Card | On Account.  Amount number.
+"Print Receipt" checkbox.
+
+"Dispense & Finish" button (teal, full width):
+  Deduct "To Dispense" qty from each medicine's stock in state.
+  Create dispense record (DIS-2024-XXXX).
+  Toast "Dispensed — [Patient] · Rs. N".
+  If print checked: window.print() dispense slip.
+  Reset form.
+
+DISPENSE SLIP (print view @media print):
+  Clinic header. Patient name, MR No., date. Dispensed by: [user].
+  Table: Medicine | Dose | Frequency | Duration | Qty | Instructions.
+  Total charged. "Computer-generated record."
+
+━━━ TAB 3 — HISTORY ━━━
+Date range filter. Search by patient name or dispense number.
+Table: Dispense No. (DIS-2024-0001) | Date | Patient | MR No. | Medicines summary | Total (Rs.) | Dispensed By | Actions.
+Actions: View (modal — full dispense table + encounter link + payment info), Print Slip.
+12 dummy dispense records from dummy patients.</pre>
+</div>
+</div>
+<div class="pc" id="p8">
+<div class="ph2">
+  <span class="pnum">08</span>
+  <div class="phr">
+    <div class="ptit">Admin Module — Users, Doctors &amp; Master Data</div>
+    <div class="pdesc">Admin-only module (403 for other roles). User management with role-coloured badges, slide-over add/edit form, and deactivate confirmation. Doctor card grid with schedule. Five-tab master data editor: services catalog, panels, ward/bed map, expense categories, and clinic settings.</div>
+    <div class="tags"><span class="tag tc">Admin Only</span><span class="tag tm">Users</span><span class="tag tm">Master Data</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c8')">Copy</button>
+  <pre class="pt2" id="c8">Build the Admin module. All three routes (/admin/users, /admin/doctors, /admin/master-data) — guard in ProtectedRoute: if role !== "admin" → show a full-page "403 — Access Denied" component with a "Go to Dashboard" button.
+
+━━━ /admin/users — USER MANAGEMENT ━━━
+Title: "User Management" H1, subtitle "Manage staff accounts and system access".
+"+ Add User" (navy, top right) → opens 480px right slide-over panel with overlay backdrop.
+
+ROLE BADGE COLORS (same as Prompt 01):
+  admin → navy-700 | doctor → teal-600 | receptionist → emerald-600
+  billing → amber-600 | lab_tech → purple-600 | pharmacist → orange-600 | nurse → pink-600
+
+Table: Avatar + Name | Email | Role (badge) | Last Login | Status | Actions.
+Avatar: 36px initials circle, background color per role.
+Last Login: relative ("2 hours ago", "Yesterday", "3 days ago") — dummy static values.
+Status: Active (emerald badge), Inactive (slate badge).
+Actions: Edit (pencil → re-opens slide-over pre-filled), Reset Password (Key icon → confirmation modal "Send password reset email to [email]?"), Deactivate/Activate (toggle icon).
+
+DEACTIVATE MODAL: "Deactivate [Name]?" Body: "This user will immediately lose access to all modules." Buttons: Cancel | Deactivate (red).
+
+ADD/EDIT SLIDE-OVER FORM:
+Title: "Add New User" / "Edit User".
+  Full Name (required) | Email (required, email format, unique check against USERS)
+  Role (required, select all role options)
+  Phone text (03XX format) | CNIC text (optional)
+  Password (required for new; optional for edit — hint "Leave blank to keep current")
+  Confirm Password (Zod must match if filled)
+  Status: Active | Inactive radio
+  Joining Date: date picker
+Footer: Cancel (ghost) | Save (navy).
+Zod: email uniqueness — error "Email already registered".
+
+━━━ /admin/doctors — DOCTORS ━━━
+Title: "Doctors" H1. "+ Add Doctor" (navy, opens modal).
+
+CARD GRID (3 columns → 2 → 1):
+Each card (white, 8px radius, shadow):
+  Header: 56px teal initials circle, Name H3 bold, "Doctor" role badge, specialization italic teal.
+  Body:
+    Degrees/Qualifications (text-secondary small)
+    PMC Reg. No. (DM Mono 11px)
+    Consultation Fee: "Rs. 800" (bold emerald)
+    Available Days: 7 small pill badges — teal bg/white if available, slate-100/slate-500 if not
+    Hours: "09:00 – 17:00"
+    Phone with Phone icon
+  Footer: "Edit" button (outline teal) | "Schedule" button (outline slate, non-functional placeholder).
+
+DUMMY DOCTORS (5 — from USERS in Prompt 01):
+  Sarah Khan: GP, MBBS FCPS Medicine, PMC-34521, Rs.800, Mon-Sat, 09:00-17:00, 0321-1234567
+  Imran Siddiqui: Cardiologist, MBBS FCPS Cardiology, PMC-28834, Rs.1500, Mon/Wed/Fri, 14:00-18:00, 0333-9876543
+  Nadia Rehman: Gynaecologist, MBBS FCPS Gynae, PMC-41122, Rs.1200, Tue/Thu/Sat, 10:00-14:00, 0311-5678901
+  Aamir Raza: Paediatrician, MBBS DCH, PMC-19833, Rs.700, Mon-Fri, 08:00-12:00, 0345-2345678
+  Ahmed Raza (Admin): General Medicine, MBBS, PMC-11234, Rs.1000, Mon-Sat, 09:00-18:00
+
+ADD/EDIT DOCTOR MODAL (two-column, large):
+  Full Name | Specialization | Degrees | PMC Reg. No. | Fee (Rs.) | Phone | Email (optional)
+  Available Days: 7 checkboxes | Hours From | To (time pickers) | Notes textarea.
+  Save | Cancel.
+
+━━━ /admin/master-data — MASTER DATA (5 TABS) ━━━
+
+TAB — Services Catalog:
+  "+ Add Service" button. Table: Code | Service Name | Category | Rate (Rs.) | Active | Actions.
+  Pre-populated with all 15 LAB_TESTS + extra services from billing (Dressing, IV Drip, etc.).
+  Category filter dropdown. Active column: direct toggle switch in table.
+  ADD/EDIT modal: Code, Service Name, Category select, Rate (Rs.), Active toggle.
+
+TAB — Panels & Insurance:
+  "+ Add Panel". Table: Panel Name | Type | Contact | Phone | Commission% | Active | Actions.
+  5 dummy panels: EFU Insurance (15%), State Life (12%), PTCL Panel (10%), Army Medical (0%), Govt Employee (0%).
+  ADD modal: Panel Name, Type (Insurance/Corporate/Government/Other), Contact, Phone, Commission%, Notes, Active toggle.
+
+TAB — Wards & Beds:
+  Ward cards grid (3 cols). Each card: Ward Name, Type badge, occupancy bar ("7/10 occupied").
+  Bar color: green if <60%, amber if <90%, red if >=90%.
+  Expand card → beds table: Bed No. | Status | Current Patient | Since.
+  Bed status: Available (emerald), Occupied (teal), Maintenance (amber).
+  Wards: General Ward M (10 beds, 7 occ), General Ward F (10 beds, 5 occ), Children Ward (6 beds, 2 occ), Private Rooms (5 beds, 3 occ), ICU (4 beds, 1 occ).
+  Per-bed status-change button.
+
+TAB — Expense Categories:
+  Inline-editable list: Utilities, Salaries, Supplies, Equipment, Rent, Maintenance, Lab Reagents, Miscellaneous.
+  Each row: name (click to edit inline) | edit pencil | delete (confirm).
+  "+ Add Category": text input at bottom + save button.
+
+TAB — Clinic Settings:
+  Single-column form, max-w-xl:
+    Clinic Name (English): "Citi Clinic"
+    Clinic Name (Urdu): "عيادة المدينة"
+    Address: "Scheme III, Bostan Khan Road, Rawalpindi, Pakistan"
+    Phone: "051-XXXXXXX" | Email: "info@citiclinic.pk"
+    Tagline: "Quality Healthcare, Compassionate Care"
+    Logo: file upload (show stethoscope icon placeholder, accept .png .jpg .svg)
+    Print Header textarea (pre-filled): "Citi Clinic | Scheme III, Rawalpindi | Ph: 051-XXXXXXX"
+    Currency Symbol: "Rs." (read-only, note "Contact support to change")
+    Default City: "Rawalpindi"
+    Timezone: "Asia/Karachi (PKT, UTC+5)"
+    Financial Year Start: select month (default July — Pakistan fiscal year)
+  "Save Settings" button → toast "Settings saved successfully".</pre>
+</div>
+</div>
+
+<div class="pc" id="p9">
+<div class="ph2">
+  <span class="pnum">09</span>
+  <div class="phr">
+    <div class="ptit">Reports — 7 Report Types with Charts, Date Filters &amp; Export</div>
+    <div class="pdesc">Reports hub with an inner sub-navigation, persistent date-range filter with quick-selects, and seven report types: Daily Summary, OPD Statistics, Revenue with aged receivables, Lab, Pharmacy, Expenses, and Patient Demographics. All charts via recharts. CSV export and print styles included.</div>
+    <div class="tags"><span class="tag tm">Reports</span><span class="tag tu">recharts</span><span class="tag tm">Print / CSV Export</span></div>
+  </div>
+</div>
+<div class="pbw">
+  <button class="cbtn" onclick="cp('c9')">Copy</button>
+  <pre class="pt2" id="c9">Build the Reports module at /reports.
+
+LAYOUT — inner sub-navigation + content:
+The /reports page has its own LEFT inner nav (200px fixed) listing 7 report names. Content area (flex-1) shows the active report. Default: Daily Summary.
+
+PERSISTENT TOP BAR (above everything in /reports):
+  Left: "Reports" label.
+  Date Range: quick-select tabs Today | Yesterday | This Week | This Month | Last Month | Custom.
+  Custom: show From + To date pickers when selected.
+  Right buttons: "Export CSV" (Download icon, outline) | "Print Report" (Printer icon, outline).
+All 7 reports filter dummy data by selected date range. Empty state: BarChart2 icon + "No data for selected period".
+
+━━━ REPORT 1 — DAILY SUMMARY ━━━
+KPI GRID 2×4 (compact stat tiles, no icons, just label + value + trend):
+Row 1: New Patients | OPD Encounters | IPD Admissions | Discharges
+Row 2: Consultation Revenue | Lab Revenue | Pharmacy Revenue | Total Revenue
+Rs. format for financial. Trend: green ↑ / red ↓ arrows.
+
+Doctor-wise OPD table: Doctor | Patients | Consultations (Rs.)
+  Dr. Sarah Khan · 14 · Rs. 11,200
+  Dr. Imran Siddiqui · 6 · Rs. 9,000
+  Dr. Nadia Rehman · 4 · Rs. 4,800
+  Total row (bold, border-top).
+
+Payment mode stacked bar (full width, 32px tall):
+  Cash 68% (teal) | Card 18% (navy) | Insurance 14% (slate). Legend below.
+
+━━━ REPORT 2 — OPD STATISTICS ━━━
+Daily patient count — BarChart: dates X-axis, count Y-axis, teal bars, rounded tops. Height 220. CartesianGrid. Tooltip "N patients".
+Top 10 Diagnoses table: Rank | Diagnosis | Count | % with inline progress bar.
+Doctor performance: Doctor | Patients | Avg Fee | Total.
+Returning vs New — PieChart donut: New (teal) | Returning (navy). Center label total. Legend.
+
+━━━ REPORT 3 — REVENUE ━━━
+Revenue trend — AreaChart multi-series:
+  Consultation (teal), Lab (emerald), Pharmacy (amber). Stacked areas, 0.3 opacity fill. Legend. Height 240. Tooltip Rs. format.
+
+Breakdown comparison table:
+  Category | This Period | Previous Period | Change%
+  Consultations Rs. 19,200 | Rs. 17,500 | +9.7% ↑ (green)
+  Lab Services  Rs. 14,600 | Rs. 13,200 | +10.6% ↑ (green)
+  Pharmacy      Rs. 8,400  | Rs. 9,100  | -7.7% ↓ (red)
+  Total row bold. Change column: green ↑ or red ↓. Tabular nums.
+
+Outstanding receivables section: "Unpaid & Partial Invoices" title + red badge total.
+Table: Patient | Invoice No. | Type | Amount | Paid | Balance | Days Overdue.
+Days Overdue color: 0–7 (slate), 8–30 (amber), 31+ (red).
+
+Aged receivables 4-cell bar:
+  0–30d Rs.8,500 | 31–60d Rs.3,200 | 61–90d Rs.1,100 | 90+d Rs.500.
+
+━━━ REPORT 4 — LAB REPORT ━━━
+Test volume by category — horizontal BarChart: category Y-axis, count X-axis, teal bars. Height 200.
+Top ordered tests table: Test Name | Count | Revenue.
+Turnaround time table: Test | Avg Hours | Target Hours | Status (On Time green / Delayed red).
+Pending >24h alert (red banner): list orders older than 24h still in Pending/Collected status.
+
+━━━ REPORT 5 — PHARMACY REPORT ━━━
+Top 10 dispensed medicines — horizontal BarChart: medicine Y-axis, qty X-axis, emerald bars.
+Summary table: Medicine | Dispensed Qty | Revenue (Rs.).
+Low stock table: Medicine | Current | Reorder Level | Shortfall (bold red if stock=0).
+Expiring soon table: Medicine | Batch | Expiry | Stock | Days Left (amber <30, red <14).
+
+━━━ REPORT 6 — EXPENSE REPORT ━━━
+By category — PieChart: 6 segments in teal-to-navy palette shades. Legend: category + amount + %. Height 240.
+Summary table: Category | Amount | % of Total. Total row.
+Daily trend — LineChart: daily expense sum, grey line, small dots.
+Full expense list: Date | Category | Description | Amount | Mode | Entered By. Paginated 10/page.
+
+━━━ REPORT 7 — PATIENT DEMOGRAPHICS ━━━
+Two-column:
+  Left: Gender donut (teal=Male, pink=Female, slate=Other). Center label "47 Patients". Legend.
+  Right: Age distribution BarChart 6 groups (0–12, 13–18, 19–30, 31–45, 46–60, 60+), navy bars.
+
+Panel vs Self-Pay donut: Self-Pay (teal) vs panel names. Legend with percentages.
+City/Area table: Area | Patients | % | inline bar.
+Monthly registrations — LineChart: last 6 months, teal line, area fill 20% opacity, dots on points.
+
+━━━ PRINT STYLES (@media print) ━━━
+Hide: sidebar, top-bar, inner nav, date filter bar, Export/Print buttons, any button element.
+Show: "Citi Clinic — عيادة المدينة" centered bold 18pt. Address 10pt. Horizontal rule.
+Show: selected report name + date range + "Generated: [datetime]".
+recharts SVG charts print without extra config.
+Page footer: "Confidential — Citi Clinic Management Information System  |  Page N of M". A4 format. 11pt body.
+
+━━━ CSV EXPORT ━━━
+buildCSV(headers: string[], rows: string[][]): creates Blob, triggers download.
+Filename: "[report-slug]-[from-date]-to-[to-date].csv" e.g. "revenue-report-2024-08-01-to-2024-08-27.csv"
+Exports the primary data table for each report. For chart-only reports: export the chart's underlying data array.
+Button calls this function with the current report's table data.</pre>
+</div>
+</div>
+
+</main>
+
+<script>
+function toggleTheme(){
+  var r=document.documentElement,c=r.getAttribute('data-theme');
+  r.setAttribute('data-theme',c==='dark'?'light':'dark');
+}
+function setA(el){
+  document.querySelectorAll('.sbi').forEach(function(i){i.classList.remove('active')});
+  el.classList.add('active');
+}
+function cp(id){
+  var el=document.getElementById(id);
+  if(!el)return;
+  var text=el.innerText||el.textContent;
+  navigator.clipboard.writeText(text).then(function(){
+    var btn=el.closest('.pbw').querySelector('.cbtn');
+    if(!btn)return;
+    var orig=btn.textContent;
+    btn.textContent='Copied!';
+    btn.classList.add('ok');
+    setTimeout(function(){btn.textContent=orig;btn.classList.remove('ok')},2000);
+  }).catch(function(){
+    var range=document.createRange();
+    range.selectNode(el);
+    window.getSelection().removeAllRanges();
+    window.getSelection().addRange(range);
+  });
+}
+(function(){
+  var cards=document.querySelectorAll('.pc');
+  var items=document.querySelectorAll('.sbi');
+  var obs=new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        var id=e.target.id;
+        items.forEach(function(item){
+          var h=item.getAttribute('href');
+          if(h==='#'+id){item.classList.add('active')}else{item.classList.remove('active')}
+        });
+      }
+    });
+  },{threshold:0.25,rootMargin:'-70px 0px -55% 0px'});
+  cards.forEach(function(c){obs.observe(c)});
+})();
+</script>

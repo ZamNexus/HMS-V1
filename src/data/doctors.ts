@@ -1,0 +1,73 @@
+import type { Doctor } from "@/types"
+
+export const DOCTORS: Doctor[] = [
+  {
+    userId: 2,
+    name: "Dr. Sarah Khan",
+    specialization: "General Physician",
+    qualifications: "MBBS, FCPS Medicine",
+    pmcRegNo: "PMC-34521",
+    fee: 800,
+    phone: "0321-1234567",
+    email: "doctor@citiclinic.pk",
+    availableDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    hoursFrom: "09:00",
+    hoursTo: "17:00",
+  },
+  {
+    userId: 3,
+    name: "Dr. Imran Siddiqui",
+    specialization: "Cardiologist",
+    qualifications: "MBBS, FCPS Cardiology",
+    pmcRegNo: "PMC-28834",
+    fee: 1500,
+    phone: "0333-9876543",
+    email: "doctor2@citiclinic.pk",
+    availableDays: ["Mon", "Wed", "Fri"],
+    hoursFrom: "14:00",
+    hoursTo: "18:00",
+  },
+  {
+    userId: 4,
+    name: "Dr. Nadia Rehman",
+    specialization: "Gynaecologist",
+    qualifications: "MBBS, FCPS Gynae",
+    pmcRegNo: "PMC-41122",
+    fee: 1200,
+    phone: "0311-5678901",
+    email: "doctor3@citiclinic.pk",
+    availableDays: ["Tue", "Thu", "Sat"],
+    hoursFrom: "10:00",
+    hoursTo: "14:00",
+  },
+  {
+    userId: 5,
+    name: "Dr. Aamir Raza",
+    specialization: "Paediatrician",
+    qualifications: "MBBS, DCH",
+    pmcRegNo: "PMC-19833",
+    fee: 700,
+    phone: "0345-2345678",
+    email: "doctor4@citiclinic.pk",
+    availableDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+    hoursFrom: "08:00",
+    hoursTo: "12:00",
+  },
+  {
+    userId: 1,
+    name: "Dr. Ahmed Raza",
+    specialization: "General Medicine",
+    qualifications: "MBBS",
+    pmcRegNo: "PMC-11234",
+    fee: 1000,
+    phone: "0300-1234567",
+    email: "admin@citiclinic.pk",
+    availableDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+    hoursFrom: "09:00",
+    hoursTo: "18:00",
+  },
+]
+
+export function getDoctorByUserId(userId: number): Doctor | undefined {
+  return DOCTORS.find((d) => d.userId === userId)
+}
