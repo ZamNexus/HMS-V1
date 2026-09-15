@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
-import { Printer, FlaskConical, ScanLine, Receipt, LogOut } from "lucide-react"
+import { Printer, FlaskConical, ScanLine, Receipt, Stethoscope, Pill, LogOut } from "lucide-react"
 
 import { getEncounter, encountersForPatient } from "@/data/encounters"
 import { getPatient } from "@/data/patients"
@@ -40,7 +40,9 @@ export function EncounterDetailPage() {
             <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print Slip</Button>
             <Button variant="outline" size="sm" asChild><Link to={`/lab/orders/new?encounterId=${encounter.id}&patientId=${encounter.patientId}`}><FlaskConical className="h-4 w-4" /> New Lab Order</Link></Button>
             <Button variant="outline" size="sm" asChild><Link to={`/imaging/orders/new?encounterId=${encounter.id}&patientId=${encounter.patientId}`}><ScanLine className="h-4 w-4" /> New Imaging Order</Link></Button>
-            <Button variant="outline" size="sm" asChild><Link to={`/billing/consultations/new?encounterId=${encounter.id}`}><Receipt className="h-4 w-4" /> New Invoice</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link to={`/pharmacy/dispense?encounterId=${encounter.id}&patientId=${encounter.patientId}`}><Pill className="h-4 w-4" /> Dispense Medicine</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link to={`/billing/consultations/new?encounterId=${encounter.id}`}><Stethoscope className="h-4 w-4" /> Consultation Invoice</Link></Button>
+            <Button variant="outline" size="sm" asChild><Link to={`/billing/services/new?encounterId=${encounter.id}`}><Receipt className="h-4 w-4" /> Services Invoice</Link></Button>
             {encounter.type === "IPD" && encounter.status === "open" && (
               <Button variant="outline" size="sm" asChild><Link to={`/encounters/${encounter.id}/discharge`}><LogOut className="h-4 w-4" /> Discharge</Link></Button>
             )}

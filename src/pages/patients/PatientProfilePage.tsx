@@ -1,6 +1,6 @@
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
-import { Pencil, FlaskConical, ScanLine, Printer, Plus } from "lucide-react"
+import { Pencil, FlaskConical, ScanLine, Pill, Printer, Plus } from "lucide-react"
 
 import { getPatient } from "@/data/patients"
 import { getPanel } from "@/data/organisations"
@@ -82,6 +82,9 @@ export function PatientProfilePage() {
             </Button>
             <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
               <Link to={`/imaging/orders/new?patientId=${patient.id}`}><ScanLine className="h-4 w-4" /> New Imaging Order</Link>
+            </Button>
+            <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
+              <Link to={`/pharmacy/dispense?patientId=${patient.id}`}><Pill className="h-4 w-4" /> Dispense Medicine</Link>
             </Button>
             <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" onClick={() => window.print()}>
               <Printer className="h-4 w-4" /> Print Card

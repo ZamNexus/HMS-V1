@@ -5,6 +5,7 @@ import { FileX } from "lucide-react"
 
 import { getEncounter, ENCOUNTERS } from "@/data/encounters"
 import { getPatient } from "@/data/patients"
+import { WARDS } from "@/data/wards"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { IcdLookup } from "@/components/shared/IcdLookup"
@@ -48,7 +49,18 @@ export function DischargeSummaryPage() {
         conditionOnDischarge: condition,
       }
     }
-    toast({ title: `${encounter.encId} discharged successfully` })
+
+    if (encounter.ward && encounter.bedNo) {
+      const w = WARDS.find((x) => x.name === encounter.ward)
+      const bed = w?.beds.find((b) => b.bedNo === encounter.bedNo)
+      if (bed) {
+        bed.status = "available"
+        bed.patientId = null
+        bed.since = null
+      }
+    }
+
+    toast({ title: `${encounter.encId} discharged successfully — bed ${encounter.bedNo ?? ""} is now available` })
     navigate(`/encounters/${encounter.id}`)
   }
 

@@ -5,8 +5,9 @@ import { Plus } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import {
-  CONSULTATION_INVOICES, SERVICES_INVOICES, PAYMENTS, RECEIPTS, EXPENSES, EXPENSE_CATEGORIES, bankRunningBalance,
+  CONSULTATION_INVOICES, SERVICES_INVOICES, PAYMENTS, RECEIPTS, EXPENSES, EXPENSE_CATEGORIES, BANK_TRANSACTIONS, bankRunningBalance,
 } from "@/data/billing"
+import { BANKS } from "@/data/settings"
 import { PATIENTS } from "@/data/patients"
 import { DOCTORS } from "@/data/doctors"
 import type { PaymentMode, ReceiptType } from "@/types"
@@ -53,6 +54,7 @@ export function BillingHubPage() {
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false)
   const [receiptModalOpen, setReceiptModalOpen] = React.useState(false)
   const [transferModalOpen, setTransferModalOpen] = React.useState(false)
+  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
 
   const consultTotal = CONSULTATION_INVOICES.reduce((s, c) => s + c.netTotal, 0)
   const servicesTotal = SERVICES_INVOICES.reduce((s, c) => s + c.netTotal, 0)
@@ -223,9 +225,9 @@ export function BillingHubPage() {
         </TabWrap>
       )}
 
-      <PaymentModal open={paymentModalOpen} onOpenChange={setPaymentModalOpen} onSaved={() => toast({ title: "Payment recorded" })} />
-      <ReceiptModal open={receiptModalOpen} onOpenChange={setReceiptModalOpen} onSaved={() => toast({ title: "Receipt recorded" })} />
-      <TransferModal open={transferModalOpen} onOpenChange={setTransferModalOpen} onSaved={() => toast({ title: "Bank transfer recorded" })} />
+      <PaymentModal open={paymentModalOpen} onOpenChange={setPaymentModalOpen} onSaved={() => { forceUpdate(); toast({ title: "Payment recorded" }) }} />
+      <ReceiptModal open={receiptModalOpen} onOpenChange={setReceiptModalOpen} onSaved={() => { forceUpdate(); toast({ title: "Receipt recorded" }) }} />
+      <TransferModal open={transferModalOpen} onOpenChange={setTransferModalOpen} onSaved={() => { forceUpdate(); toast({ title: "Bank transfer recorded" }) }} />
     </div>
   )
 }
@@ -240,6 +242,8 @@ function TabWrap({ children, actions }: { children: React.ReactNode; actions?: R
 }
 
 function ExpensesTab() {
+  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
+  const [modalOpen, setModalOpen] = React.useState(false)
   const chartData = EXPENSE_CATEGORIES.map((cat) => ({
     category: cat,
     amount: EXPENSES.filter((e) => e.category === cat).reduce((s, e) => s + e.amount, 0),
@@ -247,7 +251,9 @@ function ExpensesTab() {
   const total = EXPENSES.reduce((s, e) => s + e.amount, 0)
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[65%_1fr]">
+    <div>
+      <div className="mb-3 flex justify-end"><Button onClick={() => setModalOpen(true)}><Plus className="h-4 w-4" /> Add Expense</Button></div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[65%_1fr]">
       <div className="rounded-lg border border-border bg-card">
         <Table>
           <TableHeader><TableRow>
@@ -283,36 +289,119 @@ function ExpensesTab() {
           </ResponsiveContainer>
         </CardContent>
       </Card>
+      </div>
+      <ExpenseModal open={modalOpen} onOpenChange={setModalOpen} onSaved={forceUpdate} />
     </div>
   )
 }
 
+function ExpenseModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const { toast } = useToast()
+  const [category, setCategory] = React.useState(EXPENSE_CATEGORIES[0])
+  const [description, setDescription] = React.useState("")
+  const [amount, setAmount] = React.useState(0)
+  const [mode, setMode] = React.useState<"Cash" | "Bank">("Cash")
+  const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
+
+  React.useEffect(() => {
+    if (open) { setCategory(EXPENSE_CATEGORIES[0]); setDescription(""); setAmount(0); setMode("Cash"); setDate(new Date().toISOString().slice(0, 10)) }
+  }, [open])
+
+  const save = () => {
+    if (!description.trim() || amount <= 0) return
+    EXPENSES.push({
+      id: Math.max(0, ...EXPENSES.map((e) => e.id)) + 1,
+      date, category, description, amount, mode, enteredBy: "Ali Hassan",
+    })
+    toast({ title: `Expense of ${formatCurrency(amount)} recorded` })
+    onSaved()
+    onOpenChange(false)
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent size="sm">
+        <DialogHeader><DialogTitle>Add Expense</DialogTitle></DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5"><Label>Description *</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+            <div className="space-y-1.5">
+              <Label>Mode</Label>
+              <Select value={mode} onValueChange={(v) => setMode(v as "Cash" | "Bank")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="Cash">Cash</SelectItem><SelectItem value="Bank">Bank</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const [patientId, setPatientId] = React.useState<string>("")
+  const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
+  const [amount, setAmount] = React.useState(0)
+  const [mode, setMode] = React.useState<PaymentMode>("Cash")
+  const [against, setAgainst] = React.useState("")
+  const [referenceNo, setReferenceNo] = React.useState("")
+
+  React.useEffect(() => {
+    if (open) { setPatientId(""); setDate(new Date().toISOString().slice(0, 10)); setAmount(0); setMode("Cash"); setAgainst(""); setReferenceNo("") }
+  }, [open])
+
+  const save = () => {
+    if (!patientId || amount <= 0) return
+    PAYMENTS.unshift({
+      id: Math.max(0, ...PAYMENTS.map((p) => p.id)) + 1,
+      receiptNo: `PAY-2024-${String(PAYMENTS.length + 1).padStart(4, "0")}`,
+      patientId: Number(patientId), date, amount, mode,
+      against: against.trim() || "Advance", referenceNo: referenceNo.trim() || undefined,
+      receivedBy: "Ali Hassan",
+    })
+    onSaved()
+    onOpenChange(false)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="md">
         <DialogHeader><DialogTitle>Record Payment</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="space-y-1.5 md:col-span-2">
-            <Label>Patient</Label>
-            <Select><SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-              <SelectContent>{PATIENTS.slice(0, 10).map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+            <Label>Patient *</Label>
+            <Select value={patientId} onValueChange={setPatientId}><SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
+              <SelectContent>{PATIENTS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name} — {p.mrNo}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Payment Date</Label><Input type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
-          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" /></div>
+          <div className="space-y-1.5"><Label>Payment Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
           <div className="space-y-1.5">
             <Label>Mode</Label>
-            <Select defaultValue="Cash"><SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}><SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{(["Cash", "Card", "Bank Transfer", "Cheque"] as PaymentMode[]).map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Against</Label><Input placeholder="Advance or invoice no." /></div>
-          <div className="space-y-1.5"><Label>Reference No.</Label><Input /></div>
+          <div className="space-y-1.5"><Label>Against</Label><Input placeholder="Advance or invoice no." value={against} onChange={(e) => setAgainst(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Reference No.</Label><Input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onSaved(); onOpenChange(false) }}>Save &amp; Print Receipt</Button>
+          <Button onClick={save}>Save &amp; Print Receipt</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -320,29 +409,49 @@ function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const [patientId, setPatientId] = React.useState<string>("")
+  const [type, setType] = React.useState<ReceiptType>("Advance Deposit")
+  const [amount, setAmount] = React.useState(0)
+  const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
+
+  React.useEffect(() => {
+    if (open) { setPatientId(""); setType("Advance Deposit"); setAmount(0); setDate(new Date().toISOString().slice(0, 10)) }
+  }, [open])
+
+  const save = () => {
+    if (!patientId || amount <= 0) return
+    RECEIPTS.unshift({
+      id: Math.max(0, ...RECEIPTS.map((r) => r.id)) + 1,
+      receiptNo: `RCT-2024-${String(RECEIPTS.length + 1).padStart(4, "0")}`,
+      patientId: Number(patientId), type, amount, date, balanceRemaining: 0,
+    })
+    onSaved()
+    onOpenChange(false)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader><DialogTitle>New Receipt</DialogTitle></DialogHeader>
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Patient</Label>
-            <Select><SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
-              <SelectContent>{PATIENTS.slice(0, 10).map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}</SelectContent>
+            <Label>Patient *</Label>
+            <Select value={patientId} onValueChange={setPatientId}><SelectTrigger><SelectValue placeholder="Select patient" /></SelectTrigger>
+              <SelectContent>{PATIENTS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name} — {p.mrNo}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Type</Label>
-            <Select defaultValue="Advance Deposit"><SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={type} onValueChange={(v) => setType(v as ReceiptType)}><SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{(["Advance Deposit", "Refund", "Credit Note"] as ReceiptType[]).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Amount</Label><Input type="number" /></div>
-          <div className="space-y-1.5"><Label>Date</Label><Input type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onSaved(); onOpenChange(false) }}>Save</Button>
+          <Button onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -350,26 +459,55 @@ function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function TransferModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
+  const [type, setType] = React.useState<"Deposit" | "Withdrawal">("Deposit")
+  const [amount, setAmount] = React.useState(0)
+  const [description, setDescription] = React.useState("")
+  const [bank, setBank] = React.useState(BANKS[0]?.bankName ?? "")
+  const [reference, setReference] = React.useState("")
+
+  React.useEffect(() => {
+    if (open) { setDate(new Date().toISOString().slice(0, 10)); setType("Deposit"); setAmount(0); setDescription(""); setBank(BANKS[0]?.bankName ?? ""); setReference("") }
+  }, [open])
+
+  const save = () => {
+    if (!description.trim() || amount <= 0) return
+    BANK_TRANSACTIONS.push({
+      id: Math.max(0, ...BANK_TRANSACTIONS.map((b) => b.id)) + 1,
+      date, description: `${description} — ${bank}`,
+      debit: type === "Withdrawal" ? amount : 0,
+      credit: type === "Deposit" ? amount : 0,
+      bank, referenceNo: reference.trim() || undefined,
+    })
+    onSaved()
+    onOpenChange(false)
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="sm">
         <DialogHeader><DialogTitle>Record Transfer</DialogTitle></DialogHeader>
         <div className="space-y-4">
-          <div className="space-y-1.5"><Label>Date</Label><Input type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+          <div className="space-y-1.5"><Label>Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label>Type</Label>
-            <Select defaultValue="Deposit"><SelectTrigger><SelectValue /></SelectTrigger>
+            <Select value={type} onValueChange={(v) => setType(v as "Deposit" | "Withdrawal")}><SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="Deposit">Deposit</SelectItem><SelectItem value="Withdrawal">Withdrawal</SelectItem></SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Amount</Label><Input type="number" /></div>
-          <div className="space-y-1.5"><Label>Description</Label><Input /></div>
-          <div className="space-y-1.5"><Label>Bank</Label><Input defaultValue="Habib Bank Ltd" /></div>
-          <div className="space-y-1.5"><Label>Reference</Label><Input /></div>
+          <div className="space-y-1.5"><Label>Amount *</Label><Input type="number" value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Description *</Label><Input value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="space-y-1.5">
+            <Label>Bank</Label>
+            <Select value={bank} onValueChange={setBank}><SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{BANKS.filter((b) => b.active).map((b) => <SelectItem key={b.id} value={b.bankName}>{b.bankName} — {b.accountNo}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5"><Label>Reference</Label><Input value={reference} onChange={(e) => setReference(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onSaved(); onOpenChange(false) }}>Save</Button>
+          <Button onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

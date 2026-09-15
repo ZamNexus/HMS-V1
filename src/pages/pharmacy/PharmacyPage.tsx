@@ -1,12 +1,12 @@
 import * as React from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
 import { AlertTriangle, Pill, Plus, Printer } from "lucide-react"
 
 import { MEDICINES, MEDICINE_CATEGORIES } from "@/data/medicines"
 import { DISPENSE_RECORDS, nextDispenseNo } from "@/data/pharmacy"
 import { ENCOUNTERS } from "@/data/encounters"
-import { PATIENTS } from "@/data/patients"
+import { PATIENTS, getPatient } from "@/data/patients"
 import type { DispenseLine, DispenseRecord, Medicine, Patient } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
 import { PatientPicker } from "@/components/shared/PatientPicker"
@@ -281,7 +281,11 @@ function emptyRow(): { medicineId: number | null; qty: number; instructions: str
 
 function DispenseTab() {
   const { toast } = useToast()
-  const [patient, setPatient] = React.useState<Patient | null>(null)
+  const [params] = useSearchParams()
+  const [patient, setPatient] = React.useState<Patient | null>(() => {
+    const pid = params.get("patientId")
+    return pid ? getPatient(Number(pid)) ?? null : null
+  })
   const [linkedEncounterId, setLinkedEncounterId] = React.useState<string>("manual")
   const [rows, setRows] = React.useState([emptyRow()])
   const [discountPct, setDiscountPct] = React.useState(0)
@@ -301,6 +305,12 @@ function DispenseTab() {
     })
     setRows(newRows.length > 0 ? newRows : [emptyRow()])
   }
+
+  React.useEffect(() => {
+    const encId = params.get("encounterId")
+    if (encId && patient) linkEncounter(encId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [patient])
 
   const lines: DispenseLine[] = rows
     .filter((r) => r.medicineId !== null)

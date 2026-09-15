@@ -120,6 +120,17 @@ export function EncounterFormPage() {
       status: "open",
     }
     ENCOUNTERS.push(record)
+
+    if (type === "IPD" && ward && bedNo) {
+      const w = WARDS.find((x) => x.name === ward)
+      const bed = w?.beds.find((b) => b.bedNo === bedNo)
+      if (bed) {
+        bed.status = "occupied"
+        bed.patientId = patient.id
+        bed.since = new Date().toISOString().slice(0, 10)
+      }
+    }
+
     toast({ title: `Encounter ${encId} saved` })
     navigate(`/encounters/${record.id}`)
   }
@@ -181,7 +192,7 @@ export function EncounterFormPage() {
               <div className="grid grid-cols-1 gap-4 rounded-md border border-border bg-muted/30 p-4 md:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label>Ward</Label>
-                  <Select value={ward} onValueChange={setWard}>
+                  <Select value={ward} onValueChange={(v) => { setWard(v); setBedNo("") }}>
                     <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
                     <SelectContent>
                       {WARDS.map((w) => <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>)}
@@ -190,7 +201,17 @@ export function EncounterFormPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Bed No.</Label>
-                  <Input value={bedNo} onChange={(e) => setBedNo(e.target.value)} placeholder="e.g. GWM-03" />
+                  <Select value={bedNo} onValueChange={setBedNo} disabled={!ward}>
+                    <SelectTrigger><SelectValue placeholder={ward ? "Select an available bed" : "Select ward first"} /></SelectTrigger>
+                    <SelectContent>
+                      {WARDS.find((w) => w.name === ward)?.beds.filter((b) => b.status === "available").map((b) => (
+                        <SelectItem key={b.bedNo} value={b.bedNo}>{b.bedNo}</SelectItem>
+                      ))}
+                      {ward && WARDS.find((w) => w.name === ward)?.beds.every((b) => b.status !== "available") && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No available beds in this ward</div>
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Admission Type</Label>

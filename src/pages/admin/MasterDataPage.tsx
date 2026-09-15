@@ -5,12 +5,13 @@ import { SERVICE_CATALOG } from "@/data/services"
 import { PANELS } from "@/data/organisations"
 import { WARDS } from "@/data/wards"
 import { EXPENSE_CATEGORIES } from "@/data/billing"
-import { CLINIC_SETTINGS } from "@/data/settings"
+import { CLINIC_SETTINGS, BANKS } from "@/data/settings"
 import { GUARDIAN_RELATIONS } from "@/data/guardianRelations"
 import { ECG_ULTRASOUND_TESTS } from "@/data/ecgUltrasound"
 import { DISEASES } from "@/data/diseases"
+import { LAB_TESTS, LAB_TEST_CATEGORIES } from "@/data/labTests"
 import type {
-  PanelType, ServiceCatalogItem, Panel, GuardianRelationItem, EcgUltrasoundTest, Disease,
+  PanelType, ServiceCatalogItem, Panel, GuardianRelationItem, EcgUltrasoundTest, Disease, LabTest, BankAccount,
 } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
 import { PageHeader } from "@/components/shared/PageHeader"
@@ -37,21 +38,25 @@ export function MasterDataPage() {
       <Tabs defaultValue="services">
         <TabsList>
           <TabsTrigger value="services">Services Catalog</TabsTrigger>
+          <TabsTrigger value="labtests">Lab &amp; Imaging Tests</TabsTrigger>
           <TabsTrigger value="panels">Panels &amp; Insurance</TabsTrigger>
           <TabsTrigger value="wards">Wards &amp; Beds</TabsTrigger>
           <TabsTrigger value="guardian">Guardian Relations</TabsTrigger>
           <TabsTrigger value="ecg">ECG/Ultrasound</TabsTrigger>
           <TabsTrigger value="diseases">Diseases/Diagnosis</TabsTrigger>
           <TabsTrigger value="expenses">Expense Categories</TabsTrigger>
+          <TabsTrigger value="banks">Banks</TabsTrigger>
           <TabsTrigger value="clinic">Clinic Settings</TabsTrigger>
         </TabsList>
         <TabsContent value="services"><ServicesTab /></TabsContent>
+        <TabsContent value="labtests"><LabTestsTab /></TabsContent>
         <TabsContent value="panels"><PanelsTab /></TabsContent>
         <TabsContent value="wards"><WardsTab /></TabsContent>
         <TabsContent value="guardian"><GuardianRelationsTab /></TabsContent>
         <TabsContent value="ecg"><EcgUltrasoundTab /></TabsContent>
         <TabsContent value="diseases"><DiseasesTab /></TabsContent>
         <TabsContent value="expenses"><ExpenseCategoriesTab /></TabsContent>
+        <TabsContent value="banks"><BanksTab /></TabsContent>
         <TabsContent value="clinic"><ClinicSettingsTab /></TabsContent>
       </Tabs>
     </div>
@@ -143,6 +148,185 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
             </Select>
           </div>
           <div className="space-y-1.5"><Label>Rate (Rs.)</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function LabTestsTab() {
+  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
+  const [categoryFilter, setCategoryFilter] = React.useState("All")
+  const [modalTarget, setModalTarget] = React.useState<LabTest | "new" | null>(null)
+
+  const rows = categoryFilter === "All" ? LAB_TESTS : LAB_TESTS.filter((t) => t.category === categoryFilter)
+
+  return (
+    <div>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module —
+        edit a test's fee once and it updates both Laboratory and Imaging order forms.
+      </p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Categories</SelectItem>
+            {LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Test</Button>
+      </div>
+      <div className="rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>Code</TableHead><TableHead>Test Name</TableHead><TableHead>Category</TableHead>
+            <TableHead>Fee</TableHead><TableHead>Turnaround</TableHead><TableHead className="text-right">Actions</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {rows.map((t) => (
+              <TableRow key={t.id}>
+                <TableCell className="font-mono text-secondary">{t.code}</TableCell>
+                <TableCell className="font-medium">{t.name}</TableCell>
+                <TableCell><StatusBadge status={t.category} /></TableCell>
+                <TableCell>{formatCurrency(t.rate)}</TableCell>
+                <TableCell className="text-muted-foreground">{t.turnaroundHours}h</TableCell>
+                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <LabTestModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+    </div>
+  )
+}
+
+function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onClose: () => void }) {
+  const { toast } = useToast()
+  const isNew = target === "new"
+  const item = isNew ? null : target
+  const [code, setCode] = React.useState(item?.code ?? "")
+  const [name, setName] = React.useState(item?.name ?? "")
+  const [category, setCategory] = React.useState(item?.category ?? LAB_TEST_CATEGORIES[0])
+  const [rate, setRate] = React.useState(item?.rate ?? 0)
+  const [turnaroundHours, setTurnaroundHours] = React.useState(item?.turnaroundHours ?? 4)
+
+  React.useEffect(() => {
+    setCode(item?.code ?? ""); setName(item?.name ?? ""); setCategory(item?.category ?? LAB_TEST_CATEGORIES[0]);
+    setRate(item?.rate ?? 0); setTurnaroundHours(item?.turnaroundHours ?? 4)
+  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = () => {
+    if (!name.trim() || !code.trim()) return
+    if (isNew) {
+      LAB_TESTS.push({ id: Math.max(0, ...LAB_TESTS.map((t) => t.id)) + 1, code, name, category, rate, unit: "-", normalRange: "-", turnaroundHours })
+      toast({ title: `${name} added to catalogue` })
+    } else if (item) {
+      const idx = LAB_TESTS.findIndex((t) => t.id === item.id)
+      if (idx >= 0) LAB_TESTS[idx] = { ...LAB_TESTS[idx], code, name, category, rate, turnaroundHours }
+      toast({ title: `${name} updated` })
+    }
+    onClose()
+  }
+
+  return (
+    <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent size="md">
+        <DialogHeader><DialogTitle>{isNew ? "Add Lab/Imaging Test" : "Edit Test"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label>Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as LabTest["category"])}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2"><Label>Test Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Fee (Rs.)</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Turnaround (hours)</Label><Input type="number" value={turnaroundHours} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function BanksTab() {
+  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
+  const [modalTarget, setModalTarget] = React.useState<BankAccount | "new" | null>(null)
+
+  return (
+    <div>
+      <div className="mb-3 flex justify-end"><Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Bank Account</Button></div>
+      <div className="rounded-lg border border-border bg-card">
+        <Table>
+          <TableHeader><TableRow>
+            <TableHead>Bank</TableHead><TableHead>Account Title</TableHead><TableHead>Account No.</TableHead>
+            <TableHead>Branch</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
+          </TableRow></TableHeader>
+          <TableBody>
+            {BANKS.map((b) => (
+              <TableRow key={b.id}>
+                <TableCell className="font-medium">{b.bankName}</TableCell>
+                <TableCell>{b.accountTitle}</TableCell>
+                <TableCell className="font-mono text-xs">{b.accountNo}</TableCell>
+                <TableCell className="text-muted-foreground">{b.branch}</TableCell>
+                <TableCell><Switch checked={b.active} onCheckedChange={(v) => { b.active = v; forceUpdate() }} /></TableCell>
+                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+      <BankModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+    </div>
+  )
+}
+
+function BankModal({ target, onClose }: { target: BankAccount | "new" | null; onClose: () => void }) {
+  const { toast } = useToast()
+  const isNew = target === "new"
+  const item = isNew ? null : target
+  const [bankName, setBankName] = React.useState(item?.bankName ?? "")
+  const [accountTitle, setAccountTitle] = React.useState(item?.accountTitle ?? "")
+  const [accountNo, setAccountNo] = React.useState(item?.accountNo ?? "")
+  const [branch, setBranch] = React.useState(item?.branch ?? "")
+
+  React.useEffect(() => {
+    setBankName(item?.bankName ?? ""); setAccountTitle(item?.accountTitle ?? ""); setAccountNo(item?.accountNo ?? ""); setBranch(item?.branch ?? "")
+  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const save = () => {
+    if (!bankName.trim() || !accountNo.trim()) return
+    if (isNew) {
+      BANKS.push({ id: Math.max(0, ...BANKS.map((b) => b.id)) + 1, bankName, accountTitle, accountNo, branch, active: true })
+      toast({ title: `${bankName} added` })
+    } else if (item) {
+      const idx = BANKS.findIndex((b) => b.id === item.id)
+      if (idx >= 0) BANKS[idx] = { ...BANKS[idx], bankName, accountTitle, accountNo, branch }
+      toast({ title: `${bankName} updated` })
+    }
+    onClose()
+  }
+
+  return (
+    <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent size="md">
+        <DialogHeader><DialogTitle>{isNew ? "Add Bank Account" : "Edit Bank Account"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label>Bank Name</Label><Input value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Account Title</Label><Input value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Account No.</Label><Input value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Branch</Label><Input value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

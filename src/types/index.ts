@@ -429,6 +429,15 @@ export interface Disease {
   category: string
 }
 
+export interface BankAccount {
+  id: number
+  bankName: string
+  accountTitle: string
+  accountNo: string
+  branch: string
+  active: boolean
+}
+
 export interface AuditLogEntry {
   id: number
   user: string

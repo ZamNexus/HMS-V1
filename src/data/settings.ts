@@ -1,4 +1,10 @@
-import type { ClinicSettings, AuditLogEntry } from "@/types"
+import type { ClinicSettings, AuditLogEntry, BankAccount } from "@/types"
+
+export const BANKS: BankAccount[] = [
+  { id: 1, bankName: "Habib Bank Ltd", accountTitle: "Citi Clinic — Operating", accountNo: "0123-4567890-01", branch: "Bostan Khan Road, Rawalpindi", active: true },
+  { id: 2, bankName: "Meezan Bank", accountTitle: "Citi Clinic — Reserve", accountNo: "9988-7766554-02", branch: "Commercial Market, Rawalpindi", active: true },
+  { id: 3, bankName: "United Bank Ltd", accountTitle: "Citi Clinic — Payroll", accountNo: "5544-3322110-03", branch: "Saddar, Rawalpindi", active: false },
+]
 
 export const CLINIC_SETTINGS: ClinicSettings = {
   nameEn: "Citi Clinic",

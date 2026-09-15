@@ -1,10 +1,12 @@
 import * as React from "react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { Plus, Trash2 } from "lucide-react"
 
 import { SERVICES_INVOICES } from "@/data/billing"
 import { SERVICE_CATALOG } from "@/data/services"
 import { DOCTORS } from "@/data/doctors"
+import { ENCOUNTERS } from "@/data/encounters"
+import { getPatient } from "@/data/patients"
 import type { LineItem, Patient, PaymentMode, ServicesInvoice } from "@/types"
 import { formatCurrency } from "@/lib/utils"
 import { PatientPicker } from "@/components/shared/PatientPicker"
@@ -23,10 +25,16 @@ const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Cheque", "Insura
 export function ServicesInvoiceFormPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
+  const [params] = useSearchParams()
+  const encounterId = params.get("encounterId")
+  const linkedEncounter = encounterId ? ENCOUNTERS.find((e) => e.id === Number(encounterId)) : undefined
 
-  const [patient, setPatient] = React.useState<Patient | null>(null)
-  const [doctorId, setDoctorId] = React.useState<string>("none")
-  const [vitals, setVitals] = React.useState({ bp: "", sugar: "", weight: "", temperature: "" })
+  const [patient, setPatient] = React.useState<Patient | null>(linkedEncounter ? getPatient(linkedEncounter.patientId) ?? null : null)
+  const [doctorId, setDoctorId] = React.useState<string>(linkedEncounter ? String(linkedEncounter.doctorId) : "none")
+  const [vitals, setVitals] = React.useState({
+    bp: linkedEncounter?.vitals.bp ?? "", sugar: linkedEncounter?.vitals.rbs ?? "",
+    weight: linkedEncounter?.vitals.weight ?? "", temperature: linkedEncounter?.vitals.temp ?? "",
+  })
   const [lines, setLines] = React.useState<LineItem[]>([])
   const [pendingService, setPendingService] = React.useState<string>("")
   const [discountType, setDiscountType] = React.useState<"flat" | "percent">("flat")
@@ -63,7 +71,7 @@ export function ServicesInvoiceFormPage() {
     const record: ServicesInvoice = {
       id: Math.max(0, ...SERVICES_INVOICES.map((s) => s.id)) + 1,
       invoiceNo,
-      encounterId: null,
+      encounterId: linkedEncounter?.id ?? null,
       patientId: patient.id,
       doctorId: doctorId !== "none" ? Number(doctorId) : null,
       date: new Date().toISOString(),
