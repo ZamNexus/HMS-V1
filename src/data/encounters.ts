@@ -244,3 +244,10 @@ export function nextEncounterId(type: "OPD" | "IPD"): string {
   }, 0)
   return `${type}-2024-${String(max + 1).padStart(4, "0")}`
 }
+
+/** Next queue token for today — desktop's "Token No" is a daily walk-in queue number, distinct from the OPD/IPD No. */
+export function nextTokenNo(): number {
+  const today = new Date().toDateString()
+  const todays = ENCOUNTERS.filter((e) => new Date(e.date).toDateString() === today)
+  return todays.length > 0 ? Math.max(...todays.map((e) => e.tokenNo ?? 0)) + 1 : 1
+}

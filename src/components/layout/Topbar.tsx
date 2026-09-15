@@ -1,6 +1,6 @@
 import * as React from "react"
 import { useLocation, useNavigate } from "react-router-dom"
-import { Bell, LogOut, Search, User as UserIcon, KeyRound } from "lucide-react"
+import { Bell, LogOut, Menu, Search, User as UserIcon, KeyRound } from "lucide-react"
 import { format } from "date-fns"
 
 import { useAuth } from "@/lib/auth"
@@ -84,7 +84,7 @@ function useNotifications() {
   }, [])
 }
 
-export function Topbar() {
+export function Topbar({ onMenuClick }: { onMenuClick?: () => void } = {}) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -121,8 +121,12 @@ export function Topbar() {
   }
 
   return (
-    <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-4 border-b border-border bg-white px-6">
-      <nav className="flex min-w-0 items-center gap-1 text-[13px] text-muted-foreground">
+    <header className="sticky top-0 z-20 grid h-16 grid-cols-[minmax(0,auto)_1fr_auto] items-center gap-2 border-b border-border bg-white px-4 sm:gap-4 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <button onClick={onMenuClick} className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted lg:hidden" aria-label="Open menu">
+          <Menu className="h-5 w-5" />
+        </button>
+        <nav className="flex min-w-0 items-center gap-1 overflow-hidden text-sm text-muted-foreground">
         {crumbs.length === 0 ? (
           <span>Dashboard</span>
         ) : (
@@ -139,9 +143,10 @@ export function Topbar() {
             </span>
           ))
         )}
-      </nav>
+        </nav>
+      </div>
 
-      <div ref={searchRef} className="relative w-full max-w-sm">
+      <div ref={searchRef} className="relative mx-auto w-full max-w-sm">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
           value={query}
@@ -161,7 +166,7 @@ export function Topbar() {
                   onClick={() => goToPatient(p.id)}
                   className="flex w-full items-center gap-2.5 rounded-md p-2 text-left transition-colors hover:bg-accent-50"
                 >
-                  <Avatar className="h-7 w-7"><AvatarFallback className="bg-navy-100 text-[11px] text-navy-700">{initials(p.name)}</AvatarFallback></Avatar>
+                  <Avatar className="h-7 w-7"><AvatarFallback className="bg-navy-100 text-xs text-navy-700">{initials(p.name)}</AvatarFallback></Avatar>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-foreground">{p.name}</div>
                     <div className="text-xs text-muted-foreground"><span className="font-mono text-secondary">{p.mrNo}</span> · {p.phone}</div>
@@ -208,8 +213,8 @@ export function Topbar() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 rounded-md p-1 pr-2 transition-colors hover:bg-muted">
-              <Avatar className="h-7 w-7"><AvatarFallback className="bg-navy-700 text-[11px] text-white">{initials(user?.name ?? "")}</AvatarFallback></Avatar>
-              <span className="text-sm font-medium text-foreground">{firstName(user?.name)}</span>
+              <Avatar className="h-7 w-7"><AvatarFallback className="bg-navy-700 text-xs text-white">{initials(user?.name ?? "")}</AvatarFallback></Avatar>
+              <span className="hidden text-sm font-medium text-foreground sm:inline">{firstName(user?.name)}</span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">

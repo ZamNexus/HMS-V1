@@ -5,7 +5,7 @@ import { Printer, FlaskConical, ScanLine, Receipt, Stethoscope, Pill, LogOut } f
 import { getEncounter, encountersForPatient } from "@/data/encounters"
 import { getPatient } from "@/data/patients"
 import { DOCTORS } from "@/data/doctors"
-import { formatCurrency } from "@/lib/utils"
+import { cn, formatCurrency } from "@/lib/utils"
 import { encounterBillBreakdown } from "@/lib/billingAggregate"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -50,6 +50,17 @@ export function EncounterDetailPage() {
         }
       />
 
+      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+        <BillStat label="Consultation" value={bill.consultation} />
+        <BillStat label="Services" value={bill.services} />
+        <BillStat label="Laboratory" value={bill.lab} />
+        <BillStat label="Imaging (X-Ray/ECG/USG)" value={bill.imaging} />
+        <BillStat label="Medicines" value={bill.medicine} />
+        <BillStat label="Total Bill" value={bill.total} emphasize />
+        <BillStat label="Received" value={bill.received} tone="success" />
+        <BillStat label="Balance" value={bill.balance} tone={bill.balance > 0 ? "danger" : "success"} emphasize />
+      </div>
+
       <Tabs defaultValue="clinical">
         <TabsList>
           <TabsTrigger value="clinical">Clinical Notes</TabsTrigger>
@@ -68,11 +79,14 @@ export function EncounterDetailPage() {
             ))}
           </div>
           <Card><CardContent className="space-y-3 p-5 text-sm">
+            {encounter.tokenNo != null && <Section label="Token No" value={String(encounter.tokenNo)} />}
             <Section label="Chief Complaint" value={encounter.chiefComplaint} />
             <Section label="History" value={encounter.history} />
             <Section label="On Examination" value={encounter.onExamination} />
             <Section label="Diagnosis" value={encounter.diagnosis} />
             <Section label="Clinical Notes" value={encounter.clinicalNotes} />
+            <Section label="Advised By" value={encounter.advisedBy} />
+            <Section label="Referred By" value={encounter.referredBy} />
           </CardContent></Card>
         </TabsContent>
 
@@ -158,6 +172,17 @@ function Section({ label, value }: { label: string; value?: string }) {
     <div>
       <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
       <p className="mt-0.5 text-foreground">{value}</p>
+    </div>
+  )
+}
+
+/** Condensed always-visible bill strip — mirrors the desktop OPD/IPD screen's "Patient Bill Details" panel so the running total and balance are visible without switching tabs. */
+function BillStat({ label, value, tone, emphasize }: { label: string; value: number; tone?: "success" | "danger"; emphasize?: boolean }) {
+  const toneClass = tone === "success" ? "text-success-600" : tone === "danger" ? "text-danger-600" : "text-foreground"
+  return (
+    <div className="rounded-md border border-border bg-muted/30 p-3">
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={cn("mt-0.5 font-mono", emphasize ? "text-base font-bold" : "text-sm font-medium", toneClass)}>{formatCurrency(value)}</div>
     </div>
   )
 }

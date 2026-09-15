@@ -3,7 +3,7 @@ import { format } from "date-fns"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import { ENCOUNTERS } from "@/data/encounters"
-import { SERVICES_INVOICES, PAYMENTS, RECEIPTS, EXPENSES, bankRunningBalance } from "@/data/billing"
+import { SERVICES_INVOICES, PAYMENTS, RECEIPTS, EXPENSES, BANK_TRANSACTIONS, bankRunningBalance } from "@/data/billing"
 import { LAB_ORDERS } from "@/data/lab"
 import { IMAGING_ORDERS } from "@/data/imaging"
 import { DISPENSE_RECORDS } from "@/data/pharmacy"
@@ -74,10 +74,19 @@ export function DashboardStatsPage() {
   const bankRows = bankRunningBalance()
   const bankTotal = { value: bankRows.reduce((s, b) => s + b.transaction.credit - b.transaction.debit, 0), count: bankRows.length }
 
-  const opening = 45000
-  const cashIn = totalSales.cash + receiptsTotal.value
-  const cashOut = expensesTotal.value + paymentsTotal.value
-  const closing = opening + cashIn - cashOut
+  // Cash Flow only counts money that actually moved through the drawer — cash-mode sales/expenses/payments,
+  // plus cash physically moved to/from the bank — not card, cheque or bank-transfer settled amounts.
+  const cashSales = totalSales.cash
+  const cashReceipts = receiptsTotal.value
+  const cashDrawnFromBank = BANK_TRANSACTIONS.filter((t) => t.cashMovement === "withdrawal").reduce((s, t) => s + t.debit, 0)
+  const cashExpenses = EXPENSES.filter((e) => e.mode === "Cash").reduce((s, e) => s + e.amount, 0)
+  const cashPayments = PAYMENTS.filter((p) => p.mode === "Cash").reduce((s, p) => s + p.amount, 0)
+  const cashDepositInBank = BANK_TRANSACTIONS.filter((t) => t.cashMovement === "deposit").reduce((s, t) => s + t.credit, 0)
+
+  const CASH_DRAWER_OPENING = 5000 // petty-cash float carried in the drawer at start of day
+  const cashIn = cashSales + cashReceipts + cashDrawnFromBank
+  const cashOut = cashExpenses + cashPayments + cashDepositInBank
+  const closing = CASH_DRAWER_OPENING + cashIn - cashOut
 
   const dailyRevenue = React.useMemo(() => {
     const map = new Map<string, number>()
@@ -171,11 +180,29 @@ export function DashboardStatsPage() {
           <Card>
             <CardContent className="p-5">
               <h3 className="mb-3 text-sm font-semibold">Cash Flow</h3>
-              <div className="grid grid-cols-2 gap-4 text-center sm:grid-cols-4">
-                <div><div className="text-xs text-muted-foreground">Opening</div><div className="text-lg font-bold">{formatCurrency(opening)}</div></div>
-                <div><div className="text-xs text-muted-foreground">Cash-In</div><div className="text-lg font-bold text-success-600">{formatCurrency(cashIn)}</div></div>
-                <div><div className="text-xs text-muted-foreground">Cash-Out</div><div className="text-lg font-bold text-danger-600">{formatCurrency(cashOut)}</div></div>
+              <div className="mb-4 grid grid-cols-2 gap-4 text-center sm:grid-cols-2">
+                <div><div className="text-xs text-muted-foreground">Opening</div><div className="text-lg font-bold">{formatCurrency(CASH_DRAWER_OPENING)}</div></div>
                 <div><div className="text-xs text-muted-foreground">Closing</div><div className="text-lg font-bold">{formatCurrency(closing)}</div></div>
+              </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <div className="mb-1.5 rounded-t-md bg-muted px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cash-In</div>
+                  <div className="space-y-1 px-1 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Sale</span><span>{formatCurrency(cashSales)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Receipts</span><span>{formatCurrency(cashReceipts)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Drawn From Bank</span><span>{formatCurrency(cashDrawnFromBank)}</span></div>
+                    <div className="flex justify-between border-t border-border pt-1 font-semibold"><span>Total Cash In</span><span className="text-success-600">{formatCurrency(cashIn)}</span></div>
+                  </div>
+                </div>
+                <div>
+                  <div className="mb-1.5 rounded-t-md bg-muted px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cash-Out</div>
+                  <div className="space-y-1 px-1 text-sm">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Expenses</span><span>{formatCurrency(cashExpenses)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Payments</span><span>{formatCurrency(cashPayments)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Deposit In Bank</span><span>{formatCurrency(cashDepositInBank)}</span></div>
+                    <div className="flex justify-between border-t border-border pt-1 font-semibold"><span>Total Cash Out</span><span className="text-danger-600">{formatCurrency(cashOut)}</span></div>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

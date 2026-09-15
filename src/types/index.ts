@@ -31,9 +31,15 @@ export interface Doctor {
   specialization: string
   qualifications: string
   pmcRegNo: string
+  sharePct?: number
   fee: number
   phone: string
   email?: string
+  cnic?: string
+  city?: string
+  address?: string
+  country?: string
+  active?: boolean
   availableDays: string[]
   hoursFrom: string
   hoursTo: string
@@ -50,6 +56,8 @@ export type BloodGroup = "A+" | "A-" | "B+" | "B-" | "O+" | "O-" | "AB+" | "AB-"
 export interface Patient {
   id: number
   mrNo: string
+  medicalRecordNo?: string
+  ssEmpNo?: string
   name: string
   fatherName: string
   dob: string
@@ -57,12 +65,15 @@ export interface Patient {
   gender: Gender
   phone: string
   emergencyContact?: string
+  email?: string
   address: string
   area?: string
   city: string
+  country?: string
   bloodGroup: BloodGroup
   cnic: string
   guardianRelation: string
+  guardianName?: string
   panelId: number | null
   referredBy?: string
   remarks?: string
@@ -146,6 +157,8 @@ export interface Encounter {
   onExamination?: string
   diagnosis: string
   clinicalNotes?: string
+  advisedBy?: string
+  referredBy?: string
   vitals: Vitals
   prescription: PrescriptionItem[]
   generalInstructions?: string
@@ -189,6 +202,8 @@ export interface DispenseLine {
   prescribedQty: number
   dispensedQty: number
   unitRate: number
+  discountPct?: number
+  includedInPackage?: boolean
   total: number
   instructions?: string
 }
@@ -198,10 +213,12 @@ export interface DispenseRecord {
   disNo: string
   patientId: number
   encounterId: number | null
+  doctorId?: number
   date: string
   lines: DispenseLine[]
   subtotal: number
   discountPct: number
+  gstPct?: number
   netPayable: number
   paymentMode: PaymentMode
   dispensedBy: string
@@ -254,6 +271,7 @@ export interface LabOrderTest {
   charges: number
   discountPct: number
   gstPct: number
+  includedInPackage?: boolean
   results?: LabResultParam[]
   narrativeResult?: string
   remarks?: string
@@ -275,6 +293,7 @@ export interface LabOrder {
   discount: number
   total: number
   paymentStatus: PaymentStatus
+  paymentMode: PaymentMode
   status: LabOrderStatus
   pathologistRemarks?: string
   performedBy?: string
@@ -316,12 +335,15 @@ export interface ConsultationInvoice {
   doctorId: number
   date: string
   fee: number
+  includedInPackage?: boolean
   additionalCharges?: { description: string; amount: number }[]
   subtotal: number
   discountType: "flat" | "percent"
   discount: number
+  gstPct?: number
   netTotal: number
   paymentMode: PaymentMode
+  creditCardAmount?: number
   amountReceived: number
   balance: number
   referenceNo?: string
@@ -393,6 +415,9 @@ export interface BankTransaction {
   credit: number
   bank: string
   referenceNo?: string
+  /** Marks a transaction that moves physical cash between the drawer and the bank (as opposed to a
+   *  bank-to-vendor payment or transfer) — feeds the Dashboard's Cash Flow "Drawn From Bank" / "Deposit In Bank" lines. */
+  cashMovement?: "deposit" | "withdrawal"
 }
 
 // ─── Master Data ─────────────────────────────────────────────────
@@ -401,8 +426,13 @@ export interface ServiceCatalogItem {
   id: number
   code: string
   name: string
+  nameLocal?: string
   category: string
   rate: number
+  gstPct?: number
+  discountPct?: number
+  remarks?: string
+  barcode?: boolean
   active: boolean
 }
 

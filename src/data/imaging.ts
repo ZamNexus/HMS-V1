@@ -18,3 +18,8 @@ export const IMAGING_ORDERS: ImagingOrder[] = RAW_IMAGING_ORDERS.map((o) => ({ .
 export function getImagingOrder(id: number): ImagingOrder | undefined {
   return IMAGING_ORDERS.find((o) => o.id === id)
 }
+
+export function nextXrNo(): string {
+  const max = IMAGING_ORDERS.reduce((m, o) => Math.max(m, parseInt(o.xrNo.split("-").pop() ?? "0", 10)), 0)
+  return `XRY-2024-${String(max + 1).padStart(4, "0")}`
+}

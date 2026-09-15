@@ -13,7 +13,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Switch } from "@/components/ui/switch"
 import { PhotoUpload } from "@/components/shared/PhotoUpload"
+import { StatusBadge } from "@/components/shared/StatusBadge"
 import { useToast } from "@/components/ui/use-toast"
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -28,14 +30,17 @@ export function DoctorsPage() {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {DOCTORS.map((d) => (
-          <Card key={d.userId}>
+          <Card key={d.userId} className={d.active === false ? "opacity-60" : undefined}>
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-teal-100 text-lg font-bold text-teal-700">
                   {d.photoUrl ? <img src={d.photoUrl} alt={d.name} className="h-full w-full object-cover" /> : initials(d.name)}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="truncate text-base font-bold text-foreground">{d.name}</h3>
+                  <div className="flex items-center gap-1.5">
+                    <h3 className="truncate text-base font-bold text-foreground">{d.name}</h3>
+                    {d.active === false && <StatusBadge status="Inactive" />}
+                  </div>
                   <Badge className="mt-0.5 bg-teal-600 text-white">Doctor</Badge>
                   <p className="mt-0.5 truncate text-sm italic text-secondary">{d.specialization}</p>
                 </div>
@@ -43,7 +48,7 @@ export function DoctorsPage() {
               <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                 <p>{d.qualifications}</p>
                 <p className="font-mono">{d.pmcRegNo}</p>
-                <p className="text-sm font-bold text-success-600">{formatCurrency(d.fee)}</p>
+                <p className="text-sm font-bold text-success-600">{formatCurrency(d.fee)} {d.sharePct !== undefined && <span className="text-xs font-normal text-muted-foreground">({d.sharePct}% share)</span>}</p>
                 <div className="flex flex-wrap gap-1 pt-1">
                   {DAYS.map((day) => (
                     <span
@@ -83,9 +88,15 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
   const [specialization, setSpecialization] = React.useState(doc?.specialization ?? "")
   const [qualifications, setQualifications] = React.useState(doc?.qualifications ?? "")
   const [pmcRegNo, setPmcRegNo] = React.useState(doc?.pmcRegNo ?? "")
+  const [sharePct, setSharePct] = React.useState(doc?.sharePct ?? 0)
   const [fee, setFee] = React.useState(doc?.fee ?? 0)
   const [phone, setPhone] = React.useState(doc?.phone ?? "")
   const [email, setEmail] = React.useState(doc?.email ?? "")
+  const [cnic, setCnic] = React.useState(doc?.cnic ?? "")
+  const [city, setCity] = React.useState(doc?.city ?? "Rawalpindi")
+  const [address, setAddress] = React.useState(doc?.address ?? "")
+  const [country, setCountry] = React.useState(doc?.country ?? "Pakistan")
+  const [active, setActive] = React.useState(doc?.active ?? true)
   const [days, setDays] = React.useState<Set<string>>(new Set(doc?.availableDays ?? []))
   const [hoursFrom, setHoursFrom] = React.useState(doc?.hoursFrom ?? "09:00")
   const [hoursTo, setHoursTo] = React.useState(doc?.hoursTo ?? "17:00")
@@ -94,7 +105,9 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
 
   React.useEffect(() => {
     setName(doc?.name ?? ""); setSpecialization(doc?.specialization ?? ""); setQualifications(doc?.qualifications ?? "");
-    setPmcRegNo(doc?.pmcRegNo ?? ""); setFee(doc?.fee ?? 0); setPhone(doc?.phone ?? ""); setEmail(doc?.email ?? "");
+    setPmcRegNo(doc?.pmcRegNo ?? ""); setSharePct(doc?.sharePct ?? 0); setFee(doc?.fee ?? 0); setPhone(doc?.phone ?? ""); setEmail(doc?.email ?? "");
+    setCnic(doc?.cnic ?? ""); setCity(doc?.city ?? "Rawalpindi"); setAddress(doc?.address ?? ""); setCountry(doc?.country ?? "Pakistan");
+    setActive(doc?.active ?? true);
     setDays(new Set(doc?.availableDays ?? [])); setHoursFrom(doc?.hoursFrom ?? "09:00"); setHoursTo(doc?.hoursTo ?? "17:00");
     setNotes(doc?.notes ?? ""); setPhotoUrl(doc?.photoUrl)
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -107,7 +120,8 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
     if (!name || !fee) return
     const record: Doctor = {
       userId: doc?.userId ?? Math.max(0, ...DOCTORS.map((d) => d.userId)) + 1000,
-      name, specialization, qualifications, pmcRegNo, fee, phone, email,
+      name, specialization, qualifications, pmcRegNo, sharePct, fee, phone, email,
+      cnic, city, address, country, active,
       availableDays: [...days], hoursFrom, hoursTo, notes, photoUrl,
     }
     if (isNew) { DOCTORS.push(record); toast({ title: `${name} added` }) }
@@ -132,8 +146,17 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
           <div className="space-y-1.5"><Label>Degrees</Label><Input value={qualifications} onChange={(e) => setQualifications(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>PMC Reg. No.</Label><Input value={pmcRegNo} onChange={(e) => setPmcRegNo(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Fee (Rs.) *</Label><Input type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Share (%) — doctor's revenue share per consultation</Label><Input type="number" min={0} max={100} value={sharePct} onChange={(e) => setSharePct(Number(e.target.value))} /></div>
+          <div className="flex items-center justify-between rounded-md border border-border px-3 py-2">
+            <Label className="cursor-pointer font-normal">Active</Label>
+            <Switch checked={active} onCheckedChange={setActive} />
+          </div>
           <div className="space-y-1.5"><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Email</Label><Input value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>CNIC</Label><Input placeholder="12345-1234567-1" value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>City</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
+          <div className="space-y-1.5 md:col-span-2"><Label>Address</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Country</Label><Input value={country} onChange={(e) => setCountry(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label>Hours</Label>
             <div className="flex gap-2">

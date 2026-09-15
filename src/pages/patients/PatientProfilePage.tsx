@@ -1,3 +1,4 @@
+import * as React from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
 import { Pencil, FlaskConical, ScanLine, Pill, Printer, Plus } from "lucide-react"
@@ -10,12 +11,13 @@ import { IMAGING_ORDERS } from "@/data/imaging"
 import { DISPENSE_RECORDS } from "@/data/pharmacy"
 import { CONSULTATION_INVOICES, SERVICES_INVOICES } from "@/data/billing"
 import { DOCTORS } from "@/data/doctors"
-import { patientBillBreakdown } from "@/lib/billingAggregate"
+import { patientBillBreakdown, encounterBillBreakdown } from "@/lib/billingAggregate"
 import { cn, formatCurrency, initials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
@@ -42,7 +44,9 @@ export function PatientProfilePage() {
   const servicesInvoices = SERVICES_INVOICES.filter((s) => s.patientId === patient.id)
   const panel = getPanel(patient.panelId)
 
-  const bill = patientBillBreakdown(patient.id)
+  const [visitFilter, setVisitFilter] = React.useState<string>("all")
+  const scopedEncounterId = visitFilter !== "all" ? Number(visitFilter) : null
+  const bill = scopedEncounterId ? encounterBillBreakdown(scopedEncounterId) : patientBillBreakdown(patient.id)
 
   const lastVisit = visits[0]
   const activePrescriptions = lastVisit?.prescription ?? []
@@ -57,7 +61,7 @@ export function PatientProfilePage() {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-[22px] font-bold">{patient.name}</h1>
+                <h1 className="text-2xl font-bold">{patient.name}</h1>
                 <StatusBadge status={patient.status === "ipd" ? "IPD Admitted" : patient.status} />
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-teal-100">
@@ -106,10 +110,13 @@ export function PatientProfilePage() {
             <CardContent className="space-y-2 p-5 text-sm">
               <h3 className="font-semibold text-foreground">Registration Info</h3>
               <div className="flex justify-between"><span className="text-muted-foreground">Registered</span><span>{format(new Date(patient.registrationDate), "dd MMM yyyy")}</span></div>
+              {patient.medicalRecordNo && <div className="flex justify-between"><span className="text-muted-foreground">Medical Record No</span><span className="font-mono">{patient.medicalRecordNo}</span></div>}
+              {patient.ssEmpNo && <div className="flex justify-between"><span className="text-muted-foreground">SS/Emp No</span><span>{patient.ssEmpNo}</span></div>}
               <div className="flex justify-between"><span className="text-muted-foreground">Referred By</span><span>{patient.referredBy || "—"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Panel</span><span>{panel?.name ?? "Self-Pay"}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Guardian</span><span>{patient.guardianRelation}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Address</span><span className="text-right">{patient.address || "—"}, {patient.city}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Guardian</span><span>{patient.guardianRelation}{patient.guardianName ? ` — ${patient.guardianName}` : ""}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{patient.email || "—"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Address</span><span className="text-right">{patient.address || "—"}, {patient.city}{patient.country && patient.country !== "Pakistan" ? `, ${patient.country}` : ""}</span></div>
             </CardContent>
           </Card>
 
@@ -205,6 +212,21 @@ export function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="billing">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-semibold text-foreground">
+              {scopedEncounterId ? `Scoped to ${visits.find((v) => v.id === scopedEncounterId)?.encId ?? ""}` : "All Visits"}
+            </h3>
+            <div className="w-64 space-y-1">
+              <Select value={visitFilter} onValueChange={setVisitFilter}>
+                <SelectTrigger><SelectValue placeholder="Filter by OPD/IPD visit" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Visits</SelectItem>
+                  {visits.map((v) => <SelectItem key={v.id} value={String(v.id)}>{v.encId} — {v.type} · {format(new Date(v.date), "dd MMM yyyy")}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
           <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
             <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total Billed</div><div className="text-xl font-bold">{formatCurrency(bill.total)}</div></CardContent></Card>
             <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Paid</div><div className="text-xl font-bold text-success-600">{formatCurrency(bill.received)}</div></CardContent></Card>
@@ -221,9 +243,20 @@ export function PatientProfilePage() {
             </CardContent>
           </Card>
 
-          {consultInvoices.length === 0 && servicesInvoices.length === 0 && labResults.length === 0 && imagingResults.length === 0 && dispenses.length === 0 ? (
-            <EmptyState icon={FileText} title="No billing history" />
-          ) : (
+          {(() => {
+            const allInvoices = [
+              ...consultInvoices.map((c) => ({ key: c.invoiceNo, date: c.date, invoiceNo: c.invoiceNo, type: "Consultation", amount: c.netTotal, paid: c.amountReceived, balance: c.balance, status: c.status, encounterId: c.encounterId })),
+              ...servicesInvoices.map((s) => ({ key: s.invoiceNo, date: s.date, invoiceNo: s.invoiceNo, type: "Services", amount: s.netTotal, paid: s.amountReceived, balance: s.balance, status: s.status, encounterId: s.encounterId })),
+              ...labResults.map((o) => ({ key: o.labNo, date: o.date, invoiceNo: o.labNo, type: "Laboratory", amount: o.total, paid: o.paymentStatus === "paid" ? o.total : 0, balance: o.paymentStatus === "paid" ? 0 : o.total, status: o.paymentStatus, encounterId: o.encounterId })),
+              ...imagingResults.map((o) => ({ key: o.xrNo, date: o.date, invoiceNo: o.xrNo, type: "Imaging", amount: o.total, paid: o.total, balance: 0, status: "paid", encounterId: o.encounterId })),
+              ...dispenses.map((d) => ({ key: d.disNo, date: d.date, invoiceNo: d.disNo, type: "Pharmacy", amount: d.netPayable, paid: d.netPayable, balance: 0, status: "paid", encounterId: d.encounterId })),
+            ]
+              .filter((inv) => scopedEncounterId === null || inv.encounterId === scopedEncounterId)
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+            return allInvoices.length === 0 ? (
+              <EmptyState icon={FileText} title="No billing history" subtitle={scopedEncounterId ? "No charges recorded against this visit." : undefined} />
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -232,15 +265,7 @@ export function PatientProfilePage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[
-                  ...consultInvoices.map((c) => ({ key: c.invoiceNo, date: c.date, invoiceNo: c.invoiceNo, type: "Consultation", amount: c.netTotal, paid: c.amountReceived, balance: c.balance, status: c.status })),
-                  ...servicesInvoices.map((s) => ({ key: s.invoiceNo, date: s.date, invoiceNo: s.invoiceNo, type: "Services", amount: s.netTotal, paid: s.amountReceived, balance: s.balance, status: s.status })),
-                  ...labResults.map((o) => ({ key: o.labNo, date: o.date, invoiceNo: o.labNo, type: "Laboratory", amount: o.total, paid: o.paymentStatus === "paid" ? o.total : 0, balance: o.paymentStatus === "paid" ? 0 : o.total, status: o.paymentStatus })),
-                  ...imagingResults.map((o) => ({ key: o.xrNo, date: o.date, invoiceNo: o.xrNo, type: "Imaging", amount: o.total, paid: o.total, balance: 0, status: "paid" })),
-                  ...dispenses.map((d) => ({ key: d.disNo, date: d.date, invoiceNo: d.disNo, type: "Pharmacy", amount: d.netPayable, paid: d.netPayable, balance: 0, status: "paid" })),
-                ]
-                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                  .map((inv) => (
+                {allInvoices.map((inv) => (
                     <TableRow key={inv.key}>
                       <TableCell>{format(new Date(inv.date), "dd MMM yyyy")}</TableCell>
                       <TableCell className="font-mono text-secondary">{inv.invoiceNo}</TableCell>
@@ -253,7 +278,8 @@ export function PatientProfilePage() {
                   ))}
               </TableBody>
             </Table>
-          )}
+            )
+          })()}
         </TabsContent>
       </Tabs>
     </div>

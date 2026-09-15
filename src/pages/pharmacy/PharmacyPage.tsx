@@ -6,10 +6,13 @@ import { AlertTriangle, Pill, Plus, Printer } from "lucide-react"
 import { MEDICINES, MEDICINE_CATEGORIES } from "@/data/medicines"
 import { DISPENSE_RECORDS, nextDispenseNo } from "@/data/pharmacy"
 import { ENCOUNTERS } from "@/data/encounters"
+import { activeDoctors } from "@/data/doctors"
 import { PATIENTS, getPatient } from "@/data/patients"
-import type { DispenseLine, DispenseRecord, Medicine, Patient } from "@/types"
+import type { DispenseLine, DispenseRecord, Medicine, Patient, PaymentMode } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
 import { PatientPicker } from "@/components/shared/PatientPicker"
+import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
+import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -17,6 +20,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
@@ -275,9 +279,12 @@ function MedicineModal({ target, onClose }: { target: Medicine | "new" | null; o
   )
 }
 
-function emptyRow(): { medicineId: number | null; qty: number; instructions: string } {
-  return { medicineId: null, qty: 1, instructions: "" }
+function emptyRow() {
+  return { medicineId: null as number | null, qty: 1, instructions: "", discountPct: 0, includedInPackage: false }
 }
+
+const DISPENSE_MODES: PaymentMode[] = ["Cash", "Card", "On Account"]
+const MODE_LABELS: Partial<Record<PaymentMode, string>> = { "On Account": "Credit" }
 
 function DispenseTab() {
   const { toast } = useToast()
@@ -286,29 +293,40 @@ function DispenseTab() {
     const pid = params.get("patientId")
     return pid ? getPatient(Number(pid)) ?? null : null
   })
-  const [linkedEncounterId, setLinkedEncounterId] = React.useState<string>("manual")
+  const [encounterChoice, setEncounterChoice] = React.useState("none")
+  const [doctorId, setDoctorId] = React.useState<number | undefined>(undefined)
+  const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
   const [rows, setRows] = React.useState([emptyRow()])
   const [discountPct, setDiscountPct] = React.useState(0)
-  const [mode, setMode] = React.useState<"Cash" | "Card" | "On Account">("Cash")
+  const [gstPct, setGstPct] = React.useState(0)
+  const [mode, setMode] = React.useState<PaymentMode>("Cash")
+  const [remarks, setRemarks] = React.useState("")
   const [printReceipt, setPrintReceipt] = React.useState(true)
 
-  const patientEncounters = patient ? ENCOUNTERS.filter((e) => e.patientId === patient.id && e.prescription.length > 0) : []
+  const patientEncounters = patient ? ENCOUNTERS.filter((e) => e.patientId === patient.id) : []
+  const chosenEncounter = encounterChoice !== "none" ? ENCOUNTERS.find((e) => e.id === Number(encounterChoice)) : undefined
 
-  const linkEncounter = (encId: string) => {
-    setLinkedEncounterId(encId)
-    if (encId === "manual") return
-    const enc = ENCOUNTERS.find((e) => e.id === Number(encId))
-    if (!enc) return
-    const newRows = enc.prescription.map((rx) => {
+  const loadPrescription = () => {
+    if (!chosenEncounter || chosenEncounter.prescription.length === 0) return
+    const newRows = chosenEncounter.prescription.map((rx) => {
       const med = MEDICINES.find((m) => m.name === rx.medicine)
-      return { medicineId: med?.id ?? null, qty: 1, instructions: rx.instructions }
+      return { medicineId: med?.id ?? null, qty: 1, instructions: rx.instructions, discountPct: 0, includedInPackage: false }
     })
-    setRows(newRows.length > 0 ? newRows : [emptyRow()])
+    setRows(newRows)
   }
 
   React.useEffect(() => {
     const encId = params.get("encounterId")
-    if (encId && patient) linkEncounter(encId)
+    if (encId && patient) {
+      setEncounterChoice(encId)
+      const enc = ENCOUNTERS.find((e) => e.id === Number(encId))
+      if (enc && enc.prescription.length > 0) {
+        setRows(enc.prescription.map((rx) => {
+          const med = MEDICINES.find((m) => m.name === rx.medicine)
+          return { medicineId: med?.id ?? null, qty: 1, instructions: rx.instructions, discountPct: 0, includedInPackage: false }
+        }))
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient])
 
@@ -317,10 +335,21 @@ function DispenseTab() {
     .map((r) => {
       const med = MEDICINES.find((m) => m.id === r.medicineId)!
       const dispensed = Math.min(r.qty, med.stock)
-      return { medicineId: med.id, medicineName: med.name, prescribedQty: r.qty, dispensedQty: dispensed, unitRate: med.saleRate, total: dispensed * med.saleRate, instructions: r.instructions }
+      const charge = r.includedInPackage ? 0 : dispensed * med.saleRate
+      const total = charge - (charge * r.discountPct) / 100
+      return {
+        medicineId: med.id, medicineName: med.name, prescribedQty: r.qty, dispensedQty: dispensed, unitRate: med.saleRate,
+        discountPct: r.discountPct, includedInPackage: r.includedInPackage, total, instructions: r.instructions,
+      }
     })
+  const grossTotal = lines.reduce((s, l) => s + l.dispensedQty * l.unitRate, 0)
   const subtotal = lines.reduce((s, l) => s + l.total, 0)
-  const netPayable = Math.max(0, subtotal - (subtotal * discountPct) / 100)
+  const afterDiscount = Math.max(0, subtotal - (subtotal * discountPct) / 100)
+  const netPayable = afterDiscount + (afterDiscount * gstPct) / 100
+
+  const updateRow = (i: number, patch: Partial<ReturnType<typeof emptyRow>>) => {
+    setRows((r) => r.map((x, idx) => (idx === i ? { ...x, ...patch } : x)))
+  }
 
   const finish = () => {
     if (!patient || lines.length === 0) return
@@ -332,13 +361,15 @@ function DispenseTab() {
     const record: DispenseRecord = {
       id: Math.max(0, ...DISPENSE_RECORDS.map((d) => d.id)) + 1,
       disNo, patientId: patient.id,
-      encounterId: linkedEncounterId !== "manual" ? Number(linkedEncounterId) : null,
-      date: new Date().toISOString(), lines, subtotal, discountPct, netPayable, paymentMode: mode, dispensedBy: "Omar Farooq",
+      encounterId: chosenEncounter?.id ?? null,
+      doctorId,
+      date: new Date().toISOString(), lines, subtotal, discountPct, gstPct, netPayable, paymentMode: mode,
+      dispensedBy: "Omar Farooq", notes: remarks || undefined,
     }
     DISPENSE_RECORDS.push(record)
     toast({ title: `Dispensed — ${patient.name} · ${formatCurrency(netPayable)}` })
     if (printReceipt) window.print()
-    setPatient(null); setRows([emptyRow()]); setLinkedEncounterId("manual"); setDiscountPct(0)
+    setPatient(null); setRows([emptyRow()]); setEncounterChoice("none"); setDoctorId(undefined); setDiscountPct(0); setGstPct(0); setRemarks("")
   }
 
   return (
@@ -347,37 +378,69 @@ function DispenseTab() {
         <CardContent className="space-y-4 p-6">
           <div className="space-y-1.5">
             <Label>Patient *</Label>
-            <PatientPicker value={patient} onChange={setPatient} />
+            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
 
-          {patientEncounters.length > 0 && (
-            <div className="space-y-1.5">
-              <Label>Link Prescription</Label>
-              <Select value={linkedEncounterId} onValueChange={linkEncounter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="manual">Manual Entry</SelectItem>
-                  {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.diagnosis}</SelectItem>)}
-                </SelectContent>
-              </Select>
+          <PatientInfoPanel patient={patient} />
+
+          {patient && (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>OPD/IPD Encounter</Label>
+                <Select value={encounterChoice} onValueChange={setEncounterChoice}>
+                  <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not linked to a visit</SelectItem>
+                    {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Doctor</Label>
+                <div className="flex gap-2">
+                  <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
+                    <SelectTrigger><SelectValue placeholder="Select doctor (optional)" /></SelectTrigger>
+                    <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
+          )}
+
+          {chosenEncounter && chosenEncounter.prescription.length > 0 && (
+            <Button type="button" variant="outline" size="sm" onClick={loadPrescription}>
+              Load Rx from {chosenEncounter.encId} ({chosenEncounter.prescription.length} item{chosenEncounter.prescription.length > 1 ? "s" : ""})
+            </Button>
           )}
 
           <div className="space-y-2">
             {rows.map((row, i) => {
               const med = MEDICINES.find((m) => m.id === row.medicineId)
               return (
-                <div key={i} className="rounded-md border border-border p-3">
+                <div key={i} className="space-y-2 rounded-md border border-border p-3">
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Select value={row.medicineId ? String(row.medicineId) : undefined} onValueChange={(v) => setRows((r) => r.map((x, idx) => idx === i ? { ...x, medicineId: Number(v) } : x))}>
+                    <Select value={row.medicineId ? String(row.medicineId) : undefined} onValueChange={(v) => updateRow(i, { medicineId: Number(v) })}>
                       <SelectTrigger><SelectValue placeholder="Select medicine..." /></SelectTrigger>
-                      <SelectContent>{MEDICINES.map((m) => <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>)}</SelectContent>
+                      <SelectContent>{MEDICINES.map((m) => <SelectItem key={m.id} value={String(m.id)}>{m.name} ({m.id})</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input type="number" placeholder="Qty" value={row.qty} onChange={(e) => setRows((r) => r.map((x, idx) => idx === i ? { ...x, qty: Number(e.target.value) } : x))} />
-                    <Input placeholder="Instructions" value={row.instructions} onChange={(e) => setRows((r) => r.map((x, idx) => idx === i ? { ...x, instructions: e.target.value } : x))} />
+                    <Input type="number" placeholder="Qty" value={row.qty} onChange={(e) => updateRow(i, { qty: Number(e.target.value) })} />
+                    <Input placeholder="Instructions" value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1.5">Discount %
+                      <Input type="number" className="h-7 w-16 px-1.5 text-xs" value={row.discountPct} disabled={row.includedInPackage}
+                        onChange={(e) => updateRow(i, { discountPct: Number(e.target.value) })} />
+                    </span>
+                    <label className="flex cursor-pointer items-center gap-1.5">
+                      <Checkbox checked={row.includedInPackage} onCheckedChange={(v) => updateRow(i, { includedInPackage: v === true })} />
+                      Included in Package
+                    </label>
                   </div>
                   {med && (
-                    <p className={cn("mt-1 text-xs", med.stock === 0 ? "font-medium text-danger-600" : med.stock < row.qty ? "text-warning-700" : "text-muted-foreground")}>
+                    <p className={cn("text-xs", med.stock === 0 ? "font-medium text-danger-600" : med.stock < row.qty ? "text-warning-700" : "text-muted-foreground")}>
                       {med.stock === 0 ? "Out of stock" : `Stock: ${med.stock} ${med.unit}`}
                     </p>
                   )}
@@ -387,13 +450,13 @@ function DispenseTab() {
             <Button type="button" variant="outline" onClick={() => setRows((r) => [...r, emptyRow()])}><Plus className="h-4 w-4" /> Add Medicine</Button>
           </div>
 
-          <div className="space-y-1.5"><Label>Pharmacist Remarks</Label><Textarea rows={2} /></div>
+          <div className="space-y-1.5"><Label>Pharmacist Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </CardContent>
       </Card>
 
       <Card className="h-fit lg:sticky lg:top-20">
         <CardContent className="space-y-3 p-5">
-          <h3 className="text-sm font-semibold">Dispense Summary</h3>
+          <h3 className="text-sm font-semibold">Dispense Summary — {nextDispenseNo()}</h3>
           {lines.length === 0 ? (
             <p className="text-sm text-muted-foreground">Add medicines to see the summary.</p>
           ) : (
@@ -401,10 +464,12 @@ function DispenseTab() {
               {lines.map((l) => (
                 <div key={l.medicineId} className="flex items-center justify-between">
                   <div>
-                    <div className="font-medium">{l.medicineName}</div>
+                    <div className="font-medium">{l.medicineName} <span className="font-mono text-[10px] text-muted-foreground">#{l.medicineId}</span></div>
                     <div className="text-xs text-muted-foreground">
                       {l.prescribedQty} × {formatCurrency(l.unitRate)}
                       {l.dispensedQty < l.prescribedQty && <span className="ml-1 text-warning-700">(partial: {l.dispensedQty})</span>}
+                      {l.includedInPackage && <span className="ml-1 text-secondary">(package)</span>}
+                      {!l.includedInPackage && (l.discountPct ?? 0) > 0 && <span className="ml-1">(-{l.discountPct}%)</span>}
                     </div>
                   </div>
                   <span className="font-semibold">{formatCurrency(l.total)}</span>
@@ -413,24 +478,31 @@ function DispenseTab() {
             </div>
           )}
           <div className="space-y-1.5 border-t border-border pt-3">
+            <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Gross Total</span><span>{formatCurrency(grossTotal)}</span></div>
             <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
             <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground">Discount %</Label>
+              <Label className="text-xs text-muted-foreground">Flat Discount %</Label>
               <Input type="number" className="w-20" value={discountPct} onChange={(e) => setDiscountPct(Number(e.target.value))} />
+            </div>
+            <div className="flex items-center gap-2">
+              <Label className="text-xs text-muted-foreground">GST %</Label>
+              <Input type="number" className="w-20" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} />
             </div>
             <div className="flex items-center justify-between text-base font-bold"><span>Net Payable</span><span className="text-secondary">{formatCurrency(netPayable)}</span></div>
           </div>
           <div className="space-y-1.5">
             <Label>Payment Mode</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as "Cash" | "Card" | "On Account")}>
+            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>{["Cash", "Card", "On Account"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
+              <SelectContent>{DISPENSE_MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={printReceipt} onChange={(e) => setPrintReceipt(e.target.checked)} /> Print Receipt</label>
           <Button className="w-full" disabled={!patient || lines.length === 0} onClick={finish}>Dispense &amp; Finish</Button>
         </CardContent>
       </Card>
+
+      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreated={(id) => setDoctorId(id)} />
     </div>
   )
 }

@@ -5,23 +5,35 @@ import { EXPENSES } from "@/data/billing"
 import { cn } from "@/lib/utils"
 import { buildCSV } from "@/lib/csv"
 import { DailySummaryReport } from "@/pages/reports/DailySummaryReport"
+import { DailyTransactionsReport } from "@/pages/reports/DailyTransactionsReport"
 import { OpdStatisticsReport } from "@/pages/reports/OpdStatisticsReport"
 import { RevenueReport } from "@/pages/reports/RevenueReport"
 import { LabReport } from "@/pages/reports/LabReport"
 import { PharmacyReport } from "@/pages/reports/PharmacyReport"
 import { ExpenseReport } from "@/pages/reports/ExpenseReport"
 import { PatientDemographicsReport } from "@/pages/reports/PatientDemographicsReport"
+import { ListsReport } from "@/pages/reports/ListsReport"
+import { AccountsReport } from "@/pages/reports/AccountsReport"
+import { PatientBalancesReport } from "@/pages/reports/PatientBalancesReport"
+import { PrescriptionHistoryReport } from "@/pages/reports/PrescriptionHistoryReport"
 import { Button } from "@/components/ui/button"
 
 const REPORTS = [
-  { key: "daily", label: "Daily Summary", Component: DailySummaryReport },
-  { key: "opd", label: "OPD Statistics", Component: OpdStatisticsReport },
-  { key: "revenue", label: "Revenue", Component: RevenueReport },
-  { key: "lab", label: "Laboratory", Component: LabReport },
-  { key: "pharmacy", label: "Pharmacy", Component: PharmacyReport },
-  { key: "expense", label: "Expenses", Component: ExpenseReport },
-  { key: "demographics", label: "Patient Demographics", Component: PatientDemographicsReport },
+  { key: "daily", label: "Daily Summary", group: "Analytics", Component: DailySummaryReport },
+  { key: "daily-transactions", label: "Daily Transactions", group: "Registers", Component: DailyTransactionsReport },
+  { key: "opd", label: "OPD Statistics", group: "Analytics", Component: OpdStatisticsReport },
+  { key: "revenue", label: "Revenue", group: "Analytics", Component: RevenueReport },
+  { key: "lab", label: "Laboratory", group: "Analytics", Component: LabReport },
+  { key: "pharmacy", label: "Pharmacy", group: "Analytics", Component: PharmacyReport },
+  { key: "expense", label: "Expenses", group: "Analytics", Component: ExpenseReport },
+  { key: "demographics", label: "Patient Demographics", group: "Analytics", Component: PatientDemographicsReport },
+  { key: "lists", label: "Lists", group: "Registers", Component: ListsReport },
+  { key: "accounts", label: "Accounts", group: "Registers", Component: AccountsReport },
+  { key: "patient-balances", label: "Patient Balances", group: "Registers", Component: PatientBalancesReport },
+  { key: "prescriptions", label: "Prescription History", group: "Registers", Component: PrescriptionHistoryReport },
 ] as const
+
+const GROUPS = ["Analytics", "Registers"] as const
 
 const DATE_RANGES = ["Today", "Yesterday", "This Week", "This Month", "Last Month", "Custom"] as const
 
@@ -66,18 +78,27 @@ export function ReportsPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_1fr]">
-        <nav className="no-print space-y-1">
-          {REPORTS.map((r) => (
-            <button
-              key={r.key}
-              onClick={() => setActive(r.key)}
-              className={cn(
-                "block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
-                active === r.key ? "bg-accent-50 text-secondary" : "text-muted-foreground hover:bg-muted/50"
-              )}
-            >
-              {r.label}
-            </button>
+        <nav className="no-print space-y-4">
+          {GROUPS.map((group) => (
+            <div key={group}>
+              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                {group === "Registers" ? "Lists, Accounts & History" : group}
+              </div>
+              <div className="space-y-1">
+                {REPORTS.filter((r) => r.group === group).map((r) => (
+                  <button
+                    key={r.key}
+                    onClick={() => setActive(r.key)}
+                    className={cn(
+                      "block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
+                      active === r.key ? "bg-accent-50 text-secondary" : "text-muted-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
 

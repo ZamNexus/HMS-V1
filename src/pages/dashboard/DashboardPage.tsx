@@ -268,9 +268,9 @@ export function DashboardPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="truncate text-sm font-medium text-foreground">{p.name}</div>
-                    <div className="font-mono text-[11px] text-secondary">{p.mrNo}</div>
+                    <div className="font-mono text-xs text-secondary">{p.mrNo}</div>
                   </div>
-                  <div className="shrink-0 text-right text-[11px] text-muted-foreground">
+                  <div className="shrink-0 text-right text-xs text-muted-foreground">
                     <div>{p.phone}</div>
                     <div>{formatDistanceToNow(new Date(p.registrationDate), { addSuffix: true })}</div>
                   </div>

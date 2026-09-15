@@ -132,18 +132,19 @@ const RAW_EXPENSES: Expense[] = [
 export const EXPENSES: Expense[] = RAW_EXPENSES.map((e) => ({ ...e, date: shiftDate(e.date) }))
 
 // ─── Bank Transactions (8) ───────────────────────────────────────────
-const bankSeed: { date: string; description: string; debit: number; credit: number }[] = [
+const bankSeed: { date: string; description: string; debit: number; credit: number; cashMovement?: "deposit" | "withdrawal" }[] = [
   { date: "2024-08-01", description: "Opening Balance", debit: 0, credit: 45000 },
-  { date: "2024-08-02", description: "Cash deposit - Habib Bank", debit: 0, credit: 15000 },
+  { date: "2024-08-02", description: "Cash deposit - Habib Bank", debit: 0, credit: 15000, cashMovement: "deposit" },
   { date: "2024-08-05", description: "Medicine purchase payment", debit: 22000, credit: 0 },
-  { date: "2024-08-06", description: "Cash deposit - Habib Bank", debit: 0, credit: 20000 },
+  { date: "2024-08-06", description: "Cash deposit - Habib Bank", debit: 0, credit: 20000, cashMovement: "deposit" },
   { date: "2024-08-08", description: "Rent payment", debit: 25000, credit: 0 },
   { date: "2024-08-12", description: "Lab reagent payment", debit: 9800, credit: 0 },
-  { date: "2024-08-16", description: "Cash deposit - Habib Bank", debit: 0, credit: 18000 },
+  { date: "2024-08-16", description: "Cash deposit - Habib Bank", debit: 0, credit: 18000, cashMovement: "deposit" },
   { date: "2024-08-20", description: "Equipment purchase - nebulizer", debit: 8500, credit: 0 },
 ]
 export const BANK_TRANSACTIONS: BankTransaction[] = bankSeed.map((b, i) => ({
-  id: i + 1, date: shiftDate(b.date), description: b.description, debit: b.debit, credit: b.credit, bank: "Habib Bank Ltd", referenceNo: i % 2 === 0 ? `TXN-${5000 + i}` : undefined,
+  id: i + 1, date: shiftDate(b.date), description: b.description, debit: b.debit, credit: b.credit, bank: "Habib Bank Ltd",
+  referenceNo: i % 2 === 0 ? `TXN-${5000 + i}` : undefined, cashMovement: b.cashMovement,
 }))
 
 export function bankRunningBalance(): { transaction: BankTransaction; balance: number }[] {

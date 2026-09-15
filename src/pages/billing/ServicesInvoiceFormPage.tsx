@@ -1,15 +1,18 @@
 import * as React from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { format } from "date-fns"
 import { Plus, Trash2 } from "lucide-react"
 
 import { SERVICES_INVOICES } from "@/data/billing"
 import { SERVICE_CATALOG } from "@/data/services"
-import { DOCTORS } from "@/data/doctors"
+import { activeDoctors } from "@/data/doctors"
 import { ENCOUNTERS } from "@/data/encounters"
 import { getPatient } from "@/data/patients"
-import type { LineItem, Patient, PaymentMode, ServicesInvoice } from "@/types"
+import type { LineItem, Patient, PaymentMode, ServiceCatalogItem, ServicesInvoice } from "@/types"
 import { formatCurrency } from "@/lib/utils"
 import { PatientPicker } from "@/components/shared/PatientPicker"
+import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
+import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,19 +21,24 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Cheque", "Insurance"]
+const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology", "Procedure", "Diagnostic", "Emergency"]
 
 export function ServicesInvoiceFormPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const [params] = useSearchParams()
-  const encounterId = params.get("encounterId")
-  const linkedEncounter = encounterId ? ENCOUNTERS.find((e) => e.id === Number(encounterId)) : undefined
+  const initialEncounterId = params.get("encounterId")
+  const linkedEncounter = initialEncounterId ? ENCOUNTERS.find((e) => e.id === Number(initialEncounterId)) : undefined
 
   const [patient, setPatient] = React.useState<Patient | null>(linkedEncounter ? getPatient(linkedEncounter.patientId) ?? null : null)
+  const [encounterChoice, setEncounterChoice] = React.useState<string>(linkedEncounter ? String(linkedEncounter.id) : "none")
   const [doctorId, setDoctorId] = React.useState<string>(linkedEncounter ? String(linkedEncounter.doctorId) : "none")
+  const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
+  const [serviceDialogOpen, setServiceDialogOpen] = React.useState(false)
   const [vitals, setVitals] = React.useState({
     bp: linkedEncounter?.vitals.bp ?? "", sugar: linkedEncounter?.vitals.rbs ?? "",
     weight: linkedEncounter?.vitals.weight ?? "", temperature: linkedEncounter?.vitals.temp ?? "",
@@ -44,15 +52,26 @@ export function ServicesInvoiceFormPage() {
   const [amountReceived, setAmountReceived] = React.useState(0)
   const [notes, setNotes] = React.useState("")
 
+  const patientEncounters = patient ? ENCOUNTERS.filter((e) => e.patientId === patient.id) : []
+  const chosenEncounter = encounterChoice !== "none" ? ENCOUNTERS.find((e) => e.id === Number(encounterChoice)) : undefined
+
   const subtotal = lines.reduce((s, l) => s + l.amount, 0)
   const afterDiscount = discountType === "flat" ? Math.max(0, subtotal - discount) : Math.max(0, subtotal - (subtotal * discount) / 100)
   const netTotal = afterDiscount + (afterDiscount * gstPct) / 100
   const balance = Math.max(0, netTotal - amountReceived)
 
+  const addServiceById = (id: number) => {
+    const svc = SERVICE_CATALOG.find((s) => s.id === id)
+    if (!svc) return
+    const discountPct = svc.discountPct ?? 0
+    const amount = svc.rate * (1 - discountPct / 100)
+    setLines((l) => [...l, { id: `${svc.id}-${Date.now()}`, name: svc.name, rate: svc.rate, qty: 1, discountPct, amount }])
+  }
+
   const addService = () => {
     const svc = SERVICE_CATALOG.find((s) => String(s.id) === pendingService)
     if (!svc) return
-    setLines((l) => [...l, { id: `${svc.id}-${Date.now()}`, name: svc.name, rate: svc.rate, qty: 1, discountPct: 0, amount: svc.rate }])
+    addServiceById(svc.id)
     setPendingService("")
   }
 
@@ -71,7 +90,7 @@ export function ServicesInvoiceFormPage() {
     const record: ServicesInvoice = {
       id: Math.max(0, ...SERVICES_INVOICES.map((s) => s.id)) + 1,
       invoiceNo,
-      encounterId: linkedEncounter?.id ?? null,
+      encounterId: chosenEncounter?.id ?? null,
       patientId: patient.id,
       doctorId: doctorId !== "none" ? Number(doctorId) : null,
       date: new Date().toISOString(),
@@ -94,24 +113,44 @@ export function ServicesInvoiceFormPage() {
 
   return (
     <div>
-      <PageHeader title="New Services Invoice" />
+      <PageHeader title="New Services Invoice" subtitle={`${format(new Date(), "dd MMM yyyy")} · ${format(new Date(), "HH:mm")}`} />
       <Card>
         <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
             <Label>Patient *</Label>
-            <PatientPicker value={patient} onChange={setPatient} />
+            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
+
+          <PatientInfoPanel patient={patient} />
+
+          {patient && (
+            <div className="space-y-1.5">
+              <Label>OPD/IPD Encounter</Label>
+              <Select value={encounterChoice} onValueChange={setEncounterChoice}>
+                <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Not linked to a visit</SelectItem>
+                  {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Doctor (optional)</Label>
-              <Select value={doctorId} onValueChange={setDoctorId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  {DOCTORS.map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select value={doctorId} onValueChange={setDoctorId}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label>Payment Mode</Label>
@@ -142,6 +181,9 @@ export function ServicesInvoiceFormPage() {
                 <SelectContent>{SERVICE_CATALOG.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatCurrency(s.rate)}</SelectItem>)}</SelectContent>
               </Select>
               <Button type="button" variant="outline" onClick={addService}><Plus className="h-4 w-4" /> Add Service</Button>
+              <Button type="button" variant="outline" size="icon" title="Register new service" onClick={() => setServiceDialogOpen(true)}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
 
             {lines.length > 0 && (
@@ -203,6 +245,55 @@ export function ServicesInvoiceFormPage() {
         <Button variant="outline" disabled={!patient || lines.length === 0} onClick={save}>Save &amp; Print</Button>
         <Button disabled={!patient || lines.length === 0} onClick={save}>Save</Button>
       </div>
+
+      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreated={(id) => setDoctorId(String(id))} />
+      <QuickAddServiceDialog open={serviceDialogOpen} onClose={() => setServiceDialogOpen(false)} onCreated={addServiceById} />
     </div>
+  )
+}
+
+function QuickAddServiceDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: number) => void }) {
+  const { toast } = useToast()
+  const [name, setName] = React.useState("")
+  const [code, setCode] = React.useState("")
+  const [category, setCategory] = React.useState(SERVICE_CATEGORIES[0])
+  const [rate, setRate] = React.useState(0)
+
+  React.useEffect(() => {
+    if (open) { setName(""); setCode(""); setCategory(SERVICE_CATEGORIES[0]); setRate(0) }
+  }, [open])
+
+  const save = () => {
+    if (!name.trim() || !code.trim() || !rate) return
+    const id = Math.max(0, ...SERVICE_CATALOG.map((s) => s.id)) + 1
+    const record: ServiceCatalogItem = { id, code: code.trim(), name: name.trim(), category, rate, active: true }
+    SERVICE_CATALOG.push(record)
+    toast({ title: `${name} added to catalogue` })
+    onCreated(id)
+    onClose()
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent size="md">
+        <DialogHeader><DialogTitle>Register New Service</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label>Code *</Label><Input value={code} onChange={(e) => setCode(e.target.value)} autoFocus /></div>
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Select value={category} onValueChange={setCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2"><Label>Service Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Rate (Rs.) *</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Cancel</Button>
+          <Button onClick={save}>Save</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

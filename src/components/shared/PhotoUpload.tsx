@@ -65,7 +65,7 @@ export function PhotoUpload({
         ) : (
           <>
             <Camera className="h-6 w-6 text-muted-foreground" />
-            <span className="px-2 text-[11px] text-muted-foreground">Drag &amp; drop or click</span>
+            <span className="px-2 text-xs text-muted-foreground">Drag &amp; drop or click</span>
           </>
         )}
       </div>
@@ -76,7 +76,7 @@ export function PhotoUpload({
         className="hidden"
         onChange={(e) => handleFile(e.target.files?.[0])}
       />
-      <p className="text-[11px] text-muted-foreground">JPG/PNG, max 2MB</p>
+      <p className="text-xs text-muted-foreground">JPG/PNG, max 2MB</p>
     </div>
   )
 }

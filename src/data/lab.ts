@@ -76,6 +76,7 @@ export const LAB_ORDERS: LabOrder[] = SEED.map((s, i) => {
     discount: 0,
     total,
     paymentStatus: i % 3 === 0 ? "unpaid" : "paid",
+    paymentMode: i % 3 === 0 ? "On Account" : "Cash",
     status: s.status,
     pathologistRemarks: isResulted ? "All parameters reviewed. Clinical correlation advised." : undefined,
     performedBy: isResulted ? "Zara Ahmed" : undefined,

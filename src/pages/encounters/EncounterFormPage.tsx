@@ -2,15 +2,17 @@ import * as React from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 import { Check, Plus, Trash2 } from "lucide-react"
 
-import { ENCOUNTERS, nextEncounterId } from "@/data/encounters"
+import { ENCOUNTERS, nextEncounterId, nextTokenNo } from "@/data/encounters"
 import { getPatient } from "@/data/patients"
-import { DOCTORS } from "@/data/doctors"
+import { DOCTORS, activeDoctors } from "@/data/doctors"
 import { MEDICINES } from "@/data/medicines"
 import { WARDS } from "@/data/wards"
 import { IcdLookup } from "@/components/shared/IcdLookup"
 import type { Encounter, EncounterType, Patient, PrescriptionItem, PaymentMode } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
 import { PatientPicker } from "@/components/shared/PatientPicker"
+import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
+import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -45,7 +47,9 @@ export function EncounterFormPage() {
   const [ward, setWard] = React.useState("")
   const [bedNo, setBedNo] = React.useState("")
   const [admissionType, setAdmissionType] = React.useState<"Emergency" | "Planned">("Planned")
-  const [doctorId, setDoctorId] = React.useState<number | undefined>(DOCTORS[0]?.userId)
+  const [doctorId, setDoctorId] = React.useState<number | undefined>(activeDoctors()[0]?.userId)
+  const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
+  const [tokenNo, setTokenNo] = React.useState<number>(() => nextTokenNo())
   const [priority, setPriority] = React.useState<"Normal" | "Urgent">("Normal")
   const [vitals, setVitals] = React.useState({ bp: "", pulse: "", temp: "", weight: "", height: "", spo2: "", rbs: "" })
   const [chiefComplaint, setChiefComplaint] = React.useState("")
@@ -53,6 +57,8 @@ export function EncounterFormPage() {
   const [onExamination, setOnExamination] = React.useState("")
   const [diagnosis, setDiagnosis] = React.useState("")
   const [clinicalNotes, setClinicalNotes] = React.useState("")
+  const [advisedBy, setAdvisedBy] = React.useState("")
+  const [referredBy, setReferredBy] = React.useState("")
   const [rows, setRows] = React.useState<PrescriptionItem[]>([emptyRx(), emptyRx(), emptyRx()])
   const [generalInstructions, setGeneralInstructions] = React.useState("")
   const [followUpDate, setFollowUpDate] = React.useState("")
@@ -96,6 +102,7 @@ export function EncounterFormPage() {
       type,
       doctorId: doctorId!,
       date: new Date().toISOString(),
+      tokenNo,
       ward: type === "IPD" ? ward : undefined,
       bedNo: type === "IPD" ? bedNo : undefined,
       admissionType: type === "IPD" ? admissionType : undefined,
@@ -105,6 +112,8 @@ export function EncounterFormPage() {
       onExamination,
       diagnosis,
       clinicalNotes,
+      advisedBy: advisedBy || undefined,
+      referredBy: referredBy || undefined,
       vitals: { bp: vitals.bp, pulse: vitals.pulse, temp: vitals.temp, weight: vitals.weight, spo2: vitals.spo2, rbs: vitals.rbs },
       prescription: rows.filter((r) => r.medicine.trim() !== ""),
       generalInstructions,
@@ -162,6 +171,7 @@ export function EncounterFormPage() {
         <Card>
           <CardContent className="space-y-4 p-6">
             <PatientPicker value={patient} onChange={setPatient} />
+            <PatientInfoPanel patient={patient} />
             <Link to="/patients/new" target="_blank" className="inline-block text-xs font-medium text-secondary hover:underline">
               + Register New Patient
             </Link>
@@ -229,17 +239,29 @@ export function EncounterFormPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label>Doctor *</Label>
-                <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                  <SelectContent>
-                    {DOCTORS.map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name} — {d.specialization}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
+                    <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                    <SelectContent>
+                      {activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name} — {d.specialization}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <Label>Date &amp; Time</Label>
                 <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
               </div>
+              <div className="space-y-1.5">
+                <Label>Token No</Label>
+                <Input type="number" value={tokenNo} onChange={(e) => setTokenNo(Number(e.target.value))} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
                 <Label>Priority</Label>
                 <RadioGroup className="flex gap-4 pt-2" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
@@ -249,6 +271,14 @@ export function EncounterFormPage() {
                     </div>
                   ))}
                 </RadioGroup>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Advised By</Label>
+                <Input value={advisedBy} onChange={(e) => setAdvisedBy(e.target.value)} placeholder="Referring physician / self" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Referred By</Label>
+                <Input value={referredBy} onChange={(e) => setReferredBy(e.target.value)} placeholder="Referral source (optional)" />
               </div>
             </div>
 
@@ -324,7 +354,7 @@ export function EncounterFormPage() {
                       </SelectContent>
                     </Select>
                     {med && (
-                      <p className={cn("text-[11px]", med.stock < med.reorderLevel ? "text-warning-700" : "text-muted-foreground")}>
+                      <p className={cn("text-xs", med.stock < med.reorderLevel ? "text-warning-700" : "text-muted-foreground")}>
                         Stock: {med.stock} {med.unit}{med.stock < med.reorderLevel ? " (low stock)" : ""}
                       </p>
                     )}
@@ -458,6 +488,8 @@ export function EncounterFormPage() {
           </div>
         )}
       </div>
+
+      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreated={(id) => setDoctorId(id)} />
     </div>
   )
 }

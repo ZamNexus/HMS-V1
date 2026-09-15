@@ -1,10 +1,12 @@
 import * as React from "react"
-import { Pencil, Plus, Trash2 } from "lucide-react"
+import { format } from "date-fns"
+import { Pencil, Plus, Trash2, History } from "lucide-react"
 
 import { SERVICE_CATALOG } from "@/data/services"
 import { PANELS } from "@/data/organisations"
 import { WARDS } from "@/data/wards"
-import { EXPENSE_CATEGORIES } from "@/data/billing"
+import { EXPENSE_CATEGORIES, SERVICES_INVOICES } from "@/data/billing"
+import { PATIENTS } from "@/data/patients"
 import { CLINIC_SETTINGS, BANKS } from "@/data/settings"
 import { GUARDIAN_RELATIONS } from "@/data/guardianRelations"
 import { ECG_ULTRASOUND_TESTS } from "@/data/ecgUltrasound"
@@ -16,10 +18,13 @@ import type {
 import { cn, formatCurrency } from "@/lib/utils"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
+import { EmptyState } from "@/components/shared/EmptyState"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -67,6 +72,7 @@ function ServicesTab() {
   const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
   const [categoryFilter, setCategoryFilter] = React.useState("All")
   const [modalTarget, setModalTarget] = React.useState<ServiceCatalogItem | "new" | null>(null)
+  const [historyTarget, setHistoryTarget] = React.useState<ServiceCatalogItem | null>(null)
 
   const rows = categoryFilter === "All" ? SERVICE_CATALOG : SERVICE_CATALOG.filter((s) => s.category === categoryFilter)
 
@@ -86,24 +92,72 @@ function ServicesTab() {
         <Table>
           <TableHeader><TableRow>
             <TableHead>Code</TableHead><TableHead>Service Name</TableHead><TableHead>Category</TableHead>
-            <TableHead>Rate</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
+            <TableHead>Rate</TableHead><TableHead>GST%</TableHead><TableHead>Disc%</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
           </TableRow></TableHeader>
           <TableBody>
             {rows.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="font-mono text-secondary">{s.code}</TableCell>
-                <TableCell className="font-medium">{s.name}</TableCell>
+                <TableCell className="font-medium">{s.name}{s.nameLocal && <span className="ml-1.5 text-muted-foreground" dir="rtl">({s.nameLocal})</span>}</TableCell>
                 <TableCell>{s.category}</TableCell>
                 <TableCell>{formatCurrency(s.rate)}</TableCell>
+                <TableCell className="text-muted-foreground">{s.gstPct ?? 0}%</TableCell>
+                <TableCell className="text-muted-foreground">{s.discountPct ?? 0}%</TableCell>
                 <TableCell><Switch checked={s.active} onCheckedChange={(v) => { s.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button></TableCell>
+                <TableCell className="text-right">
+                  <Button variant="ghost" size="icon" title="Item History" onClick={() => setHistoryTarget(s)}><History className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
       <ServiceModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+      <ServiceHistoryDialog target={historyTarget} onClose={() => setHistoryTarget(null)} />
     </div>
+  )
+}
+
+function ServiceHistoryDialog({ target, onClose }: { target: ServiceCatalogItem | null; onClose: () => void }) {
+  const usages = React.useMemo(() => {
+    if (!target) return []
+    return SERVICES_INVOICES.flatMap((inv) =>
+      inv.lines.filter((l) => l.name === target.name).map((l) => ({
+        invoiceNo: inv.invoiceNo, date: inv.date, patientId: inv.patientId, qty: l.qty, rate: l.rate, amount: l.amount,
+      }))
+    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  }, [target])
+
+  return (
+    <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent size="md">
+        <DialogHeader><DialogTitle>Item History — {target?.name}</DialogTitle></DialogHeader>
+        {usages.length === 0 ? (
+          <EmptyState icon={History} title="No usage yet" subtitle="This service hasn't appeared on any invoice." />
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Invoice No.</TableHead><TableHead>Date</TableHead><TableHead>Patient</TableHead>
+              <TableHead>Qty</TableHead><TableHead>Rate</TableHead><TableHead>Amount</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {usages.map((u, i) => (
+                <TableRow key={i}>
+                  <TableCell className="font-mono text-secondary">{u.invoiceNo}</TableCell>
+                  <TableCell>{format(new Date(u.date), "dd MMM yyyy")}</TableCell>
+                  <TableCell>{PATIENTS.find((p) => p.id === u.patientId)?.name ?? "—"}</TableCell>
+                  <TableCell>{u.qty}</TableCell>
+                  <TableCell>{formatCurrency(u.rate)}</TableCell>
+                  <TableCell className="font-semibold">{formatCurrency(u.amount)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+        <DialogFooter><Button variant="ghost" onClick={onClose}>Close</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
@@ -112,22 +166,28 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
   const isNew = target === "new"
   const svc = isNew ? null : target
   const [name, setName] = React.useState(svc?.name ?? "")
+  const [nameLocal, setNameLocal] = React.useState(svc?.nameLocal ?? "")
   const [code, setCode] = React.useState(svc?.code ?? "")
   const [category, setCategory] = React.useState(svc?.category ?? SERVICE_CATEGORIES[0])
   const [rate, setRate] = React.useState(svc?.rate ?? 0)
+  const [gstPct, setGstPct] = React.useState(svc?.gstPct ?? 0)
+  const [discountPct, setDiscountPct] = React.useState(svc?.discountPct ?? 0)
+  const [remarks, setRemarks] = React.useState(svc?.remarks ?? "")
+  const [barcode, setBarcode] = React.useState(svc?.barcode ?? false)
 
   React.useEffect(() => {
-    setName(svc?.name ?? ""); setCode(svc?.code ?? ""); setCategory(svc?.category ?? SERVICE_CATEGORIES[0]); setRate(svc?.rate ?? 0)
+    setName(svc?.name ?? ""); setNameLocal(svc?.nameLocal ?? ""); setCode(svc?.code ?? ""); setCategory(svc?.category ?? SERVICE_CATEGORIES[0]); setRate(svc?.rate ?? 0)
+    setGstPct(svc?.gstPct ?? 0); setDiscountPct(svc?.discountPct ?? 0); setRemarks(svc?.remarks ?? ""); setBarcode(svc?.barcode ?? false)
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
     if (!name || !code) return
     if (isNew) {
-      SERVICE_CATALOG.push({ id: Math.max(0, ...SERVICE_CATALOG.map((s) => s.id)) + 1, code, name, category, rate, active: true })
+      SERVICE_CATALOG.push({ id: Math.max(0, ...SERVICE_CATALOG.map((s) => s.id)) + 1, code, name, nameLocal, category, rate, gstPct, discountPct, remarks, barcode, active: true })
       toast({ title: `${name} added to catalogue` })
     } else if (svc) {
       const idx = SERVICE_CATALOG.findIndex((s) => s.id === svc.id)
-      if (idx >= 0) SERVICE_CATALOG[idx] = { ...SERVICE_CATALOG[idx], name, code, category, rate }
+      if (idx >= 0) SERVICE_CATALOG[idx] = { ...SERVICE_CATALOG[idx], name, nameLocal, code, category, rate, gstPct, discountPct, remarks, barcode }
       toast({ title: `${name} updated` })
     }
     onClose()
@@ -139,7 +199,6 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
         <DialogHeader><DialogTitle>{isNew ? "Add Service" : "Edit Service"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5"><Label>Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Service Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label>Category</Label>
             <Select value={category} onValueChange={setCategory}>
@@ -147,7 +206,16 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
               <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5"><Label>Service Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label>Local Name (اردو)</Label><Input dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
           <div className="space-y-1.5"><Label>Rate (Rs.)</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>GST %</Label><Input type="number" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label>Discount %</Label><Input type="number" value={discountPct} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
+          <div className="flex items-center gap-2 pt-6">
+            <Checkbox checked={barcode} onCheckedChange={(v) => setBarcode(v === true)} id="svc-barcode" />
+            <Label htmlFor="svc-barcode" className="cursor-pointer font-normal">Barcode</Label>
+          </div>
+          <div className="space-y-1.5 sm:col-span-2"><Label>Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

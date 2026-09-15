@@ -128,7 +128,7 @@ export function LoginPage() {
                   type="button"
                   onClick={() => quickFill(u.email, u.password)}
                   className={cn(
-                    "rounded-md border border-border px-2 py-1.5 text-left text-[11px] transition-colors hover:border-secondary hover:bg-accent-50"
+                    "rounded-md border border-border px-2 py-1.5 text-left text-xs transition-colors hover:border-secondary hover:bg-accent-50"
                   )}
                 >
                   <div className="font-medium text-foreground">{ROLE_LABELS[u.role]}</div>

@@ -12,7 +12,7 @@ function Tile({ label, value, trendUp = true }: { label: string; value: string; 
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
         <div className="mt-1 text-xl font-bold text-navy-700">{value}</div>
         <div className={`mt-1 flex items-center gap-1 text-xs ${trendUp ? "text-success-600" : "text-danger-600"}`}>
           <ArrowUp className={`h-3 w-3 ${trendUp ? "" : "rotate-180"}`} /> vs last period
