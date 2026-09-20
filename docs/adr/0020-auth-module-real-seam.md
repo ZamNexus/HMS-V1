@@ -1,0 +1,21 @@
+---
+status: accepted
+---
+
+# AuthModule: password hashing, access/refresh JWT, and enforcement that isn't just sidebar-hiding
+
+`src/lib/auth.tsx` compares plaintext passwords directly (`u.password === password`) and serializes the *entire* matched `User` object — password included — to `localStorage`. `SIDEBAR_VISIBILITY`/`canSee()` is the only real access control, and it's client-side: it hides sidebar links, but `RoleGate` wraps only three admin routes, so almost every other route just requires "any logged-in user," regardless of role. There is no server to enforce anything against, because there's no server yet.
+
+**Hashing**: Argon2id, OWASP's current first choice for new systems. Rejected bcrypt as a fallback only if the eventual auth library doesn't support Argon2id well — no reason to default to the older choice on a greenfield build.
+
+**Tokens**: short-lived access JWTs (on the order of 15 minutes) plus a server-side-tracked, revocable refresh token — not a single long-lived stateless JWT, and not a pure server-side session store either. This is a specific operational requirement, not a generic best practice: clinic staff turnover needs to actually revoke access (a terminated receptionist's session must not remain valid for whatever the token's lifetime is), which a purely stateless long-lived JWT cannot do without a blocklist. A pure server-side session store was rejected too, because [ADR-0001](./0001-multi-tenant-shared-schema.md)'s eventual multi-database/sharded scale means minimizing shared state that every app server instance must consult on every request; the refresh token is the one thing that needs a revocable server-side record, and access-token verification stays a fast local check the rest of the time.
+
+**RBAC enforcement reflects the two-tier role split, not one flat check.** Per [ADR-0005](./0005-platform-vs-tenant-scoped-roles.md), the authenticated principal is one of two shapes — an unscoped platform principal or a tenant-scoped clinic principal — and `RolesGuard` has to check the right thing depending on which. A platform route checks platform role only; a clinic route checks clinic role *and* tenant membership, never both loosely.
+
+**Location scoping is enforced, not just modeled.** [ADR-0008](./0008-locations-under-tenant.md) added `staff_locations` specifically because real clinic-chain staff (a doctor covering two branches) exist — but a schema relationship enforces nothing by itself. For non-admin clinic roles, `RolesGuard` additionally checks that the resource being accessed belongs to one of the requesting user's assigned locations, closing the gap between "the model supports multi-location staffing" and "the system actually stops a doctor at Location A from acting on Location B's patients." Clinic `admin` is tenant-wide by definition and is exempt from this check.
+
+**Auth events are audited, not exempt from ADR-0015.** Login, logout, and failed login attempts write to the generic `audit_log` ([ADR-0015](./0015-audit-log-mechanism.md)) like any other action — a security-relevant event is exactly the kind of thing that log exists for, and carving out an exception for auth specifically would be an arbitrary gap.
+
+**Explicitly deferred, not silently dropped**: password-reset flow (`/forgot-password` is currently a bare stub) and multi-factor authentication are real, wanted features but are their own deepening, not part of "give auth a real seam." The `AuthGuard`/token design here doesn't preclude either — a reset flow just issues a new password through the same `PasswordService`, and MFA is an additional check `RolesGuard` can gain later — but building them now would be new scope creeping into a correctness/security fix.
+
+Rejected: a single long-lived stateless JWT with no refresh mechanism — simplest to build, but makes staff-access revocation impossible before token expiry, unacceptable for a system holding patient and financial records. Also rejected: enforcing authorization via sidebar visibility plus a handful of route-level checks, as today — this is exactly the shape that let a `billing` role reach `/pharmacy/:tab` by direct URL despite not having it in their sidebar; enforcement has to live in the guard, not the navigation.
