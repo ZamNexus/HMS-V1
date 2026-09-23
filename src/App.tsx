@@ -4,7 +4,9 @@ import { AuthProvider } from "@/lib/auth"
 import { ProtectedRoute } from "@/components/layout/ProtectedRoute"
 import { RoleGate } from "@/components/layout/RoleGate"
 import { LoginPage } from "@/pages/auth/LoginPage"
+import { UserProfilePage } from "@/pages/auth/UserProfilePage"
 import { ComingSoon } from "@/pages/ComingSoon"
+import { LandingPage } from "@/pages/public/LandingPage"
 import { DashboardPage } from "@/pages/dashboard/DashboardPage"
 import { DashboardStatsPage } from "@/pages/dashboard/DashboardStatsPage"
 
@@ -46,6 +48,7 @@ function App() {
         <Route path="/forgot-password" element={<ComingSoon title="Forgot Password" />} />
 
         <Route element={<ProtectedRoute />}>
+          <Route path="/profile" element={<UserProfilePage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/dashboard/stats" element={<DashboardStatsPage />} />
 
@@ -105,7 +108,7 @@ function App() {
           <Route path="/appointments" element={<ComingSoon title="Appointments — Phase 2" />} />
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="*" element={<ComingSoon title="404 — Page Not Found" />} />
       </Routes>
     </AuthProvider>

@@ -1,24 +1,31 @@
-import { ArrowUp } from "lucide-react"
+import { ArrowUp, Users, Stethoscope, BedDouble, LogOut, Wallet, Activity, Pill, IndianRupee } from "lucide-react"
 
 import { ENCOUNTERS } from "@/data/encounters"
 import { CONSULTATION_INVOICES } from "@/data/billing"
 import { LAB_ORDERS } from "@/data/lab"
 import { DISPENSE_RECORDS } from "@/data/pharmacy"
 import { DOCTORS } from "@/data/doctors"
-import { formatCurrency } from "@/lib/utils"
-import { Card, CardContent } from "@/components/ui/card"
+import { cn, formatCurrency } from "@/lib/utils"
 
-function Tile({ label, value, trendUp = true }: { label: string; value: string; trendUp?: boolean }) {
+function Tile({ label, value, icon: Icon, trendUp = true }: { label: string; value: string; icon: any; trendUp?: boolean }) {
   return (
-    <Card>
-      <CardContent className="p-4">
-        <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="mt-1 text-xl font-bold text-navy-700">{value}</div>
-        <div className={`mt-1 flex items-center gap-1 text-xs ${trendUp ? "text-success-600" : "text-danger-600"}`}>
-          <ArrowUp className={`h-3 w-3 ${trendUp ? "" : "rotate-180"}`} /> vs last period
+    <div className="rounded-[1.5rem] bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 relative overflow-hidden group">
+      <div className="absolute -right-4 -top-4 rounded-full bg-slate-50 p-8 transition-transform group-hover:scale-110">
+        <Icon className="h-8 w-8 text-slate-200" strokeWidth={1.5} />
+      </div>
+      <div className="relative z-10">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1CC0CE]/10 text-[#0891B2]">
+            <Icon className="h-5 w-5" />
+          </div>
+          <div className="text-[11px] font-black uppercase tracking-wider text-slate-500">{label}</div>
         </div>
-      </CardContent>
-    </Card>
+        <div className="mt-2 text-2xl font-black text-[#0D1B2E] tracking-tight">{value}</div>
+        <div className={cn("mt-2 flex items-center gap-1 text-[11px] font-bold", trendUp ? "text-emerald-600" : "text-rose-600")}>
+          <ArrowUp className={cn("h-3 w-3", !trendUp && "rotate-180")} /> vs last period
+        </div>
+      </div>
+    </div>
   )
 }
 
@@ -41,48 +48,84 @@ export function DailySummaryReport() {
   const cash = 68, card = 18, insurance = 14
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Tile label="New Patients" value={String(newPatients)} />
-        <Tile label="OPD Encounters" value={String(opdCount)} />
-        <Tile label="IPD Admissions" value={String(ipdCount)} />
-        <Tile label="Discharges" value={String(discharges)} />
-        <Tile label="Consultation Revenue" value={formatCurrency(consultRevenue)} />
-        <Tile label="Lab Revenue" value={formatCurrency(labRevenue)} />
-        <Tile label="Pharmacy Revenue" value={formatCurrency(pharmacyRevenue)} />
-        <Tile label="Total Revenue" value={formatCurrency(totalRevenue)} />
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <Tile label="New Patients" value={String(newPatients)} icon={Users} />
+        <Tile label="OPD Encounters" value={String(opdCount)} icon={Stethoscope} />
+        <Tile label="IPD Admissions" value={String(ipdCount)} icon={BedDouble} />
+        <Tile label="Discharges" value={String(discharges)} icon={LogOut} />
+        <Tile label="Consultation Rev." value={formatCurrency(consultRevenue)} icon={Wallet} />
+        <Tile label="Lab Revenue" value={formatCurrency(labRevenue)} icon={Activity} />
+        <Tile label="Pharmacy Rev." value={formatCurrency(pharmacyRevenue)} icon={Pill} />
+        <Tile label="Total Revenue" value={formatCurrency(totalRevenue)} icon={IndianRupee} />
       </div>
 
-      <Card>
-        <CardContent className="p-5">
-          <h3 className="mb-3 text-sm font-semibold">Doctor-wise OPD</h3>
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Doctor</th><th className="pb-2 text-right">Patients</th><th className="pb-2 text-right">Consultations (Rs.)</th></tr></thead>
-            <tbody>
-              {doctorWise.map((d) => (
-                <tr key={d.name} className="border-t border-border"><td className="py-1.5">{d.name}</td><td className="py-1.5 text-right">{d.patients}</td><td className="py-1.5 text-right">{formatCurrency(d.revenue)}</td></tr>
-              ))}
-              <tr className="border-t border-border font-bold"><td className="py-1.5">Total</td><td className="py-1.5 text-right">{doctorWise.reduce((s, d) => s + d.patients, 0)}</td><td className="py-1.5 text-right">{formatCurrency(doctorWise.reduce((s, d) => s + d.revenue, 0))}</td></tr>
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden flex flex-col">
+          <div className="p-6 border-b border-slate-100">
+            <h3 className="text-base font-black text-[#0D1B2E] tracking-tight">Doctor-wise OPD</h3>
+          </div>
+          <div className="p-0 overflow-x-auto flex-1 bg-slate-50/50">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50/80 border-b border-slate-100">
+                <tr>
+                  <th className="py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Doctor</th>
+                  <th className="py-4 px-6 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">Patients</th>
+                  <th className="py-4 px-6 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">Revenue</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white">
+                {doctorWise.map((d) => (
+                  <tr key={d.name} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-6 font-bold text-[#0D1B2E]">{d.name}</td>
+                    <td className="py-4 px-6 text-right font-semibold text-slate-600">{d.patients}</td>
+                    <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatCurrency(d.revenue)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="bg-slate-50 border-t border-slate-200">
+                <tr>
+                  <td className="py-4 px-6 font-black text-[#0D1B2E] uppercase text-[11px] tracking-wider">Total</td>
+                  <td className="py-4 px-6 text-right font-black text-[#0D1B2E]">{doctorWise.reduce((s, d) => s + d.patients, 0)}</td>
+                  <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatCurrency(doctorWise.reduce((s, d) => s + d.revenue, 0))}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
 
-      <Card>
-        <CardContent className="p-5">
-          <h3 className="mb-3 text-sm font-semibold">Payment Mode Breakdown</h3>
-          <div className="flex h-8 w-full overflow-hidden rounded-md">
-            <div className="bg-teal-600" style={{ width: `${cash}%` }} title={`Cash ${cash}%`} />
-            <div className="bg-navy-700" style={{ width: `${card}%` }} title={`Card ${card}%`} />
-            <div className="bg-slate-400" style={{ width: `${insurance}%` }} title={`Insurance ${insurance}%`} />
+        <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 flex flex-col">
+          <h3 className="text-base font-black text-[#0D1B2E] tracking-tight mb-8">Payment Mode Breakdown</h3>
+          <div className="flex-1 flex flex-col justify-center">
+            <div className="flex h-12 w-full overflow-hidden rounded-2xl ring-1 ring-inset ring-slate-200/50">
+              <div className="bg-[#0F2A4D] transition-all duration-1000 ease-in-out" style={{ width: `${cash}%` }} title={`Cash ${cash}%`} />
+              <div className="bg-[#1CC0CE] transition-all duration-1000 ease-in-out border-l border-white/20" style={{ width: `${card}%` }} title={`Card ${card}%`} />
+              <div className="bg-slate-200 transition-all duration-1000 ease-in-out border-l border-white/20" style={{ width: `${insurance}%` }} title={`Insurance ${insurance}%`} />
+            </div>
+            
+            <div className="mt-8 grid grid-cols-3 gap-4">
+              <div className="flex flex-col items-center p-4 rounded-xl bg-slate-50">
+                <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#0F2A4D] shadow-sm" /> Cash
+                </span>
+                <span className="text-2xl font-black text-[#0D1B2E]">{cash}%</span>
+              </div>
+              <div className="flex flex-col items-center p-4 rounded-xl bg-slate-50">
+                <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[#1CC0CE] shadow-sm" /> Card
+                </span>
+                <span className="text-2xl font-black text-[#0D1B2E]">{card}%</span>
+              </div>
+              <div className="flex flex-col items-center p-4 rounded-xl bg-slate-50">
+                <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
+                  <span className="h-2.5 w-2.5 rounded-full bg-slate-200 shadow-sm" /> Insurance
+                </span>
+                <span className="text-2xl font-black text-[#0D1B2E]">{insurance}%</span>
+              </div>
+            </div>
           </div>
-          <div className="mt-2 flex gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-teal-600" /> Cash {cash}%</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-navy-700" /> Card {card}%</span>
-            <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-400" /> Insurance {insurance}%</span>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

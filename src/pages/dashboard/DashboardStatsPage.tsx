@@ -101,12 +101,18 @@ export function DashboardStatsPage() {
     <div>
       <PageHeader title="Financial Statistics" subtitle="Dashboard Summary — replaces the desktop OPD/IPD Summary window" />
 
-      <div className="mb-4 flex gap-1 overflow-x-auto rounded-md bg-muted p-1">
+      {/* Replaced overflow-x-auto (slider) with flex-wrap so tabs stack cleanly on mobile */}
+      <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl bg-muted/40 p-1.5">
         {TABS.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={cn("shrink-0 rounded-sm px-3 py-1.5 text-xs font-medium transition-colors", tab === t ? "bg-background text-secondary shadow-sm" : "text-muted-foreground")}
+            className={cn(
+              "rounded-lg px-3.5 py-1.5 text-[13px] font-medium transition-all duration-200",
+              tab === t 
+                ? "bg-white text-primary shadow-sm ring-1 ring-border/50" 
+                : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+            )}
           >
             {t}
           </button>
@@ -115,92 +121,104 @@ export function DashboardStatsPage() {
 
       {tab === "Summary" && (
         <div className="space-y-6">
-          <Card>
+          <Card className="shadow-sm">
+            {/* Added responsive hidden classes to dense columns to prevent horizontal scrolling */}
             <CardContent className="p-0">
               <Table>
-                <TableHeader><TableRow>
-                  <TableHead>Transaction Type</TableHead><TableHead className="text-right">Total Value</TableHead>
-                  <TableHead className="text-right">Total Count</TableHead><TableHead className="text-right">Cash Received</TableHead>
-                  <TableHead className="text-right">Total Credit</TableHead><TableHead className="text-right">OPD Value</TableHead>
-                  <TableHead className="text-right">IPD Value</TableHead>
-                </TableRow></TableHeader>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead className="font-semibold">Transaction Type</TableHead>
+                    <TableHead className="text-right font-semibold">Total Value</TableHead>
+                    <TableHead className="hidden text-right font-semibold md:table-cell">Count</TableHead>
+                    <TableHead className="hidden text-right font-semibold sm:table-cell">Cash</TableHead>
+                    <TableHead className="hidden text-right font-semibold sm:table-cell">Credit</TableHead>
+                    <TableHead className="hidden text-right font-semibold lg:table-cell">OPD</TableHead>
+                    <TableHead className="hidden text-right font-semibold lg:table-cell">IPD</TableHead>
+                  </TableRow>
+                </TableHeader>
                 <TableBody>
                   {rows.map((r) => {
                     const s = summarize(r.data)
                     return (
-                      <TableRow key={r.label}>
+                      <TableRow key={r.label} className="transition-colors hover:bg-muted/20">
                         <TableCell className="font-medium">{r.label}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(s.value)}</TableCell>
-                        <TableCell className="text-right">{s.count}</TableCell>
-                        <TableCell className="text-right text-success-600">{formatCurrency(s.cash)}</TableCell>
-                        <TableCell className="text-right text-warning-700">{formatCurrency(s.credit)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(s.opd)}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(s.ipd)}</TableCell>
+                        <TableCell className="text-right font-medium">{formatCurrency(s.value)}</TableCell>
+                        <TableCell className="hidden text-right md:table-cell text-muted-foreground">{s.count}</TableCell>
+                        <TableCell className="hidden text-right text-success-600 sm:table-cell">{formatCurrency(s.cash)}</TableCell>
+                        <TableCell className="hidden text-right text-warning-700 sm:table-cell">{formatCurrency(s.credit)}</TableCell>
+                        <TableCell className="hidden text-right lg:table-cell">{formatCurrency(s.opd)}</TableCell>
+                        <TableCell className="hidden text-right lg:table-cell">{formatCurrency(s.ipd)}</TableCell>
                       </TableRow>
                     )
                   })}
-                  <TableRow className="bg-muted/40 font-semibold">
+                  <TableRow className="bg-muted/40 font-semibold shadow-inner">
                     <TableCell>Total Sales</TableCell>
                     <TableCell className="text-right">{formatCurrency(totalSales.value)}</TableCell>
-                    <TableCell className="text-right">{totalSales.count}</TableCell>
-                    <TableCell className="text-right text-success-600">{formatCurrency(totalSales.cash)}</TableCell>
-                    <TableCell className="text-right text-warning-700">{formatCurrency(totalSales.credit)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalSales.opd)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(totalSales.ipd)}</TableCell>
+                    <TableCell className="hidden text-right md:table-cell">{totalSales.count}</TableCell>
+                    <TableCell className="hidden text-right text-success-600 sm:table-cell">{formatCurrency(totalSales.cash)}</TableCell>
+                    <TableCell className="hidden text-right text-warning-700 sm:table-cell">{formatCurrency(totalSales.credit)}</TableCell>
+                    <TableCell className="hidden text-right lg:table-cell">{formatCurrency(totalSales.opd)}</TableCell>
+                    <TableCell className="hidden text-right lg:table-cell">{formatCurrency(totalSales.ipd)}</TableCell>
                   </TableRow>
                   <TableRow>
-                    <TableCell>Payments</TableCell>
-                    <TableCell className="text-right">{formatCurrency(paymentsTotal.value)}</TableCell>
-                    <TableCell className="text-right">{paymentsTotal.count}</TableCell>
-                    <TableCell colSpan={4} />
+                    <TableCell className="text-muted-foreground">Payments</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(paymentsTotal.value)}</TableCell>
+                    <TableCell className="hidden text-right md:table-cell text-muted-foreground">{paymentsTotal.count}</TableCell>
+                    <TableCell colSpan={4} className="hidden sm:table-cell" />
                   </TableRow>
                   <TableRow>
-                    <TableCell>Receipts</TableCell>
-                    <TableCell className="text-right">{formatCurrency(receiptsTotal.value)}</TableCell>
-                    <TableCell className="text-right">{receiptsTotal.count}</TableCell>
-                    <TableCell colSpan={4} />
+                    <TableCell className="text-muted-foreground">Receipts</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(receiptsTotal.value)}</TableCell>
+                    <TableCell className="hidden text-right md:table-cell text-muted-foreground">{receiptsTotal.count}</TableCell>
+                    <TableCell colSpan={4} className="hidden sm:table-cell" />
                   </TableRow>
                   <TableRow>
-                    <TableCell>Expenses</TableCell>
-                    <TableCell className="text-right">{formatCurrency(expensesTotal.value)}</TableCell>
-                    <TableCell className="text-right">{expensesTotal.count}</TableCell>
-                    <TableCell colSpan={4} />
+                    <TableCell className="text-muted-foreground">Expenses</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(expensesTotal.value)}</TableCell>
+                    <TableCell className="hidden text-right md:table-cell text-muted-foreground">{expensesTotal.count}</TableCell>
+                    <TableCell colSpan={4} className="hidden sm:table-cell" />
                   </TableRow>
                   <TableRow>
-                    <TableCell>Banks</TableCell>
-                    <TableCell className="text-right">{formatCurrency(bankTotal.value)}</TableCell>
-                    <TableCell className="text-right">{bankTotal.count}</TableCell>
-                    <TableCell colSpan={4} />
+                    <TableCell className="text-muted-foreground">Banks</TableCell>
+                    <TableCell className="text-right font-medium">{formatCurrency(bankTotal.value)}</TableCell>
+                    <TableCell className="hidden text-right md:table-cell text-muted-foreground">{bankTotal.count}</TableCell>
+                    <TableCell colSpan={4} className="hidden sm:table-cell" />
                   </TableRow>
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardContent className="p-5">
-              <h3 className="mb-3 text-sm font-semibold">Cash Flow</h3>
-              <div className="mb-4 grid grid-cols-2 gap-4 text-center sm:grid-cols-2">
-                <div><div className="text-xs text-muted-foreground">Opening</div><div className="text-lg font-bold">{formatCurrency(CASH_DRAWER_OPENING)}</div></div>
-                <div><div className="text-xs text-muted-foreground">Closing</div><div className="text-lg font-bold">{formatCurrency(closing)}</div></div>
+          <Card className="shadow-sm">
+            <CardContent className="p-6">
+              <h3 className="mb-4 text-base font-semibold text-foreground">Cash Flow</h3>
+              <div className="mb-6 grid grid-cols-2 gap-4 text-center sm:grid-cols-2">
+                <div className="rounded-xl border border-border/50 bg-gradient-to-br from-white to-muted/20 p-4 shadow-sm">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Opening</div>
+                  <div className="text-2xl font-extrabold text-foreground">{formatCurrency(CASH_DRAWER_OPENING)}</div>
+                </div>
+                <div className="rounded-xl border border-border/50 bg-gradient-to-br from-white to-muted/20 p-4 shadow-sm">
+                  <div className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Closing</div>
+                  <div className="text-2xl font-extrabold text-foreground">{formatCurrency(closing)}</div>
+                </div>
               </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <div className="mb-1.5 rounded-t-md bg-muted px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cash-In</div>
-                  <div className="space-y-1 px-1 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Sale</span><span>{formatCurrency(cashSales)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Receipts</span><span>{formatCurrency(cashReceipts)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Drawn From Bank</span><span>{formatCurrency(cashDrawnFromBank)}</span></div>
-                    <div className="flex justify-between border-t border-border pt-1 font-semibold"><span>Total Cash In</span><span className="text-success-600">{formatCurrency(cashIn)}</span></div>
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div className="rounded-xl border border-border/50 bg-white shadow-sm overflow-hidden">
+                  <div className="bg-success-50/50 border-b border-border/50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-success-700">Cash-In</div>
+                  <div className="space-y-2.5 p-4 text-[13px]">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Sale</span><span className="font-medium">{formatCurrency(cashSales)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Receipts</span><span className="font-medium">{formatCurrency(cashReceipts)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Drawn From Bank</span><span className="font-medium">{formatCurrency(cashDrawnFromBank)}</span></div>
+                    <div className="flex justify-between border-t border-border pt-3 text-sm font-bold"><span>Total Cash In</span><span className="text-success-600">{formatCurrency(cashIn)}</span></div>
                   </div>
                 </div>
-                <div>
-                  <div className="mb-1.5 rounded-t-md bg-muted px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cash-Out</div>
-                  <div className="space-y-1 px-1 text-sm">
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Expenses</span><span>{formatCurrency(cashExpenses)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Payments</span><span>{formatCurrency(cashPayments)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Deposit In Bank</span><span>{formatCurrency(cashDepositInBank)}</span></div>
-                    <div className="flex justify-between border-t border-border pt-1 font-semibold"><span>Total Cash Out</span><span className="text-danger-600">{formatCurrency(cashOut)}</span></div>
+                <div className="rounded-xl border border-border/50 bg-white shadow-sm overflow-hidden">
+                  <div className="bg-danger-50/50 border-b border-border/50 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-danger-700">Cash-Out</div>
+                  <div className="space-y-2.5 p-4 text-[13px]">
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Expenses</span><span className="font-medium">{formatCurrency(cashExpenses)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Total Cash Payments</span><span className="font-medium">{formatCurrency(cashPayments)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">Deposit In Bank</span><span className="font-medium">{formatCurrency(cashDepositInBank)}</span></div>
+                    <div className="flex justify-between border-t border-border pt-3 text-sm font-bold"><span>Total Cash Out</span><span className="text-danger-600">{formatCurrency(cashOut)}</span></div>
                   </div>
                 </div>
               </div>
@@ -219,18 +237,26 @@ export function DashboardStatsPage() {
       {tab === "Payments" && <CategoryTable rows={PAYMENTS.map((p) => ({ id: p.receiptNo, date: p.date, name: patientName(p.patientId), amount: p.amount, status: p.mode }))} />}
       {tab === "Expenses" && <CategoryTable rows={EXPENSES.map((e) => ({ id: String(e.id), date: e.date, name: e.description, amount: e.amount, status: e.category }))} />}
       {tab === "Bank" && (
-        <Card>
+        <Card className="shadow-sm">
           <CardContent className="p-0">
             <Table>
-              <TableHeader><TableRow><TableHead>Date</TableHead><TableHead>Description</TableHead><TableHead className="text-right">Debit</TableHead><TableHead className="text-right">Credit</TableHead><TableHead className="text-right">Balance</TableHead></TableRow></TableHeader>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead className="hidden sm:table-cell font-semibold">Date</TableHead>
+                  <TableHead className="font-semibold">Description</TableHead>
+                  <TableHead className="text-right font-semibold">Debit</TableHead>
+                  <TableHead className="text-right font-semibold">Credit</TableHead>
+                  <TableHead className="hidden md:table-cell text-right font-semibold">Balance</TableHead>
+                </TableRow>
+              </TableHeader>
               <TableBody>
                 {bankRows.map(({ transaction: t, balance }) => (
-                  <TableRow key={t.id}>
-                    <TableCell>{format(new Date(t.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell>{t.description}</TableCell>
-                    <TableCell className="text-right text-danger-600">{t.debit > 0 ? formatCurrency(t.debit) : "—"}</TableCell>
-                    <TableCell className="text-right text-success-600">{t.credit > 0 ? formatCurrency(t.credit) : "—"}</TableCell>
-                    <TableCell className="text-right font-semibold">{formatCurrency(balance)}</TableCell>
+                  <TableRow key={t.id} className="transition-colors hover:bg-muted/20">
+                    <TableCell className="hidden sm:table-cell text-muted-foreground">{format(new Date(t.date), "dd MMM yyyy")}</TableCell>
+                    <TableCell className="font-medium">{t.description}</TableCell>
+                    <TableCell className="text-right text-danger-600 font-medium">{t.debit > 0 ? formatCurrency(t.debit) : "—"}</TableCell>
+                    <TableCell className="text-right text-success-600 font-medium">{t.credit > 0 ? formatCurrency(t.credit) : "—"}</TableCell>
+                    <TableCell className="hidden md:table-cell text-right font-bold">{formatCurrency(balance)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -239,16 +265,20 @@ export function DashboardStatsPage() {
         </Card>
       )}
       {tab === "Graphs" && (
-        <Card>
-          <CardContent className="p-5">
-            <h3 className="mb-3 text-sm font-semibold">Daily Checkup Revenue</h3>
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={dailyRevenue}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
-                <XAxis dataKey="date" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis fontSize={11} tickLine={false} axisLine={false} width={50} />
-                <Tooltip formatter={(v) => formatCurrency(Number(v))} />
-                <Bar dataKey="value" fill="#0891B2" radius={[4, 4, 0, 0]} />
+        <Card className="shadow-sm">
+          <CardContent className="p-6">
+            <h3 className="mb-4 text-base font-semibold text-foreground">Daily Checkup Revenue</h3>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={dailyRevenue} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                <XAxis dataKey="date" fontSize={12} tickLine={false} axisLine={false} tick={{ fill: "#64748B" }} dy={10} />
+                <YAxis fontSize={12} tickLine={false} axisLine={false} width={60} tick={{ fill: "#64748B" }} />
+                <Tooltip 
+                  cursor={{ fill: "#F8FAFC" }}
+                  contentStyle={{ borderRadius: "8px", border: "none", boxShadow: "0 4px 12px rgba(0,0,0,0.08)", fontSize: "13px" }}
+                  formatter={(v) => [formatCurrency(Number(v)), "Revenue"]} 
+                />
+                <Bar dataKey="value" fill="#1CC0CE" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -285,18 +315,26 @@ export function DashboardStatsPage() {
 function CategoryTable({ rows }: { rows: { id: string; date: string; name: string; amount: number; status: string }[] }) {
   if (rows.length === 0) return <EmptyState icon={Layers} title="No records for this category" />
   return (
-    <Card>
+    <Card className="shadow-sm">
       <CardContent className="p-0">
         <Table>
-          <TableHeader><TableRow><TableHead>ID</TableHead><TableHead>Date</TableHead><TableHead>Patient / Description</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+          <TableHeader className="bg-muted/30">
+            <TableRow>
+              <TableHead className="hidden sm:table-cell font-semibold">ID</TableHead>
+              <TableHead className="hidden md:table-cell font-semibold">Date</TableHead>
+              <TableHead className="font-semibold">Patient / Description</TableHead>
+              <TableHead className="text-right font-semibold">Amount</TableHead>
+              <TableHead className="font-semibold text-center">Status</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {rows.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="font-mono text-secondary">{r.id}</TableCell>
-                <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
-                <TableCell>{r.name}</TableCell>
-                <TableCell className="text-right">{formatCurrency(r.amount)}</TableCell>
-                <TableCell><StatusBadge status={r.status} /></TableCell>
+              <TableRow key={r.id} className="transition-colors hover:bg-muted/20">
+                <TableCell className="hidden sm:table-cell font-mono text-[13px] text-muted-foreground">{r.id}</TableCell>
+                <TableCell className="hidden md:table-cell text-muted-foreground">{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
+                <TableCell className="font-medium text-foreground">{r.name}</TableCell>
+                <TableCell className="text-right font-semibold text-foreground">{formatCurrency(r.amount)}</TableCell>
+                <TableCell className="text-center"><StatusBadge status={r.status} /></TableCell>
               </TableRow>
             ))}
           </TableBody>

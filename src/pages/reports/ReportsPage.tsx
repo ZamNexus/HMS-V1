@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Download, Printer } from "lucide-react"
+import { Download, Printer, ChevronRight, FileText, BarChart3, ListOrdered } from "lucide-react"
 
 import { EXPENSES } from "@/data/billing"
 import { cn } from "@/lib/utils"
@@ -19,18 +19,18 @@ import { PrescriptionHistoryReport } from "@/pages/reports/PrescriptionHistoryRe
 import { Button } from "@/components/ui/button"
 
 const REPORTS = [
-  { key: "daily", label: "Daily Summary", group: "Analytics", Component: DailySummaryReport },
-  { key: "daily-transactions", label: "Daily Transactions", group: "Registers", Component: DailyTransactionsReport },
-  { key: "opd", label: "OPD Statistics", group: "Analytics", Component: OpdStatisticsReport },
-  { key: "revenue", label: "Revenue", group: "Analytics", Component: RevenueReport },
-  { key: "lab", label: "Laboratory", group: "Analytics", Component: LabReport },
-  { key: "pharmacy", label: "Pharmacy", group: "Analytics", Component: PharmacyReport },
-  { key: "expense", label: "Expenses", group: "Analytics", Component: ExpenseReport },
-  { key: "demographics", label: "Patient Demographics", group: "Analytics", Component: PatientDemographicsReport },
-  { key: "lists", label: "Lists", group: "Registers", Component: ListsReport },
-  { key: "accounts", label: "Accounts", group: "Registers", Component: AccountsReport },
-  { key: "patient-balances", label: "Patient Balances", group: "Registers", Component: PatientBalancesReport },
-  { key: "prescriptions", label: "Prescription History", group: "Registers", Component: PrescriptionHistoryReport },
+  { key: "daily", label: "Daily Summary", group: "Analytics", Component: DailySummaryReport, icon: BarChart3 },
+  { key: "daily-transactions", label: "Daily Transactions", group: "Registers", Component: DailyTransactionsReport, icon: ListOrdered },
+  { key: "opd", label: "OPD Statistics", group: "Analytics", Component: OpdStatisticsReport, icon: BarChart3 },
+  { key: "revenue", label: "Revenue", group: "Analytics", Component: RevenueReport, icon: BarChart3 },
+  { key: "lab", label: "Laboratory", group: "Analytics", Component: LabReport, icon: BarChart3 },
+  { key: "pharmacy", label: "Pharmacy", group: "Analytics", Component: PharmacyReport, icon: BarChart3 },
+  { key: "expense", label: "Expenses", group: "Analytics", Component: ExpenseReport, icon: BarChart3 },
+  { key: "demographics", label: "Patient Demographics", group: "Analytics", Component: PatientDemographicsReport, icon: BarChart3 },
+  { key: "lists", label: "Lists", group: "Registers", Component: ListsReport, icon: FileText },
+  { key: "accounts", label: "Accounts", group: "Registers", Component: AccountsReport, icon: FileText },
+  { key: "patient-balances", label: "Patient Balances", group: "Registers", Component: PatientBalancesReport, icon: FileText },
+  { key: "prescriptions", label: "Prescription History", group: "Registers", Component: PrescriptionHistoryReport, icon: FileText },
 ] as const
 
 const GROUPS = ["Analytics", "Registers"] as const
@@ -54,60 +54,92 @@ export function ReportsPage() {
   }
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 no-print">
-        <h1 className="text-2xl font-bold text-foreground">Reports</h1>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex gap-1 rounded-md bg-muted p-1">
-            {DATE_RANGES.map((r) => (
-              <button key={r} onClick={() => setDateRange(r)} className={cn("rounded-sm px-2.5 py-1.5 text-xs font-medium transition-colors", dateRange === r ? "bg-background text-secondary shadow-sm" : "text-muted-foreground")}>
-                {r}
-              </button>
-            ))}
-          </div>
-          <Button variant="outline" size="sm" onClick={exportCsv}><Download className="h-4 w-4" /> Export CSV</Button>
-          <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print Report</Button>
+    <div className="space-y-6 pb-10 max-w-[90rem] mx-auto">
+      {/* ─── PREMIUM PAGE HEADER ─────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+        <div>
+          <h1 className="text-3xl font-black text-[#0D1B2E] tracking-tight">Analytics & Reports</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">View clinic performance, registers, and financial data</p>
         </div>
       </div>
 
-      <div className="hidden text-center print:block">
-        <h2 className="text-lg font-bold">Citi Clinic — عيادة المدينة</h2>
-        <p className="text-xs">Scheme III, Bostan Khan Road, Rawalpindi</p>
-        <hr className="my-2" />
-        <p className="mb-2 text-sm font-semibold">{current.label} · {dateRange} · Generated: {new Date().toLocaleString()}</p>
+      {/* ─── TOP ACTION BAR ────────────────────────────────────────────── */}
+      <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col xl:flex-row xl:items-center justify-between gap-4 no-print">
+        <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-50/80 rounded-xl ring-1 ring-slate-100">
+          {DATE_RANGES.map((r) => (
+            <button
+              key={r}
+              onClick={() => setDateRange(r)}
+              className={cn(
+                "rounded-lg px-4 py-2 text-xs font-bold transition-all whitespace-nowrap",
+                dateRange === r
+                  ? "bg-white text-[#0891B2] shadow-sm ring-1 ring-black/5"
+                  : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
+              )}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="rounded-xl h-11 px-5 font-bold text-slate-600 border-slate-200 bg-white hover:bg-slate-50 transition-colors" onClick={exportCsv}>
+            <Download className="h-4 w-4 mr-2" /> Export CSV
+          </Button>
+          <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0" onClick={() => window.print()}>
+            <Printer className="h-4 w-4 mr-2" /> Print Report
+          </Button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[200px_1fr]">
-        <nav className="no-print space-y-4">
+      <div className="hidden text-center print:block mb-8">
+        <h2 className="text-xl font-black text-black uppercase tracking-widest">Citi Clinic — عيادة المدينة</h2>
+        <p className="text-sm text-slate-600 mt-1">Scheme III, Bostan Khan Road, Rawalpindi</p>
+        <hr className="my-4 border-black/20" />
+        <p className="mb-2 text-base font-bold text-black uppercase tracking-wider">{current.label}</p>
+        <p className="text-xs text-slate-500 font-medium">Period: {dateRange} · Generated: {new Date().toLocaleString()}</p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr] xl:grid-cols-[280px_1fr]">
+        <nav className="no-print space-y-6">
           {GROUPS.map((group) => (
-            <div key={group}>
-              <div className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-                {group === "Registers" ? "Lists, Accounts & History" : group}
+            <div key={group} className="space-y-2">
+              <div className="px-1 text-[11px] font-black uppercase tracking-widest text-slate-400">
+                {group === "Registers" ? "Lists & History" : group}
               </div>
               <div className="space-y-1">
-                {REPORTS.filter((r) => r.group === group).map((r) => (
-                  <button
-                    key={r.key}
-                    onClick={() => setActive(r.key)}
-                    className={cn(
-                      "block w-full rounded-md px-3 py-2 text-left text-sm font-medium transition-colors",
-                      active === r.key ? "bg-accent-50 text-secondary" : "text-muted-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                ))}
+                {REPORTS.filter((r) => r.group === group).map((r) => {
+                  const Icon = r.icon
+                  const isActive = active === r.key
+                  return (
+                    <button
+                      key={r.key}
+                      onClick={() => setActive(r.key)}
+                      className={cn(
+                        "group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-bold transition-all",
+                        isActive
+                          ? "bg-[#1CC0CE]/10 text-[#0891B2] shadow-sm"
+                          : "text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Icon className={cn("h-4 w-4 transition-colors", isActive ? "text-[#1CC0CE]" : "text-slate-400 group-hover:text-slate-500")} />
+                        {r.label}
+                      </div>
+                      {isActive && <ChevronRight className="h-4 w-4 text-[#1CC0CE]" />}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           ))}
         </nav>
 
-        <div>
+        <div className="min-w-0">
           <current.Component />
         </div>
       </div>
 
-      <p className="mt-6 hidden text-center text-[10px] text-muted-foreground print:block">
+      <p className="mt-8 hidden text-center text-[10px] font-bold uppercase tracking-widest text-slate-400 print:block">
         Confidential — Citi Clinic Management Information System
       </p>
     </div>

@@ -1,6 +1,6 @@
 import * as React from "react"
 import { format } from "date-fns"
-import { Pencil, Plus, Trash2, History } from "lucide-react"
+import { Pencil, Plus, Trash2, History, Search } from "lucide-react"
 
 import { SERVICE_CATALOG } from "@/data/services"
 import { PANELS } from "@/data/organisations"
@@ -16,7 +16,6 @@ import type {
   PanelType, ServiceCatalogItem, Panel, GuardianRelationItem, EcgUltrasoundTest, Disease, LabTest, BankAccount,
 } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
-import { PageHeader } from "@/components/shared/PageHeader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Button } from "@/components/ui/button"
@@ -36,33 +35,48 @@ const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine An
 const PANEL_TYPES: PanelType[] = ["Insurance", "Corporate", "Government", "Other"]
 const DISEASE_CATEGORIES = ["Respiratory", "Endocrine", "Cardiovascular", "Gastrointestinal", "Infectious", "Haematology", "Neurology", "Musculoskeletal", "Psychiatric", "Genitourinary", "Dermatology", "Other"]
 
+const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
+const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all font-semibold"
+const primaryBtnClass = "rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0 shrink-0"
+
 export function MasterDataPage() {
   return (
-    <div>
-      <PageHeader title="Master Data" />
+    <div className="space-y-6 pb-10 max-w-7xl mx-auto">
+      {/* ─── PREMIUM PAGE HEADER ─────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-[#0D1B2E] tracking-tight">Master Data</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            Configure system catalogues, services, billing data, and clinic settings
+          </p>
+        </div>
+      </div>
+
       <Tabs defaultValue="services">
-        <TabsList>
-          <TabsTrigger value="services">Services Catalog</TabsTrigger>
-          <TabsTrigger value="labtests">Lab &amp; Imaging Tests</TabsTrigger>
-          <TabsTrigger value="panels">Panels &amp; Insurance</TabsTrigger>
-          <TabsTrigger value="wards">Wards &amp; Beds</TabsTrigger>
-          <TabsTrigger value="guardian">Guardian Relations</TabsTrigger>
-          <TabsTrigger value="ecg">ECG/Ultrasound</TabsTrigger>
-          <TabsTrigger value="diseases">Diseases/Diagnosis</TabsTrigger>
-          <TabsTrigger value="expenses">Expense Categories</TabsTrigger>
-          <TabsTrigger value="banks">Banks</TabsTrigger>
-          <TabsTrigger value="clinic">Clinic Settings</TabsTrigger>
+        <TabsList className="h-auto p-1.5 bg-slate-100/80 rounded-2xl flex gap-1 overflow-x-auto justify-start border border-slate-200/60 shadow-inner scrollbar-none w-full">
+          <TabsTrigger value="services" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Services Catalog</TabsTrigger>
+          <TabsTrigger value="labtests" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Lab &amp; Imaging Tests</TabsTrigger>
+          <TabsTrigger value="panels" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Panels &amp; Insurance</TabsTrigger>
+          <TabsTrigger value="wards" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Wards &amp; Beds</TabsTrigger>
+          <TabsTrigger value="guardian" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Guardian Relations</TabsTrigger>
+          <TabsTrigger value="ecg" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">ECG/Ultrasound</TabsTrigger>
+          <TabsTrigger value="diseases" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Diseases/Diagnosis</TabsTrigger>
+          <TabsTrigger value="expenses" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Expense Categories</TabsTrigger>
+          <TabsTrigger value="banks" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Banks</TabsTrigger>
+          <TabsTrigger value="clinic" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Clinic Settings</TabsTrigger>
         </TabsList>
-        <TabsContent value="services"><ServicesTab /></TabsContent>
-        <TabsContent value="labtests"><LabTestsTab /></TabsContent>
-        <TabsContent value="panels"><PanelsTab /></TabsContent>
-        <TabsContent value="wards"><WardsTab /></TabsContent>
-        <TabsContent value="guardian"><GuardianRelationsTab /></TabsContent>
-        <TabsContent value="ecg"><EcgUltrasoundTab /></TabsContent>
-        <TabsContent value="diseases"><DiseasesTab /></TabsContent>
-        <TabsContent value="expenses"><ExpenseCategoriesTab /></TabsContent>
-        <TabsContent value="banks"><BanksTab /></TabsContent>
-        <TabsContent value="clinic"><ClinicSettingsTab /></TabsContent>
+        <div className="mt-6">
+          <TabsContent value="services" className="mt-0 outline-none"><ServicesTab /></TabsContent>
+          <TabsContent value="labtests" className="mt-0 outline-none"><LabTestsTab /></TabsContent>
+          <TabsContent value="panels" className="mt-0 outline-none"><PanelsTab /></TabsContent>
+          <TabsContent value="wards" className="mt-0 outline-none"><WardsTab /></TabsContent>
+          <TabsContent value="guardian" className="mt-0 outline-none"><GuardianRelationsTab /></TabsContent>
+          <TabsContent value="ecg" className="mt-0 outline-none"><EcgUltrasoundTab /></TabsContent>
+          <TabsContent value="diseases" className="mt-0 outline-none"><DiseasesTab /></TabsContent>
+          <TabsContent value="expenses" className="mt-0 outline-none"><ExpenseCategoriesTab /></TabsContent>
+          <TabsContent value="banks" className="mt-0 outline-none"><BanksTab /></TabsContent>
+          <TabsContent value="clinic" className="mt-0 outline-none"><ClinicSettingsTab /></TabsContent>
+        </div>
       </Tabs>
     </div>
   )
@@ -77,41 +91,63 @@ function ServicesTab() {
   const rows = categoryFilter === "All" ? SERVICE_CATALOG : SERVICE_CATALOG.filter((s) => s.category === categoryFilter)
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectTrigger className={cn(selectClass, "w-full md:w-64")}><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="All">All Categories</SelectItem>
             {SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Service</Button>
+        <Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Service</Button>
       </div>
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Code</TableHead><TableHead>Service Name</TableHead><TableHead>Category</TableHead>
-            <TableHead>Rate</TableHead><TableHead>GST%</TableHead><TableHead>Disc%</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {rows.map((s) => (
-              <TableRow key={s.id}>
-                <TableCell className="font-mono text-secondary">{s.code}</TableCell>
-                <TableCell className="font-medium">{s.name}{s.nameLocal && <span className="ml-1.5 text-muted-foreground" dir="rtl">({s.nameLocal})</span>}</TableCell>
-                <TableCell>{s.category}</TableCell>
-                <TableCell>{formatCurrency(s.rate)}</TableCell>
-                <TableCell className="text-muted-foreground">{s.gstPct ?? 0}%</TableCell>
-                <TableCell className="text-muted-foreground">{s.discountPct ?? 0}%</TableCell>
-                <TableCell><Switch checked={s.active} onCheckedChange={(v) => { s.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="icon" title="Item History" onClick={() => setHistoryTarget(s)}><History className="h-4 w-4" /></Button>
-                  <Button variant="ghost" size="icon" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
-                </TableCell>
+
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Code</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Service Name</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Category</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Rate</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">GST%</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Disc%</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((s) => (
+                <TableRow key={s.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                  <TableCell className="px-6 py-4">
+                    <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold font-mono text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
+                      {s.code}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-4 font-bold text-[#0D1B2E]">
+                    {s.name}
+                    {s.nameLocal && <span className="ml-2 font-medium text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded-md" dir="rtl">{s.nameLocal}</span>}
+                  </TableCell>
+                  <TableCell className="py-4 font-medium text-slate-600">{s.category}</TableCell>
+                  <TableCell className="py-4 font-black text-slate-900">{formatCurrency(s.rate)}</TableCell>
+                  <TableCell className="py-4 font-semibold text-slate-500">{s.gstPct ?? 0}%</TableCell>
+                  <TableCell className="py-4 font-semibold text-slate-500">{s.discountPct ?? 0}%</TableCell>
+                  <TableCell className="py-4">
+                    <Switch checked={s.active} onCheckedChange={(v) => { s.active = v; forceUpdate() }} />
+                  </TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" title="Item History" onClick={() => setHistoryTarget(s)}><History className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <ServiceModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
       <ServiceHistoryDialog target={historyTarget} onClose={() => setHistoryTarget(null)} />
@@ -131,31 +167,41 @@ function ServiceHistoryDialog({ target, onClose }: { target: ServiceCatalogItem 
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>Item History — {target?.name}</DialogTitle></DialogHeader>
-        {usages.length === 0 ? (
-          <EmptyState icon={History} title="No usage yet" subtitle="This service hasn't appeared on any invoice." />
-        ) : (
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Invoice No.</TableHead><TableHead>Date</TableHead><TableHead>Patient</TableHead>
-              <TableHead>Qty</TableHead><TableHead>Rate</TableHead><TableHead>Amount</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {usages.map((u, i) => (
-                <TableRow key={i}>
-                  <TableCell className="font-mono text-secondary">{u.invoiceNo}</TableCell>
-                  <TableCell>{format(new Date(u.date), "dd MMM yyyy")}</TableCell>
-                  <TableCell>{PATIENTS.find((p) => p.id === u.patientId)?.name ?? "—"}</TableCell>
-                  <TableCell>{u.qty}</TableCell>
-                  <TableCell>{formatCurrency(u.rate)}</TableCell>
-                  <TableCell className="font-semibold">{formatCurrency(u.amount)}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-        <DialogFooter><Button variant="ghost" onClick={onClose}>Close</Button></DialogFooter>
+      <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">History — {target?.name}</DialogTitle></DialogHeader>
+        <div className="pt-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
+          {usages.length === 0 ? (
+            <div className="py-10"><EmptyState icon={History} title="No usage yet" subtitle="This service hasn't appeared on any invoice." /></div>
+          ) : (
+            <div className="rounded-xl border border-slate-100 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50/50">
+                    <TableHead className="font-bold text-slate-500 h-auto py-3">Invoice No.</TableHead>
+                    <TableHead className="font-bold text-slate-500 h-auto py-3">Date</TableHead>
+                    <TableHead className="font-bold text-slate-500 h-auto py-3">Patient</TableHead>
+                    <TableHead className="font-bold text-slate-500 h-auto py-3">Qty</TableHead>
+                    <TableHead className="font-bold text-slate-500 h-auto py-3">Rate</TableHead>
+                    <TableHead className="font-bold text-slate-500 h-auto py-3">Amount</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {usages.map((u, i) => (
+                    <TableRow key={i}>
+                      <TableCell className="font-mono text-[11px] font-bold text-slate-500">{u.invoiceNo}</TableCell>
+                      <TableCell className="text-sm font-medium">{format(new Date(u.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="font-bold">{PATIENTS.find((p) => p.id === u.patientId)?.name ?? "—"}</TableCell>
+                      <TableCell className="font-semibold">{u.qty}</TableCell>
+                      <TableCell className="font-medium text-slate-600">{formatCurrency(u.rate)}</TableCell>
+                      <TableCell className="font-black">{formatCurrency(u.amount)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
+        <DialogFooter className="mt-4"><Button variant="ghost" className="rounded-xl font-bold h-11" onClick={onClose}>Close</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -178,7 +224,7 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
   React.useEffect(() => {
     setName(svc?.name ?? ""); setNameLocal(svc?.nameLocal ?? ""); setCode(svc?.code ?? ""); setCategory(svc?.category ?? SERVICE_CATEGORIES[0]); setRate(svc?.rate ?? 0)
     setGstPct(svc?.gstPct ?? 0); setDiscountPct(svc?.discountPct ?? 0); setRemarks(svc?.remarks ?? ""); setBarcode(svc?.barcode ?? false)
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!name || !code) return
@@ -195,31 +241,31 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>{isNew ? "Add Service" : "Edit Service"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Service" : "Edit Service"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 pt-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Service Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Local Name (اردو)</Label><Input dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Rate (Rs.)</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>GST %</Label><Input type="number" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Discount %</Label><Input type="number" value={discountPct} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
-          <div className="flex items-center gap-2 pt-6">
-            <Checkbox checked={barcode} onCheckedChange={(v) => setBarcode(v === true)} id="svc-barcode" />
-            <Label htmlFor="svc-barcode" className="cursor-pointer font-normal">Barcode</Label>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Local Name (اردو)</Label><Input className={inputClass} dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GST %</Label><Input className={inputClass} type="number" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount %</Label><Input className={inputClass} type="number" value={discountPct || ""} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
+          <div className="flex items-center gap-3 pt-6">
+            <Checkbox checked={barcode} onCheckedChange={(v) => setBarcode(v === true)} id="svc-barcode" className="h-5 w-5 rounded-md" />
+            <Label htmlFor="svc-barcode" className="cursor-pointer font-bold text-slate-700">Enable Barcode Generation</Label>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Textarea rows={2} className={cn(inputClass, "h-auto resize-none")} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-4 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save Service</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -234,40 +280,54 @@ function LabTestsTab() {
   const rows = categoryFilter === "All" ? LAB_TESTS : LAB_TESTS.filter((t) => t.category === categoryFilter)
 
   return (
-    <div>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module —
-        edit a test's fee once and it updates both Laboratory and Imaging order forms.
-      </p>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4">
+      <div className="rounded-[1.25rem] bg-indigo-50/50 p-4 border border-indigo-100 text-sm font-medium text-indigo-800">
+        <p>Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module — edit a test's fee once and it updates both Laboratory and Imaging order forms.</p>
+      </div>
+      <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-52"><SelectValue /></SelectTrigger>
+          <SelectTrigger className={cn(selectClass, "w-full md:w-64")}><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="All">All Categories</SelectItem>
             {LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Test</Button>
+        <Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Test</Button>
       </div>
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Code</TableHead><TableHead>Test Name</TableHead><TableHead>Category</TableHead>
-            <TableHead>Fee</TableHead><TableHead>Turnaround</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {rows.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="font-mono text-secondary">{t.code}</TableCell>
-                <TableCell className="font-medium">{t.name}</TableCell>
-                <TableCell><StatusBadge status={t.category} /></TableCell>
-                <TableCell>{formatCurrency(t.rate)}</TableCell>
-                <TableCell className="text-muted-foreground">{t.turnaroundHours}h</TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button></TableCell>
+
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Code</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Test Name</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Category</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Fee</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Turnaround</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((t) => (
+                <TableRow key={t.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                  <TableCell className="px-6 py-4">
+                    <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold font-mono text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
+                      {t.code}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-4 font-bold text-[#0D1B2E]">{t.name}</TableCell>
+                  <TableCell className="py-4"><StatusBadge status={t.category} /></TableCell>
+                  <TableCell className="py-4 font-black text-slate-900">{formatCurrency(t.rate)}</TableCell>
+                  <TableCell className="py-4 font-bold text-slate-500">{t.turnaroundHours}h</TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <LabTestModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
     </div>
@@ -287,7 +347,7 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
   React.useEffect(() => {
     setCode(item?.code ?? ""); setName(item?.name ?? ""); setCategory(item?.category ?? LAB_TEST_CATEGORIES[0]);
     setRate(item?.rate ?? 0); setTurnaroundHours(item?.turnaroundHours ?? 4)
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!name.trim() || !code.trim()) return
@@ -304,24 +364,24 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>{isNew ? "Add Lab/Imaging Test" : "Edit Test"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Lab/Imaging Test" : "Edit Test"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as LabTest["category"])}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Test Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Fee (Rs.)</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Turnaround (hours)</Label><Input type="number" value={turnaroundHours} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Turnaround (hours)</Label><Input className={inputClass} type="number" value={turnaroundHours || ""} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-4 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save Test</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -333,27 +393,37 @@ function BanksTab() {
   const [modalTarget, setModalTarget] = React.useState<BankAccount | "new" | null>(null)
 
   return (
-    <div>
-      <div className="mb-3 flex justify-end"><Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Bank Account</Button></div>
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Bank</TableHead><TableHead>Account Title</TableHead><TableHead>Account No.</TableHead>
-            <TableHead>Branch</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {BANKS.map((b) => (
-              <TableRow key={b.id}>
-                <TableCell className="font-medium">{b.bankName}</TableCell>
-                <TableCell>{b.accountTitle}</TableCell>
-                <TableCell className="font-mono text-xs">{b.accountNo}</TableCell>
-                <TableCell className="text-muted-foreground">{b.branch}</TableCell>
-                <TableCell><Switch checked={b.active} onCheckedChange={(v) => { b.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button></TableCell>
+    <div className="space-y-4">
+      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Bank Account</Button></div>
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Bank</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Account Title</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Account No.</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Branch</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {BANKS.map((b) => (
+                <TableRow key={b.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                  <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{b.bankName}</TableCell>
+                  <TableCell className="py-4 font-semibold text-slate-700">{b.accountTitle}</TableCell>
+                  <TableCell className="py-4"><span className="font-mono text-[11px] font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.accountNo}</span></TableCell>
+                  <TableCell className="py-4 font-medium text-slate-500">{b.branch}</TableCell>
+                  <TableCell className="py-4"><Switch checked={b.active} onCheckedChange={(v) => { b.active = v; forceUpdate() }} /></TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <BankModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
     </div>
@@ -371,7 +441,7 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
 
   React.useEffect(() => {
     setBankName(item?.bankName ?? ""); setAccountTitle(item?.accountTitle ?? ""); setAccountNo(item?.accountNo ?? ""); setBranch(item?.branch ?? "")
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!bankName.trim() || !accountNo.trim()) return
@@ -388,17 +458,17 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>{isNew ? "Add Bank Account" : "Edit Bank Account"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Bank Name</Label><Input value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Account Title</Label><Input value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Account No.</Label><Input value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Branch</Label><Input value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Bank Account" : "Edit Bank Account"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name</Label><Input className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Title</Label><Input className={inputClass} value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No.</Label><Input className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch</Label><Input className={inputClass} value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-4 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save Account</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -410,28 +480,39 @@ function PanelsTab() {
   const [modalTarget, setModalTarget] = React.useState<Panel | "new" | null>(null)
 
   return (
-    <div>
-      <div className="mb-3 flex justify-end"><Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Panel</Button></div>
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Panel Name</TableHead><TableHead>Type</TableHead><TableHead>Contact</TableHead>
-            <TableHead>Phone</TableHead><TableHead>Commission%</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {PANELS.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.name}</TableCell>
-                <TableCell>{p.type}</TableCell>
-                <TableCell>{p.contactPerson}</TableCell>
-                <TableCell>{p.phone}</TableCell>
-                <TableCell>{p.commissionPct}%</TableCell>
-                <TableCell><Switch checked={p.active} onCheckedChange={(v) => { p.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button></TableCell>
+    <div className="space-y-4">
+      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Panel</Button></div>
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Panel Name</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Type</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Contact</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Phone</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Commission%</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {PANELS.map((p) => (
+                <TableRow key={p.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                  <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{p.name}</TableCell>
+                  <TableCell className="py-4 font-medium text-slate-600">{p.type}</TableCell>
+                  <TableCell className="py-4 font-medium text-slate-700">{p.contactPerson}</TableCell>
+                  <TableCell className="py-4 font-medium text-slate-500">{p.phone}</TableCell>
+                  <TableCell className="py-4 font-bold text-emerald-600">{p.commissionPct}%</TableCell>
+                  <TableCell className="py-4"><Switch checked={p.active} onCheckedChange={(v) => { p.active = v; forceUpdate() }} /></TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <PanelModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
     </div>
@@ -451,7 +532,7 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
   React.useEffect(() => {
     setName(panel?.name ?? ""); setType(panel?.type ?? "Insurance"); setContactPerson(panel?.contactPerson ?? "");
     setPhone(panel?.phone ?? ""); setCommissionPct(panel?.commissionPct ?? 0)
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!name) return
@@ -468,24 +549,24 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>{isNew ? "Add Panel" : "Edit Panel"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5 sm:col-span-2"><Label>Panel Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Panel" : "Edit Panel"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label>Type</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{PANEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Commission %</Label><Input type="number" value={commissionPct} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Contact Person</Label><Input value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Phone</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Commission %</Label><Input className={inputClass} type="number" value={commissionPct || ""} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input className={inputClass} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-4 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save Panel</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -508,43 +589,43 @@ function WardsTab() {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {WARDS.map((w) => {
         const occupied = w.beds.filter((b) => b.status === "occupied").length
         const pct = (occupied / w.beds.length) * 100
         return (
-          <Card key={w.id}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-foreground">{w.name}</h3>
-                <StatusBadge status={w.type} />
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">{occupied}/{w.beds.length} occupied</p>
-              <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-muted">
-                <div
-                  className={cn("h-full rounded-full", pct < 60 ? "bg-success-600" : pct < 90 ? "bg-warning-600" : "bg-danger-600")}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <Button variant="ghost" size="sm" className="mt-2 px-0 text-secondary" onClick={() => setExpanded(expanded === w.id ? null : w.id)}>
-                {expanded === w.id ? "Hide beds" : "View beds"}
-              </Button>
-              {expanded === w.id && (
+          <div key={w.id} className="rounded-[1.5rem] bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-black text-[#0D1B2E]">{w.name}</h3>
+              <StatusBadge status={w.type} />
+            </div>
+            <p className="text-sm font-bold text-slate-500 mb-2">{occupied} of {w.beds.length} beds occupied</p>
+            <div className="h-3 w-full overflow-hidden rounded-full bg-slate-100 ring-1 ring-inset ring-slate-200/60">
+              <div
+                className={cn("h-full rounded-full transition-all duration-500", pct < 60 ? "bg-emerald-500" : pct < 90 ? "bg-amber-500" : "bg-red-500")}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <Button variant="ghost" className="mt-4 w-full rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold border-0 transition-colors" onClick={() => setExpanded(expanded === w.id ? null : w.id)}>
+              {expanded === w.id ? "Hide beds overview" : "View beds overview"}
+            </Button>
+            {expanded === w.id && (
+              <div className="mt-4 rounded-xl border border-slate-100 overflow-hidden">
                 <Table>
-                  <TableHeader><TableRow><TableHead>Bed</TableHead><TableHead>Status</TableHead><TableHead>Since</TableHead></TableRow></TableHeader>
+                  <TableHeader><TableRow className="bg-slate-50/50"><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Bed</TableHead><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Status</TableHead><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Since</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {w.beds.map((b) => (
-                      <TableRow key={b.bedNo} className="cursor-pointer" onClick={() => cycleBedStatus(w.id, b.bedNo)}>
-                        <TableCell className="font-mono text-xs">{b.bedNo}</TableCell>
+                      <TableRow key={b.bedNo} className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0" onClick={() => cycleBedStatus(w.id, b.bedNo)}>
+                        <TableCell className="font-mono text-[11px] font-bold text-slate-600">{b.bedNo}</TableCell>
                         <TableCell><StatusBadge status={b.status} /></TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{b.since ?? "—"}</TableCell>
+                        <TableCell className="text-[11px] font-semibold text-slate-400">{b.since ?? "—"}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+            )}
+          </div>
         )
       })}
     </div>
@@ -556,20 +637,27 @@ function GuardianRelationsTab() {
   const [modalTarget, setModalTarget] = React.useState<GuardianRelationItem | "new" | null>(null)
 
   return (
-    <div>
-      <div className="mb-3 flex justify-end"><Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Relation</Button></div>
-      <div className="max-w-2xl rounded-lg border border-border bg-card">
+    <div className="space-y-4 max-w-3xl">
+      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Relation</Button></div>
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
         <Table>
-          <TableHeader><TableRow>
-            <TableHead>Relation Name</TableHead><TableHead>Remarks</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
+          <TableHeader>
+            <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+              <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Relation Name</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 h-auto">Remarks</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {GUARDIAN_RELATIONS.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.name}</TableCell>
-                <TableCell className="text-muted-foreground">{r.remarks ?? "—"}</TableCell>
-                <TableCell><Switch checked={r.active} onCheckedChange={(v) => { r.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button></TableCell>
+              <TableRow key={r.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{r.name}</TableCell>
+                <TableCell className="py-4 font-medium text-slate-500">{r.remarks ?? "—"}</TableCell>
+                <TableCell className="py-4"><Switch checked={r.active} onCheckedChange={(v) => { r.active = v; forceUpdate() }} /></TableCell>
+                <TableCell className="px-6 py-4 text-right">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -587,7 +675,7 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
   const [name, setName] = React.useState(item?.name ?? "")
   const [remarks, setRemarks] = React.useState(item?.remarks ?? "")
 
-  React.useEffect(() => { setName(item?.name ?? ""); setRemarks(item?.remarks ?? "") }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  React.useEffect(() => { setName(item?.name ?? ""); setRemarks(item?.remarks ?? "") }, [target])
 
   const save = () => {
     if (!name.trim()) return
@@ -604,15 +692,15 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="sm">
-        <DialogHeader><DialogTitle>{isNew ? "Add Guardian Relation" : "Edit Guardian Relation"}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5"><Label>Relation Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Remarks</Label><Input value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-md rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Guardian Relation" : "Edit Guardian Relation"}</DialogTitle></DialogHeader>
+        <div className="space-y-5 pt-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-6 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -624,29 +712,41 @@ function EcgUltrasoundTab() {
   const [modalTarget, setModalTarget] = React.useState<EcgUltrasoundTest | "new" | null>(null)
 
   return (
-    <div>
-      <div className="mb-3 flex justify-end"><Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Test</Button></div>
-      <div className="rounded-lg border border-border bg-card">
+    <div className="space-y-4">
+      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Test</Button></div>
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
         <Table>
-          <TableHeader><TableRow>
-            <TableHead>Test ID</TableHead><TableHead>Name</TableHead><TableHead>Fee</TableHead>
-            <TableHead>Remarks</TableHead><TableHead>Active</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
+          <TableHeader>
+            <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+              <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Test ID</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 h-auto">Name</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 h-auto">Fee</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 h-auto">Remarks</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
+              <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
           <TableBody>
             {ECG_ULTRASOUND_TESTS.map((t) => (
-              <TableRow key={t.id}>
-                <TableCell className="font-mono text-secondary">{t.code}</TableCell>
-                <TableCell className="font-medium">{t.name}</TableCell>
-                <TableCell>{formatCurrency(t.fee)}</TableCell>
-                <TableCell className="text-muted-foreground">{t.remarks ?? "—"}</TableCell>
-                <TableCell><Switch checked={t.active} onCheckedChange={(v) => { t.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button></TableCell>
+              <TableRow key={t.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                <TableCell className="px-6 py-4">
+                  <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold font-mono text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
+                    {t.code}
+                  </span>
+                </TableCell>
+                <TableCell className="py-4 font-bold text-[#0D1B2E]">{t.name}</TableCell>
+                <TableCell className="py-4 font-black text-slate-900">{formatCurrency(t.fee)}</TableCell>
+                <TableCell className="py-4 font-medium text-slate-500">{t.remarks ?? "—"}</TableCell>
+                <TableCell className="py-4"><Switch checked={t.active} onCheckedChange={(v) => { t.active = v; forceUpdate() }} /></TableCell>
+                <TableCell className="px-6 py-4 text-right">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
       </div>
-      <p className="mt-3 text-xs text-muted-foreground">Master data only in this phase — direct ECG/Ultrasound invoicing is planned for a later release; these tests can be billed today as line items on a Services Invoice.</p>
+      <p className="mt-4 text-xs font-bold text-slate-400">Master data only in this phase — direct ECG/Ultrasound invoicing is planned for a later release; these tests can be billed today as line items on a Services Invoice.</p>
       <EcgUltrasoundModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
     </div>
   )
@@ -663,7 +763,7 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
 
   React.useEffect(() => {
     setCode(item?.code ?? ""); setName(item?.name ?? ""); setFee(item?.fee ?? 0); setRemarks(item?.remarks ?? "")
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!name.trim() || !code.trim()) return
@@ -680,17 +780,17 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>{isNew ? "Add ECG/Ultrasound Test" : "Edit Test"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Test Code</Label><Input value={code} onChange={(e) => setCode(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Fee (Rs.)</Label><Input type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Test Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Remarks</Label><Input value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add ECG/Ultrasound Test" : "Edit Test"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-4 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -707,27 +807,50 @@ function DiseasesTab() {
     : DISEASES
 
   return (
-    <div>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <Input placeholder="Search by name or ICD code..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
-        <Button onClick={() => setModalTarget("new")}><Plus className="h-4 w-4" /> Add Diagnosis</Button>
+    <div className="space-y-4">
+      <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative w-full max-w-md">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by name or ICD code..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-[#1CC0CE] focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20"
+          />
+        </div>
+        <Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Diagnosis</Button>
       </div>
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>ICD Code</TableHead><TableHead>Name</TableHead><TableHead>Category</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {rows.map((d) => (
-              <TableRow key={d.id}>
-                <TableCell className="font-mono text-secondary">{d.icdCode}</TableCell>
-                <TableCell className="font-medium">{d.name}</TableCell>
-                <TableCell>{d.category}</TableCell>
-                <TableCell className="text-right"><Button variant="ghost" size="icon" onClick={() => setModalTarget(d)}><Pencil className="h-4 w-4" /></Button></TableCell>
+
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">ICD Code</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Name</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Category</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {rows.map((d) => (
+                <TableRow key={d.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                  <TableCell className="px-6 py-4">
+                    <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-bold font-mono text-slate-600 ring-1 ring-inset ring-slate-200 whitespace-nowrap">
+                      {d.icdCode}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-4 font-bold text-[#0D1B2E]">{d.name}</TableCell>
+                  <TableCell className="py-4 font-medium text-slate-600">{d.category}</TableCell>
+                  <TableCell className="px-6 py-4 text-right">
+                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}><Pencil className="h-4 w-4" /></Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <DiseaseModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
     </div>
@@ -744,7 +867,7 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
 
   React.useEffect(() => {
     setIcdCode(item?.icdCode ?? ""); setName(item?.name ?? ""); setCategory(item?.category ?? DISEASE_CATEGORIES[0])
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!name.trim() || !icdCode.trim()) return
@@ -761,22 +884,22 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="md">
-        <DialogHeader><DialogTitle>{isNew ? "Add Diagnosis" : "Edit Diagnosis"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>ICD Code</Label><Input value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
+      <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
+        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Diagnosis" : "Edit Diagnosis"}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code</Label><Input className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{DISEASE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Name</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="mt-4 gap-2">
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
+          <Button className={primaryBtnClass} onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -790,33 +913,34 @@ function ExpenseCategoriesTab() {
   const [newValue, setNewValue] = React.useState("")
 
   return (
-    <Card className="max-w-md">
-      <CardContent className="space-y-1 p-5">
+    <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 max-w-md">
+      <h3 className="text-lg font-black text-[#0D1B2E] mb-6">Expense Categories</h3>
+      <div className="space-y-2 mb-6">
         {categories.map((c, i) => (
-          <div key={c + i} className="flex items-center justify-between rounded-md p-2 hover:bg-muted/40">
+          <div key={c + i} className="flex items-center justify-between rounded-xl p-3 bg-slate-50 ring-1 ring-slate-100 group">
             {editing === i ? (
-              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-8" autoFocus />
+              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-9 rounded-lg" autoFocus />
             ) : (
-              <span className="text-sm">{c}</span>
+              <span className="text-sm font-bold text-slate-700">{c}</span>
             )}
-            <div className="flex gap-1">
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
               {editing === i ? (
-                <Button size="sm" onClick={() => { setCategories((cs) => cs.map((x, idx) => idx === i ? editValue : x)); setEditing(null) }}>Save</Button>
+                <Button size="sm" className="h-8 rounded-lg bg-[#0F2A4D]" onClick={() => { setCategories((cs) => cs.map((x, idx) => idx === i ? editValue : x)); setEditing(null) }}>Save</Button>
               ) : (
-                <Button variant="ghost" size="icon" onClick={() => { setEditing(i); setEditValue(c) }}><Pencil className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditing(i); setEditValue(c) }}><Pencil className="h-3.5 w-3.5 text-slate-400" /></Button>
               )}
-              <Button variant="ghost" size="icon" onClick={() => setCategories((cs) => cs.filter((_, idx) => idx !== i))}><Trash2 className="h-3.5 w-3.5 text-danger-600" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" onClick={() => setCategories((cs) => cs.filter((_, idx) => idx !== i))}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
             </div>
           </div>
         ))}
-        <div className="flex gap-2 pt-2">
-          <Input placeholder="New category" value={newValue} onChange={(e) => setNewValue(e.target.value)} />
-          <Button onClick={() => { if (newValue.trim()) { setCategories((cs) => [...cs, newValue.trim()]); setNewValue("") } }}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+      <div className="flex gap-2">
+        <Input placeholder="New category name..." className={inputClass} value={newValue} onChange={(e) => setNewValue(e.target.value)} />
+        <Button className={primaryBtnClass} onClick={() => { if (newValue.trim()) { setCategories((cs) => [...cs, newValue.trim()]); setNewValue("") } }}>
+          <Plus className="h-5 w-5" />
+        </Button>
+      </div>
+    </div>
   )
 }
 
@@ -825,43 +949,46 @@ function ClinicSettingsTab() {
   const [settings, setSettings] = React.useState(CLINIC_SETTINGS)
 
   return (
-    <Card className="max-w-xl">
-      <CardContent className="space-y-4 p-6">
-        <div className="space-y-1.5"><Label>Clinic Name (English)</Label><Input value={settings.nameEn} onChange={(e) => setSettings((s) => ({ ...s, nameEn: e.target.value }))} /></div>
-        <div className="space-y-1.5"><Label>Clinic Name (Urdu)</Label><Input dir="rtl" value={settings.nameUr} onChange={(e) => setSettings((s) => ({ ...s, nameUr: e.target.value }))} /></div>
-        <div className="space-y-1.5"><Label>Address</Label><Input value={settings.address} onChange={(e) => setSettings((s) => ({ ...s, address: e.target.value }))} /></div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1.5"><Label>Phone</Label><Input value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label>Email</Label><Input value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} /></div>
-        </div>
-        <div className="space-y-1.5"><Label>Tagline</Label><Input value={settings.tagline} onChange={(e) => setSettings((s) => ({ ...s, tagline: e.target.value }))} /></div>
-        <div className="space-y-1.5">
-          <Label>Logo</Label>
-          <div className="flex h-16 w-16 items-center justify-center rounded-md border border-dashed border-border text-muted-foreground">
-            <Plus className="h-5 w-5" />
+    <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-8 max-w-3xl">
+      <h3 className="text-xl font-black text-[#0D1B2E] mb-6 pb-4 border-b border-slate-100">Clinic Settings</h3>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (English)</Label><Input className={inputClass} value={settings.nameEn} onChange={(e) => setSettings((s) => ({ ...s, nameEn: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (Urdu)</Label><Input className={inputClass} dir="rtl" value={settings.nameUr} onChange={(e) => setSettings((s) => ({ ...s, nameUr: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input className={inputClass} value={settings.address} onChange={(e) => setSettings((s) => ({ ...s, address: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input className={inputClass} value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tagline</Label><Input className={inputClass} value={settings.tagline} onChange={(e) => setSettings((s) => ({ ...s, tagline: e.target.value }))} /></div>
+          
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Logo</Label>
+            <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 text-slate-400 hover:border-[#1CC0CE] hover:text-[#0891B2] transition-colors cursor-pointer">
+              <Plus className="h-6 w-6" />
+            </div>
           </div>
-        </div>
-        <div className="space-y-1.5"><Label>Print Header</Label><Input value={settings.printHeader} onChange={(e) => setSettings((s) => ({ ...s, printHeader: e.target.value }))} /></div>
-        <div className="grid grid-cols-2 gap-4">
+          
+          <div className="space-y-1.5 sm:col-span-2 pt-4 border-t border-slate-100"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Print Header</Label><Input className={inputClass} value={settings.printHeader} onChange={(e) => setSettings((s) => ({ ...s, printHeader: e.target.value }))} /></div>
           <div className="space-y-1.5">
-            <Label>Currency Symbol</Label>
-            <Input readOnly value={settings.currencySymbol} />
-            <p className="text-xs text-muted-foreground">Contact support to change</p>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Currency Symbol</Label>
+            <Input className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.currencySymbol} />
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact support to change</p>
           </div>
-          <div className="space-y-1.5"><Label>Default City</Label><Input value={settings.defaultCity} onChange={(e) => setSettings((s) => ({ ...s, defaultCity: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Default City</Label><Input className={inputClass} value={settings.defaultCity} onChange={(e) => setSettings((s) => ({ ...s, defaultCity: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</Label><Input className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.timezone} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Year Start</Label>
+            <Select value={settings.fiscalYearStart} onValueChange={(v) => setSettings((s) => ({ ...s, fiscalYearStart: v }))}>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {["January", "April", "July", "October"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="space-y-1.5"><Label>Timezone</Label><Input readOnly value={settings.timezone} /></div>
-        <div className="space-y-1.5">
-          <Label>Financial Year Start</Label>
-          <Select value={settings.fiscalYearStart} onValueChange={(v) => setSettings((s) => ({ ...s, fiscalYearStart: v }))}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {["January", "April", "July", "October"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
-            </SelectContent>
-          </Select>
+        <div className="pt-6 border-t border-slate-100">
+          <Button className={cn(primaryBtnClass, "w-full md:w-auto h-12")} onClick={() => toast({ title: "Settings saved successfully" })}>Save Settings</Button>
         </div>
-        <Button onClick={() => toast({ title: "Settings saved successfully" })}>Save Settings</Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

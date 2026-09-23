@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
-import { AlertTriangle, Pill, Plus, Printer } from "lucide-react"
+import { AlertTriangle, Pill, Plus, Printer, Search, ClipboardList, Activity, Wallet, TrendingDown } from "lucide-react"
 
 import { MEDICINES, MEDICINE_CATEGORIES } from "@/data/medicines"
 import { DISPENSE_RECORDS, nextDispenseNo } from "@/data/pharmacy"
@@ -13,7 +13,6 @@ import { cn, formatCurrency } from "@/lib/utils"
 import { PatientPicker } from "@/components/shared/PatientPicker"
 import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
 import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
-import { PageHeader } from "@/components/shared/PageHeader"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Input } from "@/components/ui/input"
@@ -24,17 +23,20 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 
 const TABS = [
-  { key: "inventory", label: "Inventory" },
-  { key: "dispense", label: "Dispense" },
-  { key: "history", label: "History" },
+  { key: "inventory", label: "Inventory", icon: Pill },
+  { key: "dispense", label: "Dispense", icon: Activity },
+  { key: "history", label: "History", icon: ClipboardList },
 ] as const
+
+const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
+const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 
 function medicineStatus(m: Medicine): { label: string; days?: number } {
   const daysToExpiry = Math.floor((new Date(m.expiry).getTime() - Date.now()) / 86400000)
@@ -49,19 +51,70 @@ export function PharmacyPage() {
   const { tab = "inventory" } = useParams()
   const navigate = useNavigate()
 
+  const totalItems = MEDICINES.length
+  const inventoryValue = MEDICINES.reduce((acc, m) => acc + (m.stock * m.saleRate), 0)
+  const lowStockCount = MEDICINES.filter((m) => m.stock > 0 && m.stock < m.reorderLevel).length
+  const expiringCount = MEDICINES.filter((m) => {
+    const days = Math.floor((new Date(m.expiry).getTime() - Date.now()) / 86400000)
+    return days >= 0 && days <= 30
+  }).length
+
   return (
-    <div>
-      <PageHeader title="Pharmacy" />
-      <div className="mb-4 flex gap-1 rounded-md bg-muted p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => navigate(`/pharmacy/${t.key}`)}
-            className={cn("rounded-sm px-4 py-1.5 text-sm font-medium transition-colors", tab === t.key ? "bg-background text-secondary shadow-sm" : "text-muted-foreground")}
-          >
-            {t.label}
-          </button>
-        ))}
+    <div className="space-y-6 pb-10 max-w-7xl mx-auto">
+      {/* ─── PREMIUM PAGE HEADER ─────────────────────────────────────── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-[#0D1B2E] tracking-tight">Pharmacy Inventory</h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            Manage inventory, dispense medicines, and track records
+          </p>
+        </div>
+      </div>
+
+      {/* ─── STATS DASHBOARD ────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="rounded-[1.5rem] bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-20"><Pill className="h-12 w-12 text-[#0891B2]" /></div>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Total Items</p>
+          <p className="text-2xl font-black text-[#0D1B2E] whitespace-nowrap">{totalItems}</p>
+        </div>
+        <div className="rounded-[1.5rem] bg-gradient-to-br from-[#0A1B33] to-[#16375F] p-5 shadow-lg ring-1 ring-black/5 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-20 transition-opacity group-hover:opacity-40"><Wallet className="h-12 w-12 text-[#1CC0CE]" /></div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[#7FA3C8] mb-1">Inventory Value</p>
+          <p className="text-2xl font-black text-white whitespace-nowrap">{formatCurrency(inventoryValue)}</p>
+        </div>
+        <div className="rounded-[1.5rem] bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-20"><AlertTriangle className="h-12 w-12 text-warning-500" /></div>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Low Stock</p>
+          <p className="text-2xl font-black text-warning-600 whitespace-nowrap">{lowStockCount}</p>
+        </div>
+        <div className="rounded-[1.5rem] bg-white p-5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 relative overflow-hidden group">
+          <div className="absolute right-0 top-0 p-4 opacity-10 transition-opacity group-hover:opacity-20"><TrendingDown className="h-12 w-12 text-danger-500" /></div>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Expiring Soon</p>
+          <p className="text-2xl font-black text-danger-600 whitespace-nowrap">{expiringCount}</p>
+        </div>
+      </div>
+
+      {/* ─── TABS NAVIGATION ─────────────────────────────────────────── */}
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+        {TABS.map((t) => {
+          const isActive = tab === t.key
+          return (
+            <button
+              key={t.key}
+              onClick={() => navigate(`/pharmacy/${t.key}`)}
+              className={cn(
+                "flex items-center gap-2 shrink-0 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200",
+                isActive
+                  ? "bg-white text-[#0891B2] shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 scale-[1.02]"
+                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+              )}
+            >
+              <t.icon className={cn("h-4 w-4", isActive ? "text-[#1CC0CE]" : "text-slate-400")} />
+              {t.label}
+            </button>
+          )
+        })}
       </div>
 
       {tab === "inventory" && <InventoryTab />}
@@ -94,79 +147,111 @@ function InventoryTab() {
     if (filter === "Expiring Soon") list = list.filter((m) => expiringSoon.includes(m))
     if (filter === "Expired") list = list.filter((m) => new Date(m.expiry).getTime() < Date.now())
     return list
-  }, [search, filter]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, filter])
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap gap-2 text-xs">
-        <span className="rounded-full bg-muted px-3 py-1 font-medium">Total: {MEDICINES.length}</span>
-        <span className="rounded-full bg-success-100 px-3 py-1 font-medium text-success-700">In Stock: {MEDICINES.length - lowStock.length - outOfStock.length}</span>
-        <span className="rounded-full bg-warning-100 px-3 py-1 font-medium text-warning-700">Low Stock: {lowStock.length}</span>
-        <span className="rounded-full bg-orange-100 px-3 py-1 font-medium text-orange-700">Expiring 30d: {expiringSoon.length}</span>
-      </div>
+    <div className="space-y-4">
 
-      {lowStock.length > 0 && (
-        <div className="mb-2 flex items-center gap-2 rounded-md border border-warning-100 bg-warning-50 p-3 text-sm text-warning-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          Low stock: {lowStock.slice(0, 3).map((m) => `${m.name} (${m.stock})`).join(" · ")}
+      {(lowStock.length > 0 || outOfStock.length > 0) && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {lowStock.length > 0 && (
+            <div className="flex items-start gap-2 rounded-xl bg-amber-50 p-4 text-sm font-medium text-amber-800 ring-1 ring-amber-500/20">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+              <div>
+                <p className="font-bold mb-1">Low Stock Alert</p>
+                <p className="text-amber-700/80">{lowStock.slice(0, 3).map((m) => `${m.name} (${m.stock})`).join(" · ")}{lowStock.length > 3 ? "..." : ""}</p>
+              </div>
+            </div>
+          )}
+          {outOfStock.length > 0 && (
+            <div className="flex items-start gap-2 rounded-xl bg-red-50 p-4 text-sm font-medium text-red-800 ring-1 ring-red-500/20">
+              <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 mt-0.5" />
+              <div>
+                <p className="font-bold mb-1">Out of Stock Alert</p>
+                <p className="text-red-700/80">{outOfStock.slice(0, 3).map((m) => m.name).join(" · ")}{outOfStock.length > 3 ? "..." : ""}</p>
+              </div>
+            </div>
+          )}
         </div>
       )}
-      {outOfStock.length > 0 && (
-        <div className="mb-4 flex items-center gap-2 rounded-md border border-danger-100 bg-danger-50 p-3 text-sm text-danger-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" />
-          Out of stock: {outOfStock.map((m) => m.name).join(" · ")}
-        </div>
-      )}
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2">
-          <Input placeholder="Search by name or generic..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
+      {/* ─── SEARCH & FILTERS BAR ────────────────────────────────────── */}
+      <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="relative w-full max-w-md">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by name or generic..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-[#1CC0CE] focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 w-44 font-semibold"><SelectValue /></SelectTrigger>
             <SelectContent>
-              {["All", "Low Stock", "Out of Stock", "Expiring Soon", "Expired"].map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}
+              {["All", "Low Stock", "Out of Stock", "Expiring Soon", "Expired"].map((f) => <SelectItem key={f} value={f} className="font-medium">{f}</SelectItem>)}
             </SelectContent>
           </Select>
+          <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0 shrink-0" onClick={() => setEditTarget("new")}>
+            <Plus className="h-5 w-5 mr-2" /> Add Medicine
+          </Button>
         </div>
-        <Button onClick={() => setEditTarget("new")}><Plus className="h-4 w-4" /> Add Medicine</Button>
       </div>
 
-      <div className="rounded-lg border border-border bg-card">
-        <Table>
-          <TableHeader><TableRow>
-            <TableHead>Medicine</TableHead><TableHead>Generic</TableHead><TableHead>Category</TableHead>
-            <TableHead>Batch No.</TableHead><TableHead>Expiry</TableHead><TableHead>Stock</TableHead>
-            <TableHead>Rate</TableHead><TableHead>Status</TableHead><TableHead className="text-right">Actions</TableHead>
-          </TableRow></TableHeader>
-          <TableBody>
-            {rows.map((m) => {
-              const status = medicineStatus(m)
-              const daysToExpiry = Math.floor((new Date(m.expiry).getTime() - Date.now()) / 86400000)
-              return (
-                <TableRow key={m.id}>
-                  <TableCell className="font-semibold">{m.name}</TableCell>
-                  <TableCell className="italic text-muted-foreground">{m.generic}</TableCell>
-                  <TableCell>{m.category}</TableCell>
-                  <TableCell className="font-mono text-xs">{m.batchNo}</TableCell>
-                  <TableCell className={cn(daysToExpiry < 0 ? "text-danger-600" : daysToExpiry <= 30 ? "text-orange-600" : "")}>
-                    {format(new Date(m.expiry), "dd MMM yyyy")}
-                  </TableCell>
-                  <TableCell className={cn("tabular-nums font-semibold", m.stock === 0 ? "text-danger-600" : m.stock < m.reorderLevel ? "text-warning-700" : "")}>
-                    {m.stock} {m.unit}
-                  </TableCell>
-                  <TableCell>{formatCurrency(m.saleRate)}</TableCell>
-                  <TableCell><StatusBadge status={status.label} /></TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => setEditTarget(m)}><Pill className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => setAdjustTarget(m)}><Plus className="h-4 w-4" /></Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+      {/* ─── DATA TABLE ────────────────────────────────────────────── */}
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Medicine</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Generic</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Category</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Batch No.</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Expiry</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Stock</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Rate</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 h-auto">Status</TableHead>
+                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((m) => {
+                const status = medicineStatus(m)
+                const daysToExpiry = Math.floor((new Date(m.expiry).getTime() - Date.now()) / 86400000)
+                return (
+                  <TableRow key={m.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                    <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{m.name}</TableCell>
+                    <TableCell className="py-4 text-sm italic font-medium text-slate-500">{m.generic}</TableCell>
+                    <TableCell className="py-4 text-sm font-medium text-slate-600">{m.category}</TableCell>
+                    <TableCell className="py-4">
+                      <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-[11px] font-mono font-bold text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
+                        {m.batchNo}
+                      </span>
+                    </TableCell>
+                    <TableCell className={cn("py-4 text-sm font-bold whitespace-nowrap", daysToExpiry < 0 ? "text-danger-600" : daysToExpiry <= 30 ? "text-orange-600" : "text-slate-600")}>
+                      {format(new Date(m.expiry), "dd MMM yyyy")}
+                    </TableCell>
+                    <TableCell className={cn("py-4 text-sm tabular-nums font-black", m.stock === 0 ? "text-danger-600" : m.stock < m.reorderLevel ? "text-warning-700" : "text-slate-900")}>
+                      {m.stock} <span className="text-xs font-semibold text-slate-400">{m.unit}</span>
+                    </TableCell>
+                    <TableCell className="py-4 font-black text-slate-900">{formatCurrency(m.saleRate)}</TableCell>
+                    <TableCell className="py-4"><StatusBadge status={status.label} /></TableCell>
+                    <TableCell className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setEditTarget(m)}><Pill className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-100" onClick={() => setAdjustTarget(m)}><Plus className="h-4 w-4" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
 
       <StockAdjustModal medicine={adjustTarget} onClose={() => { setAdjustTarget(null); forceUpdate() }} />
@@ -184,7 +269,7 @@ function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; on
   React.useEffect(() => { if (medicine) { setType("Add"); setQty(0); setReason("") } }, [medicine])
 
   const save = () => {
-    if (!medicine) return
+    if (!medicine || qty <= 0) return
     const idx = MEDICINES.findIndex((m) => m.id === medicine.id)
     if (idx >= 0) {
       MEDICINES[idx] = { ...MEDICINES[idx], stock: Math.max(0, MEDICINES[idx].stock + (type === "Add" ? qty : -qty)) }
@@ -195,19 +280,29 @@ function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; on
 
   return (
     <Dialog open={!!medicine} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="sm">
+      <DialogContent className="sm:max-w-[425px] rounded-[1.5rem]">
         <DialogHeader><DialogTitle>Adjust Stock — {medicine?.name}</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <RadioGroup className="flex gap-4" value={type} onValueChange={(v) => setType(v as "Add" | "Remove")}>
-            <div className="flex items-center gap-1.5"><RadioGroupItem value="Add" id="adj-add" /><Label htmlFor="adj-add" className="cursor-pointer font-normal">Add</Label></div>
-            <div className="flex items-center gap-1.5"><RadioGroupItem value="Remove" id="adj-rem" /><Label htmlFor="adj-rem" className="cursor-pointer font-normal">Remove</Label></div>
-          </RadioGroup>
-          <div className="space-y-1.5"><Label>Quantity</Label><Input type="number" value={qty} onChange={(e) => setQty(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Reason</Label><Input value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+        <div className="space-y-5 pt-4">
+          <div className="p-1 rounded-xl bg-slate-100/50 flex">
+            {(["Add", "Remove"] as const).map((t) => (
+              <button
+                key={t}
+                className={cn(
+                  "flex-1 py-2 text-sm font-bold rounded-lg transition-all duration-200",
+                  type === t ? "bg-white text-[#0D1B2E] shadow-sm" : "text-slate-500 hover:text-slate-700"
+                )}
+                onClick={() => setType(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Quantity</Label><Input type="number" className={inputClass} value={qty || ""} onChange={(e) => setQty(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reason</Label><Input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="gap-2 sm:gap-0 mt-6">
+          <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={onClose}>Cancel</Button>
+          <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold" onClick={save}>Save Stock</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -232,7 +327,7 @@ function MedicineModal({ target, onClose }: { target: Medicine | "new" | null; o
     setName(med?.name ?? ""); setGeneric(med?.generic ?? ""); setCategory(med?.category ?? MEDICINE_CATEGORIES[0]);
     setBatchNo(med?.batchNo ?? ""); setExpiry(med?.expiry ?? ""); setStock(med?.stock ?? 0);
     setSaleRate(med?.saleRate ?? 0); setReorderLevel(med?.reorderLevel ?? 10)
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [target])
 
   const save = () => {
     if (!name || !batchNo || !expiry || !saleRate) return
@@ -252,27 +347,27 @@ function MedicineModal({ target, onClose }: { target: Medicine | "new" | null; o
 
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent size="lg">
+      <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle>{isNew ? "Add Medicine" : `Edit Medicine — ${med?.name}`}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="space-y-1.5"><Label>Medicine Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Generic Name</Label><Input value={generic} onChange={(e) => setGeneric(e.target.value)} /></div>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2 pt-2">
+          <div className="space-y-1.5 md:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Medicine Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Generic Name</Label><Input className={inputClass} value={generic} onChange={(e) => setGeneric(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{MEDICINE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label>Batch No. *</Label><Input value={batchNo} onChange={(e) => setBatchNo(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Expiry Date *</Label><Input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Stock Quantity *</Label><Input type="number" value={stock} onChange={(e) => setStock(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Sale Rate (Rs.) *</Label><Input type="number" value={saleRate} onChange={(e) => setSaleRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Reorder Level</Label><Input type="number" value={reorderLevel} onChange={(e) => setReorderLevel(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Batch No. *</Label><Input className={inputClass} value={batchNo} onChange={(e) => setBatchNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Expiry Date *</Label><Input type="date" className={inputClass} value={expiry} onChange={(e) => setExpiry(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Stock Quantity *</Label><Input type="number" className={inputClass} value={stock || ""} onChange={(e) => setStock(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sale Rate (Rs.) *</Label><Input type="number" className={inputClass} value={saleRate || ""} onChange={(e) => setSaleRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reorder Level</Label><Input type="number" className={inputClass} value={reorderLevel || ""} onChange={(e) => setReorderLevel(Number(e.target.value))} /></div>
         </div>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button onClick={save}>Save</Button>
+        <DialogFooter className="gap-2 sm:gap-0 mt-6">
+          <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={onClose}>Cancel</Button>
+          <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold" onClick={save}>Save Medicine</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -327,7 +422,6 @@ function DispenseTab() {
         }))
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patient])
 
   const lines: DispenseLine[] = rows
@@ -374,21 +468,21 @@ function DispenseTab() {
 
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-[58%_1fr]">
-      <Card>
-        <CardContent className="space-y-4 p-6">
+      <Card className="rounded-[1.5rem] border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5">
+        <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <Label>Patient *</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
             <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
 
           <PatientInfoPanel patient={patient} />
 
           {patient && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 p-4 rounded-xl bg-slate-50 ring-1 ring-slate-100">
               <div className="space-y-1.5">
-                <Label>OPD/IPD Encounter</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">OPD/IPD Encounter</Label>
                 <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                  <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                  <SelectTrigger className={selectClass}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Not linked to a visit</SelectItem>
                     {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
@@ -396,13 +490,13 @@ function DispenseTab() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Doctor</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Doctor</Label>
                 <div className="flex gap-2">
                   <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Select doctor (optional)" /></SelectTrigger>
+                    <SelectTrigger className={selectClass}><SelectValue placeholder="Select doctor (optional)" /></SelectTrigger>
                     <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
+                  <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-xl bg-white border-slate-200" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -411,94 +505,125 @@ function DispenseTab() {
           )}
 
           {chosenEncounter && chosenEncounter.prescription.length > 0 && (
-            <Button type="button" variant="outline" size="sm" onClick={loadPrescription}>
+            <Button type="button" className="w-full bg-[#1CC0CE]/10 text-[#0891B2] hover:bg-[#1CC0CE]/20 font-bold border-0 rounded-xl" onClick={loadPrescription}>
               Load Rx from {chosenEncounter.encId} ({chosenEncounter.prescription.length} item{chosenEncounter.prescription.length > 1 ? "s" : ""})
             </Button>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Medicines</Label>
             {rows.map((row, i) => {
               const med = MEDICINES.find((m) => m.id === row.medicineId)
               return (
-                <div key={i} className="space-y-2 rounded-md border border-border p-3">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <Select value={row.medicineId ? String(row.medicineId) : undefined} onValueChange={(v) => updateRow(i, { medicineId: Number(v) })}>
-                      <SelectTrigger><SelectValue placeholder="Select medicine..." /></SelectTrigger>
-                      <SelectContent>{MEDICINES.map((m) => <SelectItem key={m.id} value={String(m.id)}>{m.name} ({m.id})</SelectItem>)}</SelectContent>
-                    </Select>
-                    <Input type="number" placeholder="Qty" value={row.qty} onChange={(e) => updateRow(i, { qty: Number(e.target.value) })} />
-                    <Input placeholder="Instructions" value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
+                <div key={i} className="space-y-3 rounded-xl border border-slate-200 p-4 bg-white shadow-sm">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
+                    <div className="md:col-span-5">
+                      <Select value={row.medicineId ? String(row.medicineId) : undefined} onValueChange={(v) => updateRow(i, { medicineId: Number(v) })}>
+                        <SelectTrigger className={selectClass}><SelectValue placeholder="Select medicine..." /></SelectTrigger>
+                        <SelectContent>{MEDICINES.map((m) => <SelectItem key={m.id} value={String(m.id)}>{m.name} ({m.id})</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                    <div className="md:col-span-3">
+                      <Input type="number" placeholder="Qty" className={inputClass} value={row.qty || ""} onChange={(e) => updateRow(i, { qty: Number(e.target.value) })} />
+                    </div>
+                    <div className="md:col-span-4">
+                      <Input placeholder="Instructions" className={inputClass} value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
+                    </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-1.5">Discount %
-                      <Input type="number" className="h-7 w-16 px-1.5 text-xs" value={row.discountPct} disabled={row.includedInPackage}
-                        onChange={(e) => updateRow(i, { discountPct: Number(e.target.value) })} />
-                    </span>
-                    <label className="flex cursor-pointer items-center gap-1.5">
-                      <Checkbox checked={row.includedInPackage} onCheckedChange={(v) => updateRow(i, { includedInPackage: v === true })} />
-                      Included in Package
-                    </label>
+                  <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold text-slate-500 pt-2 border-t border-slate-100">
+                    <div className="flex items-center gap-4">
+                      <span className="flex items-center gap-1.5">Discount %
+                        <Input type="number" className="h-8 w-16 px-2 text-xs rounded-md border-slate-200 focus:border-[#1CC0CE]" value={row.discountPct} disabled={row.includedInPackage}
+                          onChange={(e) => updateRow(i, { discountPct: Number(e.target.value) })} />
+                      </span>
+                      <label className="flex cursor-pointer items-center gap-1.5">
+                        <Checkbox checked={row.includedInPackage} onCheckedChange={(v) => updateRow(i, { includedInPackage: v === true })} />
+                        Included in Package
+                      </label>
+                    </div>
+                    {med && (
+                      <span className={cn("px-2 py-1 rounded-md", med.stock === 0 ? "bg-red-50 text-red-600" : med.stock < row.qty ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600")}>
+                        {med.stock === 0 ? "Out of stock" : `Stock: ${med.stock} ${med.unit}`}
+                      </span>
+                    )}
                   </div>
-                  {med && (
-                    <p className={cn("text-xs", med.stock === 0 ? "font-medium text-danger-600" : med.stock < row.qty ? "text-warning-700" : "text-muted-foreground")}>
-                      {med.stock === 0 ? "Out of stock" : `Stock: ${med.stock} ${med.unit}`}
-                    </p>
-                  )}
                 </div>
               )
             })}
-            <Button type="button" variant="outline" onClick={() => setRows((r) => [...r, emptyRow()])}><Plus className="h-4 w-4" /> Add Medicine</Button>
+            <Button type="button" variant="outline" className="w-full rounded-xl border-dashed border-2 h-12 font-bold text-slate-500 hover:text-[#0D1B2E]" onClick={() => setRows((r) => [...r, emptyRow()])}>
+              <Plus className="h-4 w-4 mr-2" /> Add Medicine
+            </Button>
           </div>
 
-          <div className="space-y-1.5"><Label>Pharmacist Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pharmacist Remarks</Label>
+            <Textarea rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+          </div>
         </CardContent>
       </Card>
 
-      <Card className="h-fit lg:sticky lg:top-20">
-        <CardContent className="space-y-3 p-5">
-          <h3 className="text-sm font-semibold">Dispense Summary — {nextDispenseNo()}</h3>
+      <Card className="h-fit lg:sticky lg:top-24 rounded-[1.5rem] border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0F2A4D] to-[#16375F] p-5 text-white">
+          <h3 className="text-sm font-bold opacity-80 uppercase tracking-wider mb-1">Dispense Summary</h3>
+          <p className="font-mono text-xl">{nextDispenseNo()}</p>
+        </div>
+        <CardContent className="space-y-4 p-5 bg-white">
           {lines.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Add medicines to see the summary.</p>
+            <div className="py-6 text-center text-sm font-medium text-slate-400 border-2 border-dashed border-slate-100 rounded-xl">
+              Add medicines to see the summary.
+            </div>
           ) : (
-            <div className="space-y-2 text-sm">
+            <div className="space-y-3 text-sm max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
               {lines.map((l) => (
-                <div key={l.medicineId} className="flex items-center justify-between">
+                <div key={l.medicineId} className="flex items-start justify-between pb-3 border-b border-slate-50 last:border-0 last:pb-0">
                   <div>
-                    <div className="font-medium">{l.medicineName} <span className="font-mono text-[10px] text-muted-foreground">#{l.medicineId}</span></div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="font-bold text-[#0D1B2E]">{l.medicineName} <span className="font-mono text-[10px] bg-slate-100 px-1 rounded text-slate-500 ml-1">#{l.medicineId}</span></div>
+                    <div className="text-xs font-medium text-slate-500 mt-0.5">
                       {l.prescribedQty} × {formatCurrency(l.unitRate)}
-                      {l.dispensedQty < l.prescribedQty && <span className="ml-1 text-warning-700">(partial: {l.dispensedQty})</span>}
-                      {l.includedInPackage && <span className="ml-1 text-secondary">(package)</span>}
-                      {!l.includedInPackage && (l.discountPct ?? 0) > 0 && <span className="ml-1">(-{l.discountPct}%)</span>}
+                      {l.dispensedQty < l.prescribedQty && <span className="ml-1 text-amber-600">(partial: {l.dispensedQty})</span>}
+                      {l.includedInPackage && <span className="ml-1 text-[#0891B2] bg-[#1CC0CE]/10 px-1 rounded">(package)</span>}
+                      {!l.includedInPackage && (l.discountPct ?? 0) > 0 && <span className="ml-1 text-emerald-600">(-{l.discountPct}%)</span>}
                     </div>
                   </div>
-                  <span className="font-semibold">{formatCurrency(l.total)}</span>
+                  <span className="font-bold text-[#0D1B2E]">{formatCurrency(l.total)}</span>
                 </div>
               ))}
             </div>
           )}
-          <div className="space-y-1.5 border-t border-border pt-3">
-            <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Gross Total</span><span>{formatCurrency(grossTotal)}</span></div>
-            <div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>{formatCurrency(subtotal)}</span></div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground">Flat Discount %</Label>
-              <Input type="number" className="w-20" value={discountPct} onChange={(e) => setDiscountPct(Number(e.target.value))} />
+          
+          <div className="space-y-2.5 rounded-xl bg-slate-50 p-4 ring-1 ring-slate-100">
+            <div className="flex items-center justify-between text-sm font-semibold"><span className="text-slate-500">Gross Total</span><span className="text-[#0D1B2E]">{formatCurrency(grossTotal)}</span></div>
+            <div className="flex items-center justify-between text-sm font-semibold"><span className="text-slate-500">Subtotal</span><span className="text-[#0D1B2E]">{formatCurrency(subtotal)}</span></div>
+            <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-200/60">
+              <span className="text-xs font-bold text-slate-500">Flat Discount %</span>
+              <Input type="number" className="h-8 w-16 px-2 text-xs rounded-md border-slate-200 font-semibold" value={discountPct || ""} onChange={(e) => setDiscountPct(Number(e.target.value))} />
             </div>
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground">GST %</Label>
-              <Input type="number" className="w-20" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} />
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-xs font-bold text-slate-500">GST %</span>
+              <Input type="number" className="h-8 w-16 px-2 text-xs rounded-md border-slate-200 font-semibold" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} />
             </div>
-            <div className="flex items-center justify-between text-base font-bold"><span>Net Payable</span><span className="text-secondary">{formatCurrency(netPayable)}</span></div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Payment Mode</Label>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-emerald-50 ring-1 ring-emerald-500/20">
+            <span className="text-sm font-bold text-emerald-800 uppercase tracking-wider">Net Payable</span>
+            <span className="text-2xl font-black text-emerald-700">{formatCurrency(netPayable)}</span>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Mode</Label>
             <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{DISPENSE_MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={printReceipt} onChange={(e) => setPrintReceipt(e.target.checked)} /> Print Receipt</label>
-          <Button className="w-full" disabled={!patient || lines.length === 0} onClick={finish}>Dispense &amp; Finish</Button>
+          
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-600 pb-2">
+            <Checkbox checked={printReceipt} onCheckedChange={(v) => setPrintReceipt(v === true)} /> Print Receipt
+          </label>
+          
+          <Button className="w-full rounded-xl h-12 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold text-lg shadow-lg shadow-[#0F2A4D]/20" disabled={!patient || lines.length === 0} onClick={finish}>
+            Dispense &amp; Finish
+          </Button>
         </CardContent>
       </Card>
 
@@ -517,34 +642,61 @@ function HistoryTab() {
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   return (
-    <div>
-      <Input placeholder="Search by patient or dispense number..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 max-w-sm" />
-      <div className="rounded-lg border border-border bg-card">
-        {rows.length === 0 ? <EmptyState icon={Pill} title="No dispense records" /> : (
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Dispense No.</TableHead><TableHead>Date</TableHead><TableHead>Patient</TableHead>
-              <TableHead>Medicines</TableHead><TableHead>Total</TableHead><TableHead>Dispensed By</TableHead><TableHead className="text-right">Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {rows.map((d) => {
-                const patient = PATIENTS.find((p) => p.id === d.patientId)
-                return (
-                  <TableRow key={d.id}>
-                    <TableCell className="font-mono text-secondary">{d.disNo}</TableCell>
-                    <TableCell>{format(new Date(d.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell className="font-medium">{patient?.name}</TableCell>
-                    <TableCell className="max-w-[220px] truncate">{d.lines.map((l) => l.medicineName).join(", ")}</TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(d.netPayable)}</TableCell>
-                    <TableCell>{d.dispensedBy}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /></Button>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+    <div className="space-y-4">
+      {/* ─── SEARCH BAR ────────────────────────────────────── */}
+      <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex items-center gap-4">
+        <div className="relative w-full max-w-md">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search by patient or dispense number..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50/50 pl-10 pr-4 text-sm font-medium text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-[#1CC0CE] focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20"
+          />
+        </div>
+      </div>
+
+      {/* ─── ELEVATED DATA TABLE ──────────────────────────────────────── */}
+      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        {rows.length === 0 ? <div className="p-10"><EmptyState icon={Pill} title="No dispense records" /></div> : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
+                  <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Dispense No.</TableHead>
+                  <TableHead className="font-bold text-slate-500 py-4 h-auto">Date</TableHead>
+                  <TableHead className="font-bold text-slate-500 py-4 h-auto">Patient</TableHead>
+                  <TableHead className="font-bold text-slate-500 py-4 h-auto">Medicines</TableHead>
+                  <TableHead className="font-bold text-slate-500 py-4 h-auto">Total</TableHead>
+                  <TableHead className="font-bold text-slate-500 py-4 h-auto">Dispensed By</TableHead>
+                  <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((d) => {
+                  const patient = PATIENTS.find((p) => p.id === d.patientId)
+                  return (
+                    <TableRow key={d.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
+                      <TableCell className="px-6 py-4">
+                        <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
+                          {d.disNo}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-4 text-sm font-medium text-slate-600 whitespace-nowrap">{format(new Date(d.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell className="py-4 font-bold text-[#0D1B2E]">{patient?.name || "Unknown Patient"}</TableCell>
+                      <TableCell className="py-4 text-sm font-medium text-slate-600 max-w-[220px] truncate">{d.lines.map((l) => l.medicineName).join(", ")}</TableCell>
+                      <TableCell className="py-4 font-black text-slate-900">{formatCurrency(d.netPayable)}</TableCell>
+                      <TableCell className="py-4 text-sm font-medium text-slate-500">{d.dispensedBy}</TableCell>
+                      <TableCell className="px-6 py-4 text-right">
+                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100" onClick={() => window.print()}><Printer className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>
