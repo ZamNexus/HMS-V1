@@ -16,7 +16,6 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, 
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useToast } from "@/components/ui/use-toast"
 
 function firstName(name?: string) {
   if (!name) return ""
@@ -97,7 +96,6 @@ function useNotifications() {
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
-  const { toast } = useToast()
   const crumbs = useBreadcrumb()
   const notifications = useNotifications()
 

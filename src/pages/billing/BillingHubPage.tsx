@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { format } from "date-fns"
-import { Plus, Wallet, TrendingUp, TrendingDown, Receipt as ReceiptIcon, CreditCard, PiggyBank, ArrowUpRight, ArrowDownRight } from "lucide-react"
+import { Plus, Wallet, TrendingUp, TrendingDown, Receipt as ReceiptIcon, CreditCard, PiggyBank } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import {

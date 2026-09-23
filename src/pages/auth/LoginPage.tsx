@@ -95,6 +95,15 @@ function IcoArrow() {
   )
 }
 
+function IcoArrowLeft() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 12H5" /><path d="m12 19-7-7 7-7" />
+    </svg>
+  )
+}
+
 function IcoLogOut() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
@@ -153,11 +162,24 @@ function AlreadySignedIn({
         maxWidth: "420px", width: "100%",
         boxShadow: "0 1px 3px rgba(10,27,51,0.07), 0 20px 60px rgba(10,27,51,0.12)",
       }}>
+        {/* ── Back to Home ───────────────────────────────────────── */}
+        <div style={{ marginBottom: "24px" }}>
+          <Link to="/" style={{
+            display: "inline-flex", alignItems: "center", gap: "6px",
+            color: "#64748B", textDecoration: "none", fontSize: "0.85rem",
+            fontWeight: 600, transition: "color 0.15s"
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#0F2A4D" }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#64748B" }}>
+            <IcoArrowLeft /> Back to Home
+          </Link>
+        </div>
+
         {/* Logo */}
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "28px" }}>
+        <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "28px", textDecoration: "none" }}>
           <IcoPulse />
           <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "#0F2A4D" }}>Citi Clinic</span>
-        </div>
+        </Link>
 
         <h1 style={{ fontSize: "1.4rem", fontWeight: 700, color: "#0D1B2E", marginBottom: "6px" }}>
           Already signed in
@@ -206,7 +228,7 @@ function AlreadySignedIn({
               boxShadow: "0 4px 14px rgba(10,27,51,0.28)", fontFamily: "inherit",
             }}
           >
-            Continue to Dashboard <IcoArrow />
+            Continue as {ROLE_LABELS[user.role] ?? "User"} <IcoArrow />
           </button>
 
           <button
@@ -315,12 +337,12 @@ export function LoginPage() {
           className="relative z-10 flex flex-1 flex-col justify-between"
         >
           {/* Logo — always visible */}
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Link to="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px", textDecoration: "none" }}>
             <IcoPulse size={20} />
             <span style={{ color: "#1CC0CE", fontWeight: 700, fontSize: "1.15rem" }}>
               Citi Clinic
             </span>
-          </div>
+          </Link>
 
           {/* Centered body — hidden on mobile to keep panel compact */}
           <div className="hidden md:block" style={{ padding: "40px 0" }}>
@@ -385,6 +407,19 @@ export function LoginPage() {
           width: "100%",
         }}>
 
+          {/* ── Back to Home ───────────────────────────────────────── */}
+          <div style={{ marginBottom: "24px" }}>
+            <Link to="/" style={{
+              display: "inline-flex", alignItems: "center", gap: "6px",
+              color: "#64748B", textDecoration: "none", fontSize: "0.85rem",
+              fontWeight: 600, transition: "color 0.15s"
+            }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#0F2A4D" }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.color = "#64748B" }}>
+              <IcoArrowLeft /> Back to Home
+            </Link>
+          </div>
+
           {/* ── Icon mark ───────────────────────────────────────── */}
           <div style={{
             width: "46px", height: "46px", borderRadius: "12px",
@@ -428,6 +463,7 @@ export function LoginPage() {
           <form
             onSubmit={handleSubmit(onSubmit)}
             noValidate
+            autoComplete="off"
             style={{ display: "flex", flexDirection: "column", gap: "18px" }}
           >
 
@@ -450,6 +486,7 @@ export function LoginPage() {
                 <input
                   id="email"
                   type="email"
+                  autoComplete="off"
                   placeholder="you@citiclinic.pk"
                   aria-invalid={!!errors.email}
                   {...register("email")}
@@ -493,6 +530,7 @@ export function LoginPage() {
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
                   placeholder="••••••••"
                   aria-invalid={!!errors.password}
                   {...register("password")}
@@ -586,7 +624,7 @@ export function LoginPage() {
                 (e.currentTarget as HTMLButtonElement).style.outline = "none"
               }}
             >
-              {isSubmitting ? "Signing in…" : "Sign in"}
+              {isSubmitting ? "Signing in…" : (roleLabel ? `Continue as ${roleLabel}` : "Sign in")}
             </button>
           </form>
 
