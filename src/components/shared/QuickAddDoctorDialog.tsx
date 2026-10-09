@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 /**
  * Inline "register a new doctor without leaving this form" dialog — mirrors the desktop's
@@ -25,7 +26,8 @@ export function QuickAddDoctorDialog({ open, onClose, onCreated }: { open: boole
   }, [open])
 
   const save = () => {
-    if (!name.trim() || !fee) return
+    const problems = failedChecks([[name.trim(), "Doctor Name is required"], [fee, "Fee is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     const userId = Math.max(0, ...DOCTORS.map((d) => d.userId)) + 1000
     const record: Doctor = {
       userId, name: name.trim(), specialization, qualifications: "", pmcRegNo: "", sharePct, fee, phone,

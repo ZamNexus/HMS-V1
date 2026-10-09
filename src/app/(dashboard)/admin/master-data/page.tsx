@@ -30,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology", "Procedure", "Diagnostic", "Emergency"]
 const PANEL_TYPES: PanelType[] = ["Insurance", "Corporate", "Government", "Other"]
@@ -227,7 +228,8 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name || !code) return
+    const problems = failedChecks([[code, "Code is required"], [name, "Service Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       SERVICE_CATALOG.push({ id: Math.max(0, ...SERVICE_CATALOG.map((s) => s.id)) + 1, code, name, nameLocal, category, rate, gstPct, discountPct, remarks, barcode, active: true })
       toast({ title: `${name} added to catalogue` })
@@ -244,7 +246,7 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
       <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Service" : "Edit Service"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
@@ -252,7 +254,7 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
               <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Local Name (اردو)</Label><Input className={inputClass} dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GST %</Label><Input className={inputClass} type="number" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
@@ -350,7 +352,8 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name.trim() || !code.trim()) return
+    const problems = failedChecks([[code.trim(), "Code is required"], [name.trim(), "Test Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       LAB_TESTS.push({ id: Math.max(0, ...LAB_TESTS.map((t) => t.id)) + 1, code, name, category, rate, unit: "-", normalRange: "-", turnaroundHours })
       toast({ title: `${name} added to catalogue` })
@@ -367,7 +370,7 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Lab/Imaging Test" : "Edit Test"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as LabTest["category"])}>
@@ -375,7 +378,7 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
               <SelectContent>{LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Turnaround (hours)</Label><Input className={inputClass} type="number" value={turnaroundHours || ""} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
         </div>
@@ -444,7 +447,8 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!bankName.trim() || !accountNo.trim()) return
+    const problems = failedChecks([[bankName.trim(), "Bank Name is required"], [accountNo.trim(), "Account No. is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       BANKS.push({ id: Math.max(0, ...BANKS.map((b) => b.id)) + 1, bankName, accountTitle, accountNo, branch, active: true })
       toast({ title: `${bankName} added` })
@@ -461,9 +465,9 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Bank Account" : "Edit Bank Account"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name</Label><Input className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name *</Label><Input className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Title</Label><Input className={inputClass} value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No.</Label><Input className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No. *</Label><Input className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch</Label><Input className={inputClass} value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
@@ -535,7 +539,8 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name) return
+    const problems = failedChecks([[name, "Panel Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       PANELS.push({ id: Math.max(0, ...PANELS.map((p) => p.id)) + 1, name, type, contactPerson, phone, commissionPct, active: true })
       toast({ title: `${name} added` })
@@ -552,7 +557,7 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Panel" : "Edit Panel"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
@@ -687,7 +692,8 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name.trim()) return
+    const problems = failedChecks([[name.trim(), "Relation Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       GUARDIAN_RELATIONS.push({ id: Math.max(0, ...GUARDIAN_RELATIONS.map((r) => r.id)) + 1, name: name.trim(), remarks, active: true })
       toast({ title: `${name} added` })
@@ -704,7 +710,7 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
       <DialogContent className="sm:max-w-md rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Guardian Relation" : "Edit Guardian Relation"}</DialogTitle></DialogHeader>
         <div className="space-y-5 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-6 gap-2">
@@ -775,7 +781,8 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name.trim() || !code.trim()) return
+    const problems = failedChecks([[code.trim(), "Test Code is required"], [name.trim(), "Test Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       ECG_ULTRASOUND_TESTS.push({ id: Math.max(0, ...ECG_ULTRASOUND_TESTS.map((t) => t.id)) + 1, code, name, fee, remarks, active: true })
       toast({ title: `${name} added` })
@@ -792,9 +799,9 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add ECG/Ultrasound Test" : "Edit Test"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code *</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
@@ -879,7 +886,8 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name.trim() || !icdCode.trim()) return
+    const problems = failedChecks([[icdCode.trim(), "ICD Code is required"], [name.trim(), "Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       DISEASES.push({ id: Math.max(0, ...DISEASES.map((d) => d.id)) + 1, icdCode, name, category })
       toast({ title: `${name} added` })
@@ -896,7 +904,7 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Diagnosis" : "Edit Diagnosis"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code</Label><Input className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code *</Label><Input className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
           <div className="space-y-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
@@ -904,7 +912,7 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
               <SelectContent>{DISEASE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>

@@ -111,6 +111,17 @@ test("a receptionist registers a patient and lands on the new profile", async ({
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible()
 })
 
+test("saving an incomplete form explains what is missing", async ({ page }) => {
+  await signIn(page, "admin")
+  await sidebar(page).getByRole("link", { name: "Medical Staff", exact: true }).click()
+  await page.getByRole("button", { name: "Add Doctor" }).click()
+  const dialog = page.getByRole("dialog")
+  await dialog.getByRole("button", { name: "Save Doctor" }).click()
+  await expect(page.getByText("Please fix these fields", { exact: true })).toBeVisible()
+  await expect(page.getByText("Full Name is required · Consultation Fee is required", { exact: true })).toBeVisible()
+  await expect(dialog).toBeVisible() // nothing was saved; the dialog stays open
+})
+
 test("encounter rows can be opened from the keyboard", async ({ page }) => {
   await signIn(page, "doctor")
   await sidebar(page).getByRole("link", { name: "Encounters", exact: true }).click()

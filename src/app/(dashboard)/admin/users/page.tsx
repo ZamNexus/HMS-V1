@@ -18,6 +18,7 @@ import { Sheet, SheetContent, SheetFooter, SheetHeader, SheetTitle } from "@/com
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { EmptyState } from "@/components/shared/EmptyState"
+import { failedChecks } from "@/lib/validation"
 
 const ROLES: Role[] = ["admin", "doctor", "receptionist", "billing", "lab_tech", "pharmacist", "nurse"]
 
@@ -187,7 +188,8 @@ function UserSheet({ target, onClose }: { target: User | "new" | null; onClose: 
 
   const save = () => {
     setError("")
-    if (!name || !email) return
+    const problems = failedChecks([[name, "Full Name is required"], [email, "Email is required"]])
+    if (problems.length) { setError(problems.join(". ")); return }
     const dupe = USERS.find((u) => u.email.toLowerCase() === email.toLowerCase() && u.id !== user?.id)
     if (dupe) { setError("Email already registered"); return }
     if (isNew && !password) { setError("Password is required for new users"); return }

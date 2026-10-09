@@ -30,6 +30,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 const TABS = [
   { key: "inventory", label: "Inventory", icon: Pill },
@@ -276,7 +277,9 @@ function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; on
   React.useEffect(() => { if (medicine) { setType("Add"); setQty(0); setReason("") } }, [medicine])
 
   const save = () => {
-    if (!medicine || qty <= 0) return
+    const problems = failedChecks([[medicine, "Select a medicine"], [qty > 0, "Quantity must be greater than 0"]])
+    // `!medicine` is already in `problems`; repeated here so TypeScript narrows it
+    if (problems.length || !medicine) { toast(validationToast(problems)); return }
     const idx = MEDICINES.findIndex((m) => m.id === medicine.id)
     if (idx >= 0) {
       MEDICINES[idx] = { ...MEDICINES[idx], stock: Math.max(0, MEDICINES[idx].stock + (type === "Add" ? qty : -qty)) }
@@ -304,7 +307,7 @@ function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; on
               </button>
             ))}
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Quantity</Label><Input type="number" className={inputClass} value={qty || ""} onChange={(e) => setQty(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Quantity *</Label><Input type="number" className={inputClass} value={qty || ""} onChange={(e) => setQty(Number(e.target.value))} /></div>
           <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reason</Label><Input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0 mt-6">
@@ -337,7 +340,8 @@ function MedicineModal({ target, onClose }: { target: Medicine | "new" | null; o
   }, [target, med])
 
   const save = () => {
-    if (!name || !batchNo || !expiry || !saleRate) return
+    const problems = failedChecks([[name, "Medicine Name is required"], [batchNo, "Batch No. is required"], [expiry, "Expiry Date is required"], [saleRate, "Sale Rate is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       MEDICINES.push({
         id: Math.max(0, ...MEDICINES.map((m) => m.id)) + 1, name, generic, category, batchNo, expiry,

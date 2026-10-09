@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Cheque", "Insurance"]
 const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology", "Procedure", "Diagnostic", "Emergency"]
@@ -265,7 +266,8 @@ function QuickAddServiceDialog({ open, onClose, onCreated }: { open: boolean; on
   }, [open])
 
   const save = () => {
-    if (!name.trim() || !code.trim() || !rate) return
+    const problems = failedChecks([[code.trim(), "Code is required"], [name.trim(), "Service Name is required"], [rate, "Rate is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     const id = Math.max(0, ...SERVICE_CATALOG.map((s) => s.id)) + 1
     const record: ServiceCatalogItem = { id, code: code.trim(), name: name.trim(), category, rate, active: true }
     SERVICE_CATALOG.push(record)

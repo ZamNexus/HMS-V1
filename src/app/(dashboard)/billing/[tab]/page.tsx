@@ -26,6 +26,7 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 // Only the Expenses tab has a chart; load recharts on demand so the other tabs don't pay for it
 const ExpenseByCategoryChart = dynamic(() => import("./ExpenseChart").then((m) => m.ExpenseByCategoryChart), {
@@ -436,7 +437,8 @@ function ExpenseModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
   }, [open])
 
   const save = () => {
-    if (!description.trim() || amount <= 0) return
+    const problems = failedChecks([[description.trim(), "Description is required"], [amount > 0, "Amount must be greater than 0"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     EXPENSES.push({
       id: Math.max(0, ...EXPENSES.map((e) => e.id)) + 1,
       date, category, description, amount, mode, enteredBy: "Ali Hassan",
@@ -481,6 +483,7 @@ function ExpenseModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const { toast } = useToast()
   const [patientId, setPatientId] = React.useState<string>("")
   const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
   const [amount, setAmount] = React.useState(0)
@@ -493,7 +496,8 @@ function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
   }, [open])
 
   const save = () => {
-    if (!patientId || amount <= 0) return
+    const problems = failedChecks([[patientId, "Patient is required"], [amount > 0, "Amount must be greater than 0"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     PAYMENTS.unshift({
       id: Math.max(0, ...PAYMENTS.map((p) => p.id)) + 1,
       receiptNo: `PAY-2024-${String(PAYMENTS.length + 1).padStart(4, "0")}`,
@@ -537,6 +541,7 @@ function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const { toast } = useToast()
   const [patientId, setPatientId] = React.useState<string>("")
   const [type, setType] = React.useState<ReceiptType>("Advance Deposit")
   const [amount, setAmount] = React.useState(0)
@@ -547,7 +552,8 @@ function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
   }, [open])
 
   const save = () => {
-    if (!patientId || amount <= 0) return
+    const problems = failedChecks([[patientId, "Patient is required"], [amount > 0, "Amount must be greater than 0"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     RECEIPTS.unshift({
       id: Math.max(0, ...RECEIPTS.map((r) => r.id)) + 1,
       receiptNo: `RCT-2024-${String(RECEIPTS.length + 1).padStart(4, "0")}`,
@@ -587,6 +593,7 @@ function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function TransferModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const { toast } = useToast()
   const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
   const [type, setType] = React.useState<"Deposit" | "Withdrawal">("Deposit")
   const [amount, setAmount] = React.useState(0)
@@ -599,7 +606,8 @@ function TransferModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenC
   }, [open])
 
   const save = () => {
-    if (!description.trim() || amount <= 0) return
+    const problems = failedChecks([[amount > 0, "Amount must be greater than 0"], [description.trim(), "Description is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     BANK_TRANSACTIONS.push({
       id: Math.max(0, ...BANK_TRANSACTIONS.map((b) => b.id)) + 1,
       date, description: `${description} — ${bank}`,

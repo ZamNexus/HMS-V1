@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 /**
  * Inline "register a new lab/imaging test without leaving this form" dialog — mirrors the
@@ -34,7 +35,8 @@ export function QuickAddLabTestDialog({
   }, [open, defaultCategory])
 
   const save = () => {
-    if (!name.trim() || !code.trim() || !rate) return
+    const problems = failedChecks([[code.trim(), "Code is required"], [name.trim(), "Test Name is required"], [rate, "Fee is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     const id = Math.max(0, ...LAB_TESTS.map((t) => t.id)) + 1
     LAB_TESTS.push({ id, code: code.trim(), name: name.trim(), category, rate, unit: "-", normalRange: "-", turnaroundHours })
     toast({ title: `${name} added to catalogue` })

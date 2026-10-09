@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -456,7 +457,8 @@ function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onCl
   }, [open])
 
   const save = () => {
-    if (!name.trim()) return
+    const problems = failedChecks([[name.trim(), "Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     const id = Math.max(0, ...PANELS.map((p) => p.id)) + 1
     PANELS.push({ id, name: name.trim(), type, contactPerson, phone, commissionPct: 0, active: true })
     toast({ title: `${name} registered` })
@@ -499,7 +501,8 @@ function QuickAddRelationDialog({ open, onClose, onCreated }: { open: boolean; o
   React.useEffect(() => { if (open) setName("") }, [open])
 
   const save = () => {
-    if (!name.trim()) return
+    const problems = failedChecks([[name.trim(), "Relation Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     const id = Math.max(0, ...GUARDIAN_RELATIONS.map((r) => r.id)) + 1
     GUARDIAN_RELATIONS.push({ id, name: name.trim(), active: true })
     toast({ title: `${name} added` })

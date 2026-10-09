@@ -16,6 +16,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { useToast } from "@/components/ui/use-toast"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { failedChecks, validationToast } from "@/lib/validation"
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -203,7 +204,8 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
   }
 
   const save = () => {
-    if (!name || !fee) return
+    const problems = failedChecks([[name, "Full Name is required"], [fee, "Consultation Fee is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     const record: Doctor = {
       userId: doc?.userId ?? Math.max(0, ...DOCTORS.map((d) => d.userId)) + 1000,
       name, specialization, qualifications, pmcRegNo, sharePct, fee, phone, email,
