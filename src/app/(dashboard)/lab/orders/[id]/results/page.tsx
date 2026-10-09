@@ -163,7 +163,7 @@ export default function LabResultEntryPage() {
 
         <Card>
           <CardContent className="space-y-3 p-5">
-            <div className="space-y-1.5"><Label>Pathologist's Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Pathologist&apos;s Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Performed By</Label><Input readOnly value={user?.name ?? ""} /></div>
               <div className="space-y-1.5"><Label>Verified By</Label><Input value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} placeholder="Pathologist / doctor name" /></div>

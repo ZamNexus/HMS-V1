@@ -1,4 +1,4 @@
-import { ArrowUp, Users, Stethoscope, BedDouble, LogOut, Wallet, Activity, Pill, IndianRupee } from "lucide-react"
+import { ArrowUp, Users, Stethoscope, BedDouble, LogOut, Wallet, Activity, Pill, IndianRupee, type LucideIcon } from "lucide-react"
 
 import { ENCOUNTERS } from "@/data/encounters"
 import { CONSULTATION_INVOICES } from "@/data/billing"
@@ -7,7 +7,7 @@ import { DISPENSE_RECORDS } from "@/data/pharmacy"
 import { DOCTORS } from "@/data/doctors"
 import { cn, formatCurrency } from "@/lib/utils"
 
-function Tile({ label, value, icon: Icon, trendUp = true }: { label: string; value: string; icon: any; trendUp?: boolean }) {
+function Tile({ label, value, icon: Icon, trendUp = true }: { label: string; value: string; icon: LucideIcon; trendUp?: boolean }) {
   return (
     <div className="rounded-[1.5rem] bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 relative overflow-hidden group">
       <div className="absolute -right-4 -top-4 rounded-full bg-slate-50 p-8 transition-transform group-hover:scale-110">

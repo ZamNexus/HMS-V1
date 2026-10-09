@@ -9,6 +9,7 @@ import { z } from "zod"
 import { useAuth } from "@/lib/auth"
 import { ROLE_LABELS } from "@/data/users"
 import { useToast } from "@/components/ui/use-toast"
+import { Toaster } from "@/components/ui/toaster"
 
 // ─── Role labels (extended with public Patient role) ─────────────
 const ALL_ROLE_LABELS: Record<string, string> = {
@@ -279,22 +280,14 @@ function LoginContent() {
     defaultValues: { email: "", password: "", remember: false },
   })
 
-  // Track if we are currently attempting a login so we don't instantly logout after success
-  const isLoggingIn = React.useRef(false)
-
-  // Ensure strict authentication (CIA triad) - if the user hits the login page, clear any existing session
-  // to prevent unauthorized "continue as last role" access.
-  React.useEffect(() => {
-    if (user && !isLoggingIn.current) {
-      logout()
-    }
-  }, [user, logout])
+  // Already logged in — show switch-account screen instead of form
+  if (user) {
+    return <AlreadySignedIn user={user} logout={logout} router={router} roleParam={roleParam} />
+  }
 
   const onSubmit = (values: FormValues) => {
-    isLoggingIn.current = true
     const result = login(values.email, values.password)
     if (!result.ok) {
-      isLoggingIn.current = false // reset on failure
       toast({ variant: "destructive", title: "Sign in failed", description: result.error })
       return
     }
@@ -672,6 +665,7 @@ export default function LoginPage() {
   return (
     <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F3F5F8]">Loading...</div>}>
       <LoginContent />
+      <Toaster />
     </React.Suspense>
   )
 }

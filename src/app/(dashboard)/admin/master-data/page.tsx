@@ -282,7 +282,7 @@ function LabTestsTab() {
   return (
     <div className="space-y-4">
       <div className="rounded-[1.25rem] bg-indigo-50/50 p-4 border border-indigo-100 text-sm font-medium text-indigo-800">
-        <p>Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module — edit a test's fee once and it updates both Laboratory and Imaging order forms.</p>
+        <p>Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module — edit a test&apos;s fee once and it updates both Laboratory and Imaging order forms.</p>
       </div>
       <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>

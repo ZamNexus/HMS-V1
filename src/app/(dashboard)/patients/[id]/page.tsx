@@ -34,6 +34,7 @@ export default function PatientProfilePage() {
   const id = params?.id as string | undefined
   const router = useRouter()
   const patient = id ? getPatient(Number(id)) : undefined
+  const [visitFilter, setVisitFilter] = React.useState<string>("all")
 
   if (!patient) {
     return <EmptyState icon={FileText} title="Patient not found" subtitle="This patient record does not exist." />
@@ -47,7 +48,6 @@ export default function PatientProfilePage() {
   const servicesInvoices = SERVICES_INVOICES.filter((s) => s.patientId === patient.id)
   const panel = getPanel(patient.panelId)
 
-  const [visitFilter, setVisitFilter] = React.useState<string>("all")
   const scopedEncounterId = visitFilter !== "all" ? Number(visitFilter) : null
   const bill = scopedEncounterId ? encounterBillBreakdown(scopedEncounterId) : patientBillBreakdown(patient.id)
 

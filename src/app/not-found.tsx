@@ -12,7 +12,7 @@ export default function NotFound() {
       </div>
       <h1 className="text-4xl font-black text-[#0D1B2E] tracking-tight mb-2">404 - Page Not Found</h1>
       <p className="text-muted-foreground text-lg max-w-md mx-auto mb-8 font-medium">
-        Oops! The page you're looking for doesn't exist or has been moved.
+        Oops! The page you&apos;re looking for doesn&apos;t exist or has been moved.
       </p>
       <div className="flex gap-4">
         <Button asChild onClick={() => window.history.back()} variant="outline" className="h-12 px-6 rounded-xl font-bold">

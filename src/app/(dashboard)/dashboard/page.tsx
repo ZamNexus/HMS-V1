@@ -1,16 +1,12 @@
 "use client"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { format, formatDistanceToNow } from "date-fns"
 import {
   Users, Banknote, FlaskConical, BedDouble, ArrowUpRight, AlertTriangle, Pill,
-  Activity, ArrowRight, Stethoscope, ChevronRight, CalendarCheck
+  Activity, ArrowRight, Stethoscope, ChevronRight, CalendarCheck, type LucideIcon
 } from "lucide-react"
-import dynamic from "next/dynamic"
-
-// Recharts must be loaded client-side only — it accesses browser globals on init
-const RechartsBarChart = dynamic(() => import("./DashboardCharts").then(m => m.PatientFlowChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
-const RechartsAreaChart = dynamic(() => import("./DashboardCharts").then(m => m.RevenueChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
 
 import { useAuth } from "@/lib/auth"
 import { PATIENTS } from "@/data/patients"
@@ -19,7 +15,9 @@ import { formatCurrency, initials, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 
-
+// Recharts must be loaded client-side only — it accesses browser globals on init
+const RechartsBarChart = dynamic(() => import("./DashboardCharts").then(m => m.PatientFlowChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
+const RechartsAreaChart = dynamic(() => import("./DashboardCharts").then(m => m.RevenueChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
 
 const APPOINTMENTS = [
   { time: "09:00", patient: "Kamran Iqbal", mr: "MR-2024-0091", doctor: "Dr. Sarah Khan", type: "OPD", status: "Completed" },
@@ -36,64 +34,11 @@ function greet() {
   return "Good evening"
 }
 
-function DashboardCard({ title, subtitle, action, children, className, bodyClass }: any) {
-  return (
-    <div className={cn("rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 flex flex-col overflow-hidden h-full", className)}>
-      {(title || action) && (
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-50 shrink-0">
-          <div>
-            {title && <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">{title}</h2>}
-            {subtitle && <p className="text-[11px] font-black text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</p>}
-          </div>
-          {action && <div>{action}</div>}
-        </div>
-      )}
-      <div className={cn("flex-1 flex flex-col min-h-0", bodyClass)}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function RecentPatientsCard({ patients }: { patients: any[] }) {
-  return (
-    <DashboardCard title="Recently Registered" bodyClass="p-0 flex flex-col">
-      <div className="p-4 space-y-2 flex-1 overflow-y-auto">
-        {patients.length === 0 ? (
-           <div className="text-center p-8 text-slate-500 font-semibold text-sm">No recent patients</div>
-        ) : patients.map((p) => (
-          <Link
-            key={p.id}
-            href={`/patients/${p.id}`}
-            className="flex items-center gap-4 rounded-2xl p-3 bg-slate-50 ring-1 ring-slate-100 transition-all duration-300 hover:shadow-md hover:bg-white hover:ring-black/5 group"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white text-[#0D1B2E] shadow-sm font-black text-sm group-hover:bg-[#0F2A4D] group-hover:text-white transition-colors">
-              {initials(p.name)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-black text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors">{p.name}</div>
-              <div className="font-mono text-[11px] font-bold text-slate-400 mt-0.5">{p.mrNo}</div>
-            </div>
-            <div className="shrink-0 text-right text-[11px] font-bold text-slate-400">
-              <div>{formatDistanceToNow(new Date(p.registrationDate), { addSuffix: true })}</div>
-            </div>
-          </Link>
-        ))}
-      </div>
-      <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-        <Button variant="ghost" className="w-full rounded-xl font-black text-[#0F2A4D] hover:bg-slate-50 h-11" asChild>
-          <Link href="/patients">View All Patients</Link>
-        </Button>
-      </div>
-    </DashboardCard>
-  )
-}
-
 // ─── PREMIUM KPI TILE ────────────────────────────────────────────
 function KpiTile({
   label, value, icon: Icon, iconColor, bgStyle, trend, onClick,
 }: {
-  label: string; value: string; icon: any; iconColor: string; bgStyle: string; trend?: string; onClick?: () => void
+  label: string; value: string; icon: LucideIcon; iconColor: string; bgStyle: string; trend?: string; onClick?: () => void
 }) {
   return (
     <div 
@@ -170,7 +115,7 @@ export default function DashboardPage() {
               {greet()}, <span className="text-[#1CC0CE]">{user.name.replace(/^Dr\.\s|^Nurse\s/, "").split(" ")[0]}</span>
             </h1>
             <p className="mt-2 text-slate-300 text-sm font-medium max-w-2xl">
-              Here is what's happening at Citi Clinic today. You have <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">24</strong> OPD patients and <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">7</strong> pending lab reports.
+              Here is what&apos;s happening at Citi Clinic today. You have <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">24</strong> OPD patients and <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">7</strong> pending lab reports.
             </p>
           </div>
           
@@ -243,109 +188,118 @@ export default function DashboardPage() {
         )}
       </div>
 
-      {/* ─── GRID LAYOUT ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        
-        {/* ROW 2: CHART + COMPANION */}
-        <div className="lg:col-span-8 flex flex-col">
-          <DashboardCard title="Patient Flow This Week" subtitle="Total 141 visits over the last 7 days">
-            <div className="h-[280px] w-full">
-              <RechartsBarChart />
-            </div>
-          </DashboardCard>
+      {/* ─── CHARTS ROW ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 flex flex-col">
+          <div className="mb-6">
+            <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Patient Flow This Week</h2>
+            <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-wider">Total 141 visits over the last 7 days</p>
+          </div>
+          <RechartsBarChart />
         </div>
 
-        <div className="lg:col-span-4 flex flex-col">
-          {showRevenue ? (
-            <DashboardCard title="Revenue Trajectory" subtitle="Cash flow across all departments">
-              <div className="h-[280px] w-full">
-                <RechartsAreaChart />
-              </div>
-            </DashboardCard>
-          ) : (
-            <RecentPatientsCard patients={recentPatients} />
-          )}
-        </div>
-
-        {/* ROW 3: UP NEXT + COMPANION */}
-        {user.role !== "lab_tech" && user.role !== "pharmacist" && (
-          <>
-            <div className={cn("flex flex-col", showRevenue ? "lg:col-span-8" : "lg:col-span-12")}>
-              <DashboardCard 
-                title="Up Next" 
-                subtitle="Today's scheduled appointments"
-                action={
-                  <Button variant="ghost" className="text-[#0891B2] font-black hover:bg-[#1CC0CE]/10 rounded-xl px-4 hidden sm:flex">
-                    View Full Schedule <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                }
-                bodyClass="p-0 overflow-hidden flex flex-col"
-              >
-                <div className="flex-1 overflow-auto">
-                  {APPOINTMENTS.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-12 text-center h-[280px]">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center mb-3">
-                        <CalendarCheck className="h-6 w-6 text-slate-300" />
-                      </div>
-                      <h3 className="text-slate-500 font-black">No appointments</h3>
-                      <p className="text-slate-400 text-sm mt-1">There are no scheduled appointments left for today.</p>
-                    </div>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-slate-100">
-                        <tr>
-                          <th className="py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">Time</th>
-                          <th className="py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Patient</th>
-                          {user.role !== "doctor" && (
-                            <th className="hidden py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:table-cell">Doctor</th>
-                          )}
-                          <th className="hidden py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 md:table-cell">Type</th>
-                          <th className="py-3 px-6 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-slate-50">
-                        {APPOINTMENTS.map((a) => {
-                          const patient = PATIENTS.find((p) => p.name === a.patient)
-                          return (
-                            <tr
-                              key={a.time + a.patient}
-                              className="cursor-pointer transition-colors hover:bg-slate-50/50 group"
-                              onClick={() => patient && router.push(`/patients/${patient.id}`)}
-                            >
-                              <td className="py-3.5 px-6 font-mono font-bold text-[#0D1B2E] whitespace-nowrap">{a.time}</td>
-                              <td className="py-3.5 px-6">
-                                <div className="font-bold text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors truncate">{a.patient}</div>
-                                <div className="font-mono text-[11px] font-semibold text-slate-400 sm:hidden mt-0.5">{a.mr}</div>
-                              </td>
-                              {user.role !== "doctor" && (
-                                <td className="hidden py-3.5 px-6 font-bold text-slate-600 sm:table-cell truncate">{a.doctor}</td>
-                              )}
-                              <td className="hidden py-3.5 px-6 md:table-cell">
-                                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-500 tracking-wide uppercase">
-                                  {a.type}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-6 text-right">
-                                <StatusBadge status={a.status} />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  )}
-                </div>
-              </DashboardCard>
+        {showRevenue ? (
+          <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 flex flex-col">
+            <div className="mb-6">
+              <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Revenue Trajectory</h2>
+              <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-wider">Cash flow across all departments</p>
             </div>
-
-            {showRevenue && (
-              <div className="lg:col-span-4 flex flex-col">
-                <RecentPatientsCard patients={recentPatients} />
-              </div>
-            )}
-          </>
-        )}
+            <RechartsAreaChart />
+          </div>
+        ) : null}
       </div>
+
+      {/* ─── BOTTOM ROW ────────────────────────────────────────────────── */}
+      {user.role !== "lab_tech" && user.role !== "pharmacist" && (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+          
+          {/* APPOINTMENTS TABLE */}
+          <div className="lg:col-span-2 rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Up Next</h2>
+                <p className="text-sm font-bold text-slate-400 mt-0.5 uppercase tracking-wider">Today&apos;s scheduled appointments</p>
+              </div>
+              <Button variant="ghost" className="text-[#0891B2] font-black hover:bg-[#1CC0CE]/10 rounded-xl px-4 hidden sm:flex">
+                View Full Schedule <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="p-0 overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50/80 border-b border-slate-100">
+                  <tr>
+                    <th className="py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Time</th>
+                    <th className="py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Patient</th>
+                    <th className="hidden py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:table-cell">Doctor</th>
+                    <th className="hidden py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 md:table-cell">Type</th>
+                    <th className="py-4 px-6 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white">
+                  {APPOINTMENTS.map((a) => {
+                    const patient = PATIENTS.find((p) => p.name === a.patient)
+                    return (
+                      <tr
+                        key={a.time + a.patient}
+                        className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0 group"
+                        onClick={() => patient && router.push(`/patients/${patient.id}`)}
+                      >
+                        <td className="py-4 px-6 font-mono font-bold text-[#0D1B2E]">{a.time}</td>
+                        <td className="py-4 px-6">
+                          <div className="font-bold text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors">{a.patient}</div>
+                          <div className="font-mono text-[11px] font-semibold text-slate-400 sm:hidden mt-0.5">{a.mr}</div>
+                        </td>
+                        <td className="hidden py-4 px-6 font-bold text-slate-600 sm:table-cell">{a.doctor}</td>
+                        <td className="hidden py-4 px-6 md:table-cell">
+                          <span className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500 tracking-wide uppercase">
+                            {a.type}
+                          </span>
+                        </td>
+                        <td className="py-4 px-6 text-right">
+                          <StatusBadge status={a.status} />
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* RECENT PATIENTS */}
+          <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 flex flex-col overflow-hidden">
+            <div className="p-6 pb-4 border-b border-slate-100">
+              <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Recently Registered</h2>
+            </div>
+            <div className="p-4 space-y-2 flex-1 bg-slate-50/50">
+              {recentPatients.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/patients/${p.id}`}
+                  className="flex items-center gap-4 rounded-2xl p-3 bg-white ring-1 ring-slate-100 transition-all duration-300 hover:shadow-md hover:ring-black/5 group"
+                >
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-slate-100 text-[#0D1B2E] shadow-inner font-black text-sm group-hover:bg-[#0F2A4D] group-hover:text-white transition-colors">
+                    {initials(p.name)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-sm font-black text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors">{p.name}</div>
+                    <div className="font-mono text-[11px] font-bold text-slate-400 mt-0.5">{p.mrNo}</div>
+                  </div>
+                  <div className="shrink-0 text-right text-[11px] font-bold text-slate-400">
+                    <div>{formatDistanceToNow(new Date(p.registrationDate), { addSuffix: true })}</div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+            <div className="p-4 bg-white border-t border-slate-100">
+              <Button variant="ghost" className="w-full rounded-xl font-black text-[#0F2A4D] hover:bg-slate-50 h-11" asChild>
+                <Link href="/patients">View All Patients</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

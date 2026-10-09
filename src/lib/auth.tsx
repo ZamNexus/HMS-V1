@@ -34,11 +34,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       (u) => u.email.toLowerCase() === email.trim().toLowerCase() && u.password === password
     )
     if (!found) {
-      return { ok: false as const, error: "Wrong credentials" }
+      return { ok: false as const, error: "Invalid email or password." }
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(found))
     // Set a cookie so middleware can see it
-    document.cookie = `${STORAGE_KEY}=${encodeURIComponent(JSON.stringify(found))}; path=/; max-age=86400`
+    document.cookie = `${STORAGE_KEY}=${encodeURIComponent(JSON.stringify({ id: found.id, role: found.role }))}; path=/; max-age=86400`
     setUser(found)
     return { ok: true as const }
   }, [])

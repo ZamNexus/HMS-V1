@@ -115,7 +115,7 @@ export default function LabOrderDetailPage() {
       {order.pathologistRemarks && (
         <Card className="mt-4">
           <CardContent className="p-5 text-sm">
-            <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Pathologist's Remarks</div>
+            <div className="mb-1 text-xs font-semibold uppercase text-muted-foreground">Pathologist&apos;s Remarks</div>
             <p>{order.pathologistRemarks}</p>
             <p className="mt-2 text-xs text-muted-foreground">Performed by: {order.performedBy} · Verified by: {order.verifiedBy}</p>
           </CardContent>
