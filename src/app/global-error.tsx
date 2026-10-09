@@ -39,6 +39,7 @@ export default function GlobalError({
                 Try again
               </button>
               {/* Plain <a>: a full reload is the safest recovery when the root layout failed */}
+              {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
               <a
                 href="/"
                 style={{ padding: "11px 20px", borderRadius: "10px", border: "1.5px solid #D8E0EB", color: "#374B65", fontWeight: 600, fontSize: "0.9rem", textDecoration: "none" }}
