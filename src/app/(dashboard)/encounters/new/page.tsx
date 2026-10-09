@@ -152,7 +152,7 @@ function EncounterFormContent() {
       <div className="mb-6 flex items-center gap-2">
         {STEPS.map((s, i) => (
           <React.Fragment key={s}>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2" aria-current={i === step ? "step" : undefined}>
               <div
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
@@ -161,9 +161,10 @@ function EncounterFormContent() {
               >
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
-              <span className={cn("text-sm font-medium", i === step ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+              {/* On phones only the current step's label is shown; the others stay available to screen readers */}
+              <span className={cn("text-sm font-medium", i === step ? "text-foreground" : "sr-only text-muted-foreground sm:not-sr-only")}>{s}</span>
             </div>
-            {i < STEPS.length - 1 && <div className="mx-2 h-px w-8 bg-border" />}
+            {i < STEPS.length - 1 && <div className="mx-1 h-px w-4 shrink-0 bg-border sm:mx-2 sm:w-8" />}
           </React.Fragment>
         ))}
       </div>

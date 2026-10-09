@@ -146,7 +146,7 @@ export default function LabOrderListPage() {
                           {patient?.mrNo || "—"}
                         </span>
                       </TableCell>
-                      <TableCell className="py-4 text-sm font-medium text-slate-600 max-w-[220px] truncate">
+                      <TableCell className="py-4 text-sm font-medium text-slate-600 max-w-[220px] truncate" title={o.tests.map((t) => t.testName).join(", ")}>
                         {testsLabel}
                       </TableCell>
                       <TableCell className="py-4">

@@ -178,7 +178,7 @@ export default function BillingHubPage() {
               <TableBody>
                 {CONSULTATION_INVOICES.map((c) => (
                   <TableRow key={c.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                    <TableCell className="px-6 py-4 font-mono font-medium text-slate-500">{c.invoiceNo}</TableCell>
+                    <TableCell className="px-6 py-4 font-mono font-medium text-slate-500 whitespace-nowrap">{c.invoiceNo}</TableCell>
                     <TableCell className="py-4 text-sm font-medium text-slate-600 whitespace-nowrap">{format(new Date(c.date), "dd MMM yyyy")}</TableCell>
                     <TableCell className="py-4 font-bold text-[#0D1B2E]">{patientName(c.patientId)}</TableCell>
                     <TableCell className="py-4 text-sm font-medium text-slate-600">{doctorName(c.doctorId)}</TableCell>
@@ -219,7 +219,7 @@ export default function BillingHubPage() {
               <TableBody>
                 {SERVICES_INVOICES.map((s) => (
                   <TableRow key={s.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                    <TableCell className="px-6 py-4 font-mono font-medium text-slate-500">{s.invoiceNo}</TableCell>
+                    <TableCell className="px-6 py-4 font-mono font-medium text-slate-500 whitespace-nowrap">{s.invoiceNo}</TableCell>
                     <TableCell className="py-4 text-sm font-medium text-slate-600 whitespace-nowrap">{format(new Date(s.date), "dd MMM yyyy")}</TableCell>
                     <TableCell className="py-4 font-bold text-[#0D1B2E]">{patientName(s.patientId)}</TableCell>
                     <TableCell className="py-4 text-sm font-medium text-slate-600">{s.lines.map((l) => l.name).join(", ")}</TableCell>
@@ -257,7 +257,7 @@ export default function BillingHubPage() {
             <TableBody>
               {PAYMENTS.map((p) => (
                 <TableRow key={p.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                  <TableCell className="px-6 py-4 font-mono font-medium text-slate-500">{p.receiptNo}</TableCell>
+                  <TableCell className="px-6 py-4 font-mono font-medium text-slate-500 whitespace-nowrap">{p.receiptNo}</TableCell>
                   <TableCell className="py-4 text-sm font-medium text-slate-600 whitespace-nowrap">{format(new Date(p.date), "dd MMM yyyy")}</TableCell>
                   <TableCell className="py-4 font-bold text-[#0D1B2E]">{patientName(p.patientId)}</TableCell>
                   <TableCell className="py-4 text-sm font-medium text-slate-600">{p.against}</TableCell>
@@ -293,7 +293,7 @@ export default function BillingHubPage() {
             <TableBody>
               {RECEIPTS.map((r) => (
                 <TableRow key={r.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                  <TableCell className="px-6 py-4 font-mono font-medium text-slate-500">{r.receiptNo}</TableCell>
+                  <TableCell className="px-6 py-4 font-mono font-medium text-slate-500 whitespace-nowrap">{r.receiptNo}</TableCell>
                   <TableCell className="py-4 text-sm font-medium text-slate-600 whitespace-nowrap">{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
                   <TableCell className="py-4 font-bold text-[#0D1B2E]">{patientName(r.patientId)}</TableCell>
                   <TableCell className="py-4"><StatusBadge status={r.type} /></TableCell>

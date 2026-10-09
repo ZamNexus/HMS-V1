@@ -82,8 +82,8 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       {/* Main Sidebar Container */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-[#0A1B33] via-[#0F2A4D] to-[#0A1B33] border-r border-white/10 text-white shadow-2xl transition-transform duration-300 ease-in-out lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-[#0A1B33] via-[#0F2A4D] to-[#0A1B33] border-r border-white/10 text-white transition-transform lg:shadow-2xl duration-300 ease-in-out lg:translate-x-0",
+          open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
