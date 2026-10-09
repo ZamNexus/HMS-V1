@@ -387,7 +387,7 @@ function EncounterFormContent() {
                       <Label className="text-xs font-normal text-muted-foreground">Instructions</Label>
                       <Input value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
                     </div>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}>
+                    <Button aria-label="Remove medicine" type="button" variant="ghost" size="icon" onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}>
                       <Trash2 className="h-4 w-4 text-danger-600" />
                     </Button>
                   </div>

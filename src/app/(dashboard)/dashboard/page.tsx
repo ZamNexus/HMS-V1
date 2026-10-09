@@ -44,9 +44,16 @@ function KpiTile({
     <div 
       className={cn(
         "relative overflow-hidden rounded-[1.5rem] bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 transition-all duration-300 group",
-        onClick ? "cursor-pointer hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1" : ""
+        onClick ? "cursor-pointer hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1CC0CE]" : ""
       )}
       onClick={onClick}
+      {...(onClick && {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() }
+        },
+      })}
     >
       <div className={cn("absolute -right-6 -top-6 rounded-full p-10 transition-transform group-hover:scale-110", bgStyle)}>
         <Icon className={cn("h-10 w-10 opacity-20", iconColor)} strokeWidth={1.5} />
@@ -247,7 +254,17 @@ export default function DashboardPage() {
                       >
                         <td className="py-4 px-6 font-mono font-bold text-[#0D1B2E]">{a.time}</td>
                         <td className="py-4 px-6">
-                          <div className="font-bold text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors">{a.patient}</div>
+                          {patient ? (
+                            <Link
+                              href={`/patients/${patient.id}`}
+                              onClick={(ev) => ev.stopPropagation()}
+                              className="block font-bold text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors focus-visible:outline-none focus-visible:text-[#0891B2] focus-visible:underline"
+                            >
+                              {a.patient}
+                            </Link>
+                          ) : (
+                            <div className="font-bold text-[#0D1B2E]">{a.patient}</div>
+                          )}
                           <div className="font-mono text-[11px] font-semibold text-slate-400 sm:hidden mt-0.5">{a.mr}</div>
                         </td>
                         <td className="hidden py-4 px-6 font-bold text-slate-600 sm:table-cell">{a.doctor}</td>

@@ -153,7 +153,9 @@ export default function EncounterDetailPage() {
                 {history.map((h) => (
                   <TableRow key={h.id} className="cursor-pointer" onClick={() => router.push(`/encounters/${h.id}`)}>
                     <TableCell>{format(new Date(h.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell className="font-mono text-secondary">{h.encId}</TableCell>
+                    <TableCell className="font-mono text-secondary">
+                      <Link href={`/encounters/${h.id}`} onClick={(ev) => ev.stopPropagation()} className="hover:underline focus-visible:underline focus-visible:outline-none">{h.encId}</Link>
+                    </TableCell>
                     <TableCell><StatusBadge status={h.type} /></TableCell>
                     <TableCell>{DOCTORS.find((d) => d.userId === h.doctorId)?.name}</TableCell>
                     <TableCell>{h.diagnosis}</TableCell>

@@ -117,19 +117,21 @@ export default function DischargeSummaryPage() {
             <div>
               <Label className="mb-2 block">Discharge Medications</Label>
               <div className="rounded-md border border-border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr><th className="p-2 text-left">Medicine</th><th className="p-2 text-left">Dose</th><th className="p-2 text-left">Frequency</th><th className="p-2 text-left">Duration</th></tr>
-                  </thead>
-                  <tbody>
-                    {encounter.prescription.map((rx, i) => (
-                      <tr key={i} className="border-t border-border">
-                        <td className="p-2 font-medium">{rx.medicine}</td><td className="p-2">{rx.dose}</td>
-                        <td className="p-2">{rx.frequency}</td><td className="p-2">{rx.duration}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+                      <tr><th className="p-2 text-left">Medicine</th><th className="p-2 text-left">Dose</th><th className="p-2 text-left">Frequency</th><th className="p-2 text-left">Duration</th></tr>
+                    </thead>
+                    <tbody>
+                      {encounter.prescription.map((rx, i) => (
+                        <tr key={i} className="border-t border-border">
+                          <td className="p-2 font-medium">{rx.medicine}</td><td className="p-2">{rx.dose}</td>
+                          <td className="p-2">{rx.frequency}</td><td className="p-2">{rx.duration}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}

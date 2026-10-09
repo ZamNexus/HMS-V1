@@ -18,6 +18,8 @@ export function PhotoUpload({
   const { toast } = useToast()
   const [dragOver, setDragOver] = React.useState(false)
   const inputRef = React.useRef<HTMLInputElement>(null)
+  const labelId = React.useId()
+  const openPicker = () => inputRef.current?.click()
 
   const handleFile = (file: File | undefined) => {
     if (!file) return
@@ -36,37 +38,48 @@ export function PhotoUpload({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium">{label}</label>
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragOver(false)
-          handleFile(e.dataTransfer.files?.[0])
-        }}
-        onClick={() => inputRef.current?.click()}
-        className={cn(
-          "relative flex h-32 w-32 cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-md border-2 border-dashed border-border bg-muted/30 text-center transition-colors hover:border-secondary",
-          dragOver && "border-secondary bg-accent-50"
-        )}
-      >
-        {value ? (
-          <>
+      <span id={labelId} className="block text-sm font-medium">{label}</span>
+      {/* Remove button is a sibling of the drop zone, not nested inside it, to avoid nested interactive controls */}
+      <div className="relative h-32 w-32">
+        <div
+          role="button"
+          tabIndex={0}
+          aria-labelledby={labelId}
+          aria-describedby={`${labelId}-hint`}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setDragOver(false)
+            handleFile(e.dataTransfer.files?.[0])
+          }}
+          onClick={openPicker}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPicker() }
+          }}
+          className={cn(
+            "flex h-full w-full cursor-pointer flex-col items-center justify-center gap-1.5 overflow-hidden rounded-md border-2 border-dashed border-border bg-muted/30 text-center transition-colors hover:border-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+            dragOver && "border-secondary bg-accent-50"
+          )}
+        >
+          {value ? (
             <img src={value} alt="Profile" className="h-full w-full object-cover" />
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onChange(undefined) }}
-              className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </>
-        ) : (
-          <>
-            <Camera className="h-6 w-6 text-muted-foreground" />
-            <span className="px-2 text-xs text-muted-foreground">Drag &amp; drop or click</span>
-          </>
+          ) : (
+            <>
+              <Camera className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+              <span className="px-2 text-xs text-muted-foreground">Drag &amp; drop or click</span>
+            </>
+          )}
+        </div>
+        {value && (
+          <button
+            type="button"
+            aria-label="Remove photo"
+            onClick={() => onChange(undefined)}
+            className="absolute right-1 top-1 rounded-full bg-black/60 p-1 text-white hover:bg-black/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+          >
+            <X className="h-3 w-3" aria-hidden="true" />
+          </button>
         )}
       </div>
       <input
@@ -74,9 +87,14 @@ export function PhotoUpload({
         type="file"
         accept="image/png,image/jpeg"
         className="hidden"
-        onChange={(e) => handleFile(e.target.files?.[0])}
+        tabIndex={-1}
+        onChange={(e) => {
+          handleFile(e.target.files?.[0])
+          // Clear so choosing the same file again (e.g. after removing it) still fires onChange
+          e.target.value = ""
+        }}
       />
-      <p className="text-xs text-muted-foreground">JPG/PNG, max 2MB</p>
+      <p id={`${labelId}-hint`} className="text-xs text-muted-foreground">JPG/PNG, max 2MB</p>
     </div>
   )
 }

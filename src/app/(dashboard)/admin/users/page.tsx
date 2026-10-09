@@ -40,11 +40,9 @@ export default function UserManagementPage() {
     forceUpdate()
   }
 
-  const rows = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return USERS
-    return USERS.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || ROLE_LABELS[u.role].toLowerCase().includes(q))
-  }, [search, USERS]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Not memoised: USERS is mutated in place, so a memo keyed on it would go stale after edits
+  const q = search.trim().toLowerCase()
+  const rows = !q ? USERS : USERS.filter((u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || ROLE_LABELS[u.role].toLowerCase().includes(q))
 
   const activeCount = USERS.filter(u => u.active !== false).length
 
@@ -115,9 +113,9 @@ export default function UserManagementPage() {
                     <TableCell className="py-4"><StatusBadge status={u.active === false ? "Inactive" : "Active"} /></TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setSheetTarget(u)}><Pencil className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-100" onClick={() => setResetTarget(u)}><Key className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => setDeactivateTarget(u)}>
+                        <Button aria-label={`Edit ${u.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setSheetTarget(u)}><Pencil className="h-4 w-4" /></Button>
+                        <Button aria-label={`Reset password for ${u.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-100" onClick={() => setResetTarget(u)}><Key className="h-4 w-4" /></Button>
+                        <Button aria-label={`${u.active === false ? "Activate" : "Deactivate"} ${u.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50" onClick={() => setDeactivateTarget(u)}>
                           <Power className={cn("h-4 w-4", u.active === false && "text-emerald-500")} />
                         </Button>
                       </div>

@@ -26,16 +26,14 @@ export default function DoctorsPage() {
   const [modalTarget, setModalTarget] = React.useState<Doctor | "new" | null>(null)
   const [search, setSearch] = React.useState("")
 
-  const filteredDoctors = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return DOCTORS
-    return DOCTORS.filter((d) => 
-      d.name.toLowerCase().includes(q) || 
-      d.specialization.toLowerCase().includes(q) ||
-      (d.phone && d.phone.includes(q)) ||
-      (d.pmcRegNo && d.pmcRegNo.toLowerCase().includes(q))
-    )
-  }, [search, DOCTORS]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Not memoised: DOCTORS is mutated in place, so a memo keyed on it would go stale after edits
+  const q = search.trim().toLowerCase()
+  const filteredDoctors = !q ? DOCTORS : DOCTORS.filter((d) =>
+    d.name.toLowerCase().includes(q) ||
+    d.specialization.toLowerCase().includes(q) ||
+    (d.phone && d.phone.includes(q)) ||
+    (d.pmcRegNo && d.pmcRegNo.toLowerCase().includes(q))
+  )
 
   const activeCount = DOCTORS.filter(d => d.active !== false).length
 
@@ -149,7 +147,7 @@ export default function DoctorsPage() {
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}>
+                        <Button aria-label={`Edit ${d.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </div>

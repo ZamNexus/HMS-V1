@@ -57,31 +57,35 @@ export function LabReport() {
         <Card>
           <CardContent className="p-5">
             <h3 className="mb-3 text-sm font-semibold">Top Ordered Tests</h3>
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Test</th><th className="pb-2 text-right">Count</th><th className="pb-2 text-right">Revenue</th></tr></thead>
-              <tbody>
-                {topTests.map(([name, d]) => (
-                  <tr key={name} className="border-t border-border"><td className="py-1.5">{name}</td><td className="py-1.5 text-right">{d.count}</td><td className="py-1.5 text-right">{formatCurrency(d.revenue)}</td></tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Test</th><th className="pb-2 text-right">Count</th><th className="pb-2 text-right">Revenue</th></tr></thead>
+                <tbody>
+                  {topTests.map(([name, d]) => (
+                    <tr key={name} className="border-t border-border"><td className="py-1.5">{name}</td><td className="py-1.5 text-right">{d.count}</td><td className="py-1.5 text-right">{formatCurrency(d.revenue)}</td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-5">
             <h3 className="mb-3 text-sm font-semibold">Turnaround Time</h3>
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Category</th><th className="pb-2 text-right">Avg Hrs</th><th className="pb-2 text-right">Target</th><th className="pb-2 text-right">Status</th></tr></thead>
-              <tbody>
-                {turnaround.map((t) => (
-                  <tr key={t.category} className="border-t border-border">
-                    <td className="py-1.5">{t.category}</td><td className="py-1.5 text-right">{t.avgHours}h</td><td className="py-1.5 text-right">{t.target}h</td>
-                    <td className={cn("py-1.5 text-right font-medium", t.onTime ? "text-success-600" : "text-danger-600")}>{t.onTime ? "On Time" : "Delayed"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Category</th><th className="pb-2 text-right">Avg Hrs</th><th className="pb-2 text-right">Target</th><th className="pb-2 text-right">Status</th></tr></thead>
+                <tbody>
+                  {turnaround.map((t) => (
+                    <tr key={t.category} className="border-t border-border">
+                      <td className="py-1.5">{t.category}</td><td className="py-1.5 text-right">{t.avgHours}h</td><td className="py-1.5 text-right">{t.target}h</td>
+                      <td className={cn("py-1.5 text-right font-medium", t.onTime ? "text-success-600" : "text-danger-600")}>{t.onTime ? "On Time" : "Delayed"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       </div>

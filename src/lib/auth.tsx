@@ -4,9 +4,30 @@ import { USERS } from "@/data/users"
 import type { Role, User } from "@/types"
 
 const STORAGE_KEY = "hms_user"
+const SESSION_MAX_AGE = 86400 // seconds; the cookie is the session's source of truth
+
+// What the browser keeps about the signed-in user. Never includes the password.
+export type SessionUser = Omit<User, "password">
+
+function toSessionUser(u: User | SessionUser): SessionUser {
+  const { password: _password, ...session } = u as User // eslint-disable-line @typescript-eslint/no-unused-vars
+  return session
+}
+
+function hasSessionCookie(): boolean {
+  return document.cookie.split("; ").some((c) => c.startsWith(`${STORAGE_KEY}=`))
+}
+
+function readStoredUser(): SessionUser | null {
+  const raw = localStorage.getItem(STORAGE_KEY)
+  if (!raw) return null
+  const parsed = JSON.parse(raw) as Partial<User>
+  if (typeof parsed?.id !== "number" || typeof parsed.role !== "string" || typeof parsed.name !== "string") return null
+  return toSessionUser(parsed as User)
+}
 
 interface AuthContextValue {
-  user: User | null
+  user: SessionUser | null
   isInitialized: boolean
   login: (email: string, password: string) => { ok: true } | { ok: false; error: string }
   logout: () => void
@@ -15,15 +36,24 @@ interface AuthContextValue {
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<User | null>(null)
+  const [user, setUser] = React.useState<SessionUser | null>(null)
   const [isInitialized, setIsInitialized] = React.useState(false)
 
   React.useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) setUser(JSON.parse(raw) as User)
+      // An expired/missing cookie means signed out, even if localStorage still has a user.
+      // Otherwise the login page would show "Already signed in" while the proxy bounces
+      // every dashboard request back to /login.
+      const stored = hasSessionCookie() ? readStoredUser() : null
+      if (stored) {
+        // Re-save so records written before passwords were stripped get cleaned up
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(stored))
+        setUser(stored)
+      } else {
+        localStorage.removeItem(STORAGE_KEY)
+      }
     } catch {
-      // ignore
+      localStorage.removeItem(STORAGE_KEY)
     } finally {
       setIsInitialized(true)
     }
@@ -36,16 +66,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!found) {
       return { ok: false as const, error: "Invalid email or password." }
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(found))
-    // Set a cookie so middleware can see it
-    document.cookie = `${STORAGE_KEY}=${encodeURIComponent(JSON.stringify({ id: found.id, role: found.role }))}; path=/; max-age=86400`
-    setUser(found)
+    const session = toSessionUser(found)
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(session))
+    // Set a cookie so the proxy can see it. Demo only: it is not signed or HttpOnly,
+    // so it must be replaced by a backend-issued session cookie.
+    const secure = window.location.protocol === "https:" ? "; Secure" : ""
+    document.cookie = `${STORAGE_KEY}=${encodeURIComponent(JSON.stringify({ id: found.id, role: found.role }))}; path=/; max-age=${SESSION_MAX_AGE}; SameSite=Lax${secure}`
+    setUser(session)
     return { ok: true as const }
   }, [])
 
   const logout = React.useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
-    document.cookie = `${STORAGE_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+    document.cookie = `${STORAGE_KEY}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
     setUser(null)
     window.location.href = '/login'
   }, [])

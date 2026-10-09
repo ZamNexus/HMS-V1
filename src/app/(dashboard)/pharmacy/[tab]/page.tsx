@@ -249,8 +249,8 @@ function InventoryTab() {
                     <TableCell className="py-4"><StatusBadge status={status.label} /></TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setEditTarget(m)}><Pill className="h-4 w-4" /></Button>
-                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-100" onClick={() => setAdjustTarget(m)}><Plus className="h-4 w-4" /></Button>
+                        <Button aria-label={`Edit ${m.name}`} variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setEditTarget(m)}><Pill className="h-4 w-4" /></Button>
+                        <Button aria-label={`Adjust stock for ${m.name}`} variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-emerald-600 hover:bg-emerald-100" onClick={() => setAdjustTarget(m)}><Plus className="h-4 w-4" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -696,7 +696,7 @@ function HistoryTab() {
                       <TableCell className="py-4 font-black text-slate-900">{formatCurrency(d.netPayable)}</TableCell>
                       <TableCell className="py-4 text-sm font-medium text-slate-500">{d.dispensedBy}</TableCell>
                       <TableCell className="px-6 py-4 text-right">
-                        <Button variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100" onClick={() => window.print()}><Printer className="h-4 w-4" /></Button>
+                        <Button aria-label={`Print ${d.disNo}`} variant="ghost" size="sm" className="h-9 w-9 p-0 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100" onClick={() => window.print()}><Printer className="h-4 w-4" /></Button>
                       </TableCell>
                     </TableRow>
                   )

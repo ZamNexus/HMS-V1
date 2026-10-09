@@ -140,7 +140,7 @@ function ServicesTab() {
                   <TableCell className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" title="Item History" onClick={() => setHistoryTarget(s)}><History className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
+                      <Button aria-label={`Edit ${s.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -321,7 +321,7 @@ function LabTestsTab() {
                   <TableCell className="py-4 font-black text-slate-900">{formatCurrency(t.rate)}</TableCell>
                   <TableCell className="py-4 font-bold text-slate-500">{t.turnaroundHours}h</TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${t.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -417,7 +417,7 @@ function BanksTab() {
                   <TableCell className="py-4 font-medium text-slate-500">{b.branch}</TableCell>
                   <TableCell className="py-4"><Switch checked={b.active} onCheckedChange={(v) => { b.active = v; forceUpdate() }} /></TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${b.bankName}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -506,7 +506,7 @@ function PanelsTab() {
                   <TableCell className="py-4 font-bold text-emerald-600">{p.commissionPct}%</TableCell>
                   <TableCell className="py-4"><Switch checked={p.active} onCheckedChange={(v) => { p.active = v; forceUpdate() }} /></TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${p.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -615,7 +615,14 @@ function WardsTab() {
                   <TableHeader><TableRow className="bg-slate-50/50"><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Bed</TableHead><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Status</TableHead><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Since</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {w.beds.map((b) => (
-                      <TableRow key={b.bedNo} className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0" onClick={() => cycleBedStatus(w.id, b.bedNo)}>
+                      <TableRow
+                        key={b.bedNo}
+                        className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0 focus-visible:outline-none focus-visible:bg-slate-100"
+                        onClick={() => cycleBedStatus(w.id, b.bedNo)}
+                        tabIndex={0}
+                        aria-label={`Bed ${b.bedNo}: ${b.status}. Press Enter to change status`}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycleBedStatus(w.id, b.bedNo) } }}
+                      >
                         <TableCell className="font-mono text-[11px] font-bold text-slate-600">{b.bedNo}</TableCell>
                         <TableCell><StatusBadge status={b.status} /></TableCell>
                         <TableCell className="text-[11px] font-semibold text-slate-400">{b.since ?? "—"}</TableCell>
@@ -656,7 +663,7 @@ function GuardianRelationsTab() {
                 <TableCell className="py-4 font-medium text-slate-500">{r.remarks ?? "—"}</TableCell>
                 <TableCell className="py-4"><Switch checked={r.active} onCheckedChange={(v) => { r.active = v; forceUpdate() }} /></TableCell>
                 <TableCell className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button>
+                  <Button aria-label={`Edit ${r.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -741,7 +748,7 @@ function EcgUltrasoundTab() {
                 <TableCell className="py-4 font-medium text-slate-500">{t.remarks ?? "—"}</TableCell>
                 <TableCell className="py-4"><Switch checked={t.active} onCheckedChange={(v) => { t.active = v; forceUpdate() }} /></TableCell>
                 <TableCell className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
+                  <Button aria-label={`Edit ${t.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -846,7 +853,7 @@ function DiseasesTab() {
                   <TableCell className="py-4 font-bold text-[#0D1B2E]">{d.name}</TableCell>
                   <TableCell className="py-4 font-medium text-slate-600">{d.category}</TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${d.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -929,9 +936,9 @@ function ExpenseCategoriesTab() {
               {editing === i ? (
                 <Button size="sm" className="h-8 rounded-lg bg-[#0F2A4D]" onClick={() => { setCategories((cs) => cs.map((x, idx) => idx === i ? editValue : x)); setEditing(null) }}>Save</Button>
               ) : (
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditing(i); setEditValue(c) }}><Pencil className="h-3.5 w-3.5 text-slate-400" /></Button>
+                <Button aria-label={`Edit ${c}`} variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditing(i); setEditValue(c) }}><Pencil className="h-3.5 w-3.5 text-slate-400" /></Button>
               )}
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" onClick={() => setCategories((cs) => cs.filter((_, idx) => idx !== i))}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
+              <Button aria-label={`Delete ${c}`} variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" onClick={() => setCategories((cs) => cs.filter((_, idx) => idx !== i))}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
             </div>
           </div>
         ))}

@@ -6,6 +6,9 @@ const config: Config = {
   content: [
     "./src/app/**/*.{ts,tsx}",
     "./src/components/**/*.{ts,tsx}",
+    // Class names also live in data/lib modules (e.g. ROLE_BADGE_CLASSES)
+    "./src/data/**/*.{ts,tsx}",
+    "./src/lib/**/*.{ts,tsx}",
     "./src/pages/**/*.{ts,tsx}",
   ],
   theme: {
@@ -16,8 +19,8 @@ const config: Config = {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "system-ui", "sans-serif"],
-        mono: ["JetBrains Mono", "ui-monospace", "monospace"],
+        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "ui-monospace", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

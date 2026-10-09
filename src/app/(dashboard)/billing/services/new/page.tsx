@@ -202,7 +202,7 @@ function ServicesInvoiceFormContent() {
                       <TableCell><Input type="number" className="w-16" value={l.discountPct} onChange={(e) => updateLine(l.id, { discountPct: Number(e.target.value) })} /></TableCell>
                       <TableCell className="font-semibold">{formatCurrency(l.amount)}</TableCell>
                       <TableCell>
-                        <Button type="button" variant="ghost" size="icon" onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}>
+                        <Button aria-label="Remove line item" type="button" variant="ghost" size="icon" onClick={() => setLines((ls) => ls.filter((x) => x.id !== l.id))}>
                           <Trash2 className="h-4 w-4 text-danger-600" />
                         </Button>
                       </TableCell>

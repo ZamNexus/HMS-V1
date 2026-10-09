@@ -14,5 +14,9 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  // Skip Next internals and static files served from public/ (icons, images,
+  // robots.txt, …) so signed-out visitors can still load them.
+  matcher: [
+    "/((?!_next/static|_next/image|.*\\.(?:ico|svg|png|jpe?g|gif|webp|avif|txt|xml|webmanifest|woff2?)$).*)",
+  ],
 }

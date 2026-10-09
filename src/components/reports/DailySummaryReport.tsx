@@ -103,7 +103,7 @@ export function DailySummaryReport() {
               <div className="bg-slate-200 transition-all duration-1000 ease-in-out border-l border-white/20" style={{ width: `${insurance}%` }} title={`Insurance ${insurance}%`} />
             </div>
             
-            <div className="mt-8 grid grid-cols-3 gap-4">
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col items-center p-4 rounded-xl bg-slate-50">
                 <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
                   <span className="h-2.5 w-2.5 rounded-full bg-[#0F2A4D] shadow-sm" /> Cash

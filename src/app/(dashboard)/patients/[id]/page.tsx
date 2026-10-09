@@ -172,7 +172,9 @@ export default function PatientProfilePage() {
                 {visits.map((v) => (
                   <TableRow key={v.id} className="cursor-pointer" onClick={() => router.push(`/encounters/${v.id}`)}>
                     <TableCell>{format(new Date(v.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell className="font-mono text-secondary">{v.encId}</TableCell>
+                    <TableCell className="font-mono text-secondary">
+                      <Link href={`/encounters/${v.id}`} onClick={(ev) => ev.stopPropagation()} className="hover:underline focus-visible:underline focus-visible:outline-none">{v.encId}</Link>
+                    </TableCell>
                     <TableCell><StatusBadge status={v.type} /></TableCell>
                     <TableCell>{doctorName(v.doctorId)}</TableCell>
                     <TableCell className="max-w-[180px] truncate">{v.chiefComplaint}</TableCell>

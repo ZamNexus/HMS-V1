@@ -41,14 +41,16 @@ export function PharmacyReport() {
       <Card>
         <CardContent className="p-5">
           <h3 className="mb-3 text-sm font-semibold">Dispensed Summary</h3>
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Medicine</th><th className="pb-2 text-right">Dispensed Qty</th><th className="pb-2 text-right">Revenue</th></tr></thead>
-            <tbody>
-              {top10.map(([name, d]) => (
-                <tr key={name} className="border-t border-border"><td className="py-1.5">{name}</td><td className="py-1.5 text-right">{d.qty}</td><td className="py-1.5 text-right">{formatCurrency(d.revenue)}</td></tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Medicine</th><th className="pb-2 text-right">Dispensed Qty</th><th className="pb-2 text-right">Revenue</th></tr></thead>
+              <tbody>
+                {top10.map(([name, d]) => (
+                  <tr key={name} className="border-t border-border"><td className="py-1.5">{name}</td><td className="py-1.5 text-right">{d.qty}</td><td className="py-1.5 text-right">{formatCurrency(d.revenue)}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -56,34 +58,38 @@ export function PharmacyReport() {
         <Card>
           <CardContent className="p-5">
             <h3 className="mb-3 text-sm font-semibold">Low Stock</h3>
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Medicine</th><th className="pb-2 text-right">Current</th><th className="pb-2 text-right">Reorder</th><th className="pb-2 text-right">Shortfall</th></tr></thead>
-              <tbody>
-                {lowStock.map((m) => (
-                  <tr key={m.id} className="border-t border-border">
-                    <td className="py-1.5">{m.name}</td><td className="py-1.5 text-right">{m.stock}</td><td className="py-1.5 text-right">{m.reorderLevel}</td>
-                    <td className={cn("py-1.5 text-right font-semibold", m.stock === 0 && "text-danger-600")}>{m.reorderLevel - m.stock}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Medicine</th><th className="pb-2 text-right">Current</th><th className="pb-2 text-right">Reorder</th><th className="pb-2 text-right">Shortfall</th></tr></thead>
+                <tbody>
+                  {lowStock.map((m) => (
+                    <tr key={m.id} className="border-t border-border">
+                      <td className="py-1.5">{m.name}</td><td className="py-1.5 text-right">{m.stock}</td><td className="py-1.5 text-right">{m.reorderLevel}</td>
+                      <td className={cn("py-1.5 text-right font-semibold", m.stock === 0 && "text-danger-600")}>{m.reorderLevel - m.stock}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardContent className="p-5">
             <h3 className="mb-3 text-sm font-semibold">Expiring Soon</h3>
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Medicine</th><th className="pb-2 text-left">Batch</th><th className="pb-2 text-right">Stock</th><th className="pb-2 text-right">Days Left</th></tr></thead>
-              <tbody>
-                {expiring.map((m) => (
-                  <tr key={m.id} className="border-t border-border">
-                    <td className="py-1.5">{m.name}</td><td className="py-1.5 font-mono text-xs">{m.batchNo}</td><td className="py-1.5 text-right">{m.stock}</td>
-                    <td className={cn("py-1.5 text-right font-medium", m.daysLeft < 14 ? "text-danger-600" : "text-warning-700")}>{differenceInDays(new Date(m.expiry), new Date())}d</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Medicine</th><th className="pb-2 text-left">Batch</th><th className="pb-2 text-right">Stock</th><th className="pb-2 text-right">Days Left</th></tr></thead>
+                <tbody>
+                  {expiring.map((m) => (
+                    <tr key={m.id} className="border-t border-border">
+                      <td className="py-1.5">{m.name}</td><td className="py-1.5 font-mono text-xs">{m.batchNo}</td><td className="py-1.5 text-right">{m.stock}</td>
+                      <td className={cn("py-1.5 text-right font-medium", m.daysLeft < 14 ? "text-danger-600" : "text-warning-700")}>{differenceInDays(new Date(m.expiry), new Date())}d</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       </div>

@@ -1,10 +1,10 @@
 "use client"
 import * as React from "react"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useRouter, useParams } from "next/navigation"
 import { format } from "date-fns"
 import { Plus, Wallet, TrendingUp, TrendingDown, Receipt as ReceiptIcon, CreditCard, PiggyBank } from "lucide-react"
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
 import {
   CONSULTATION_INVOICES, SERVICES_INVOICES, PAYMENTS, RECEIPTS, EXPENSES, EXPENSE_CATEGORIES, BANK_TRANSACTIONS, bankRunningBalance,
@@ -26,6 +26,12 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+
+// Only the Expenses tab has a chart; load recharts on demand so the other tabs don't pay for it
+const ExpenseByCategoryChart = dynamic(() => import("./ExpenseChart").then((m) => m.ExpenseByCategoryChart), {
+  ssr: false,
+  loading: () => <div className="h-full animate-pulse rounded-xl bg-slate-50" />,
+})
 
 const TABS = [
   { key: "consultations", label: "Consultations", icon: ReceiptIcon },
@@ -407,15 +413,7 @@ function ExpensesTab() {
             <h3 className="mb-1 text-lg font-bold text-[#0D1B2E]">This Month by Category</h3>
             <p className="mb-6 text-sm font-medium text-slate-500">Total: <span className="font-bold text-danger-600">{formatCurrency(total)}</span></p>
             <div className="h-[280px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" horizontal={false} />
-                  <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `Rs.${v/1000}k`} />
-                  <YAxis type="category" dataKey="category" width={90} fontSize={11} tickLine={false} axisLine={false} tick={{fill: '#64748B', fontWeight: 600}} />
-                  <Tooltip formatter={(v) => formatCurrency(Number(v))} cursor={{fill: '#F8FAFC'}} />
-                  <Bar dataKey="amount" fill="#F43F5E" radius={[0, 4, 4, 0]} barSize={24} />
-                </BarChart>
-              </ResponsiveContainer>
+              <ExpenseByCategoryChart data={chartData} />
             </div>
           </CardContent>
         </Card>

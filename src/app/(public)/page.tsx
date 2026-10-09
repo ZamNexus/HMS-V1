@@ -153,7 +153,7 @@ function EcgIllustration() {
       <text
         x="24"
         y="28"
-        fontFamily="Inter, system-ui, sans-serif"
+        style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
         fontSize="9.5"
         fill="#1A3C6E"
         opacity="0.38"

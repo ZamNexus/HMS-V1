@@ -1,23 +1,28 @@
 "use client"
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { Download, Printer, ChevronRight, FileText, BarChart3, ListOrdered } from "lucide-react"
 
 import { EXPENSES } from "@/data/billing"
 import { cn } from "@/lib/utils"
 import { buildCSV } from "@/lib/csv"
-import { DailySummaryReport } from "@/components/reports/DailySummaryReport"
-import { DailyTransactionsReport } from "@/components/reports/DailyTransactionsReport"
-import { OpdStatisticsReport } from "@/components/reports/OpdStatisticsReport"
-import { RevenueReport } from "@/components/reports/RevenueReport"
-import { LabReport } from "@/components/reports/LabReport"
-import { PharmacyReport } from "@/components/reports/PharmacyReport"
-import { ExpenseReport } from "@/components/reports/ExpenseReport"
-import { PatientDemographicsReport } from "@/components/reports/PatientDemographicsReport"
-import { ListsReport } from "@/components/reports/ListsReport"
-import { AccountsReport } from "@/components/reports/AccountsReport"
-import { PatientBalancesReport } from "@/components/reports/PatientBalancesReport"
-import { PrescriptionHistoryReport } from "@/components/reports/PrescriptionHistoryReport"
 import { Button } from "@/components/ui/button"
+
+// Each report is loaded only when selected, so /reports doesn't download all
+// twelve (and recharts, used by six of them) up front.
+const reportLoading = () => <div className="h-[400px] animate-pulse rounded-[1.5rem] bg-slate-50" />
+const DailySummaryReport = dynamic(() => import("@/components/reports/DailySummaryReport").then((m) => m.DailySummaryReport), { loading: reportLoading })
+const DailyTransactionsReport = dynamic(() => import("@/components/reports/DailyTransactionsReport").then((m) => m.DailyTransactionsReport), { loading: reportLoading })
+const OpdStatisticsReport = dynamic(() => import("@/components/reports/OpdStatisticsReport").then((m) => m.OpdStatisticsReport), { loading: reportLoading })
+const RevenueReport = dynamic(() => import("@/components/reports/RevenueReport").then((m) => m.RevenueReport), { loading: reportLoading })
+const LabReport = dynamic(() => import("@/components/reports/LabReport").then((m) => m.LabReport), { loading: reportLoading })
+const PharmacyReport = dynamic(() => import("@/components/reports/PharmacyReport").then((m) => m.PharmacyReport), { loading: reportLoading })
+const ExpenseReport = dynamic(() => import("@/components/reports/ExpenseReport").then((m) => m.ExpenseReport), { loading: reportLoading })
+const PatientDemographicsReport = dynamic(() => import("@/components/reports/PatientDemographicsReport").then((m) => m.PatientDemographicsReport), { loading: reportLoading })
+const ListsReport = dynamic(() => import("@/components/reports/ListsReport").then((m) => m.ListsReport), { loading: reportLoading })
+const AccountsReport = dynamic(() => import("@/components/reports/AccountsReport").then((m) => m.AccountsReport), { loading: reportLoading })
+const PatientBalancesReport = dynamic(() => import("@/components/reports/PatientBalancesReport").then((m) => m.PatientBalancesReport), { loading: reportLoading })
+const PrescriptionHistoryReport = dynamic(() => import("@/components/reports/PrescriptionHistoryReport").then((m) => m.PrescriptionHistoryReport), { loading: reportLoading })
 
 const REPORTS = [
   { key: "daily", label: "Daily Summary", group: "Analytics", Component: DailySummaryReport, icon: BarChart3 },

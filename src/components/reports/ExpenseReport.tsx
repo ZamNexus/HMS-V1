@@ -58,15 +58,17 @@ export function ExpenseReport() {
         <Card>
           <CardContent className="p-5">
             <h3 className="mb-3 text-sm font-semibold">Summary</h3>
-            <table className="w-full text-sm">
-              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Category</th><th className="pb-2 text-right">Amount</th><th className="pb-2 text-right">% of Total</th></tr></thead>
-              <tbody>
-                {byCategory.map((c) => (
-                  <tr key={c.name} className="border-t border-border"><td className="py-1.5">{c.name}</td><td className="py-1.5 text-right">{formatCurrency(c.value)}</td><td className="py-1.5 text-right">{((c.value / total) * 100).toFixed(1)}%</td></tr>
-                ))}
-                <tr className="border-t border-border font-bold"><td className="py-1.5">Total</td><td className="py-1.5 text-right">{formatCurrency(total)}</td><td className="py-1.5 text-right">100%</td></tr>
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Category</th><th className="pb-2 text-right">Amount</th><th className="pb-2 text-right">% of Total</th></tr></thead>
+                <tbody>
+                  {byCategory.map((c) => (
+                    <tr key={c.name} className="border-t border-border"><td className="py-1.5">{c.name}</td><td className="py-1.5 text-right">{formatCurrency(c.value)}</td><td className="py-1.5 text-right">{((c.value / total) * 100).toFixed(1)}%</td></tr>
+                  ))}
+                  <tr className="border-t border-border font-bold"><td className="py-1.5">Total</td><td className="py-1.5 text-right">{formatCurrency(total)}</td><td className="py-1.5 text-right">100%</td></tr>
+                </tbody>
+              </table>
+            </div>
           </CardContent>
         </Card>
       </div>

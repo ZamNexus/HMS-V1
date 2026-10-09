@@ -68,25 +68,27 @@ export function RevenueReport() {
       <Card>
         <CardContent className="p-5">
           <h3 className="mb-3 text-sm font-semibold">Breakdown Comparison</h3>
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Category</th><th className="pb-2 text-right">This Period</th><th className="pb-2 text-right">Previous Period</th><th className="pb-2 text-right">Change%</th></tr></thead>
-            <tbody>
-              {rows.map((r) => {
-                const change = r.prev ? ((r.current - r.prev) / r.prev) * 100 : 0
-                return (
-                  <tr key={r.label} className="border-t border-border">
-                    <td className="py-1.5">{r.label}</td>
-                    <td className="py-1.5 text-right tabular-nums">{formatCurrency(r.current)}</td>
-                    <td className="py-1.5 text-right tabular-nums">{formatCurrency(r.prev)}</td>
-                    <td className={cn("py-1.5 text-right font-medium tabular-nums", change >= 0 ? "text-success-600" : "text-danger-600")}>
-                      <span className="inline-flex items-center gap-0.5">{change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}{Math.abs(change).toFixed(1)}%</span>
-                    </td>
-                  </tr>
-                )
-              })}
-              <tr className="border-t border-border font-bold"><td className="py-1.5">Total</td><td className="py-1.5 text-right">{formatCurrency(total)}</td><td colSpan={2} /></tr>
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Category</th><th className="pb-2 text-right">This Period</th><th className="pb-2 text-right">Previous Period</th><th className="pb-2 text-right">Change%</th></tr></thead>
+              <tbody>
+                {rows.map((r) => {
+                  const change = r.prev ? ((r.current - r.prev) / r.prev) * 100 : 0
+                  return (
+                    <tr key={r.label} className="border-t border-border">
+                      <td className="py-1.5">{r.label}</td>
+                      <td className="py-1.5 text-right tabular-nums">{formatCurrency(r.current)}</td>
+                      <td className="py-1.5 text-right tabular-nums">{formatCurrency(r.prev)}</td>
+                      <td className={cn("py-1.5 text-right font-medium tabular-nums", change >= 0 ? "text-success-600" : "text-danger-600")}>
+                        <span className="inline-flex items-center gap-0.5">{change >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}{Math.abs(change).toFixed(1)}%</span>
+                      </td>
+                    </tr>
+                  )
+                })}
+                <tr className="border-t border-border font-bold"><td className="py-1.5">Total</td><td className="py-1.5 text-right">{formatCurrency(total)}</td><td colSpan={2} /></tr>
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
@@ -96,33 +98,35 @@ export function RevenueReport() {
             <h3 className="text-sm font-semibold">Unpaid &amp; Partial Invoices</h3>
             <Badge variant="danger">{formatCurrency(totalOutstanding)}</Badge>
           </div>
-          <table className="w-full text-sm">
-            <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Patient</th><th className="pb-2 text-left">Invoice No.</th><th className="pb-2 text-left">Type</th><th className="pb-2 text-right">Amount</th><th className="pb-2 text-right">Paid</th><th className="pb-2 text-right">Balance</th><th className="pb-2 text-right">Days Overdue</th></tr></thead>
-            <tbody>
-              {unpaid.map((u) => {
-                const daysOverdue = differenceInDays(new Date(), new Date(u.date))
-                const patient = PATIENTS.find((p) => p.id === u.patientId)
-                return (
-                  <tr key={u.invoiceNo} className="border-t border-border">
-                    <td className="py-1.5">{patient?.name}</td>
-                    <td className="py-1.5 font-mono text-secondary">{u.invoiceNo}</td>
-                    <td className="py-1.5">{u.type}</td>
-                    <td className="py-1.5 text-right">{formatCurrency(u.amount)}</td>
-                    <td className="py-1.5 text-right">{formatCurrency(u.paid)}</td>
-                    <td className="py-1.5 text-right font-semibold">{formatCurrency(u.balance)}</td>
-                    <td className={cn("py-1.5 text-right", daysOverdue > 30 ? "text-danger-600" : daysOverdue > 7 ? "text-warning-700" : "text-muted-foreground")}>{daysOverdue}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="text-xs uppercase text-muted-foreground"><tr><th className="pb-2 text-left">Patient</th><th className="pb-2 text-left">Invoice No.</th><th className="pb-2 text-left">Type</th><th className="pb-2 text-right">Amount</th><th className="pb-2 text-right">Paid</th><th className="pb-2 text-right">Balance</th><th className="pb-2 text-right">Days Overdue</th></tr></thead>
+              <tbody>
+                {unpaid.map((u) => {
+                  const daysOverdue = differenceInDays(new Date(), new Date(u.date))
+                  const patient = PATIENTS.find((p) => p.id === u.patientId)
+                  return (
+                    <tr key={u.invoiceNo} className="border-t border-border">
+                      <td className="py-1.5">{patient?.name}</td>
+                      <td className="py-1.5 font-mono text-secondary">{u.invoiceNo}</td>
+                      <td className="py-1.5">{u.type}</td>
+                      <td className="py-1.5 text-right">{formatCurrency(u.amount)}</td>
+                      <td className="py-1.5 text-right">{formatCurrency(u.paid)}</td>
+                      <td className="py-1.5 text-right font-semibold">{formatCurrency(u.balance)}</td>
+                      <td className={cn("py-1.5 text-right", daysOverdue > 30 ? "text-danger-600" : daysOverdue > 7 ? "text-warning-700" : "text-muted-foreground")}>{daysOverdue}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
 
       <Card>
         <CardContent className="p-5">
           <h3 className="mb-3 text-sm font-semibold">Aged Receivables</h3>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Object.entries(buckets).map(([label, amount]) => (
               <div key={label} className="rounded-md bg-muted/40 p-3 text-center">
                 <div className="text-xs text-muted-foreground">{label}d</div>

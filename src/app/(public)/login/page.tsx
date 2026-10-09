@@ -158,7 +158,7 @@ function AlreadySignedIn({
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "#F3F5F8", padding: "24px", fontFamily: "'Inter', system-ui, sans-serif",
+      background: "#F3F5F8", padding: "24px", fontFamily: "var(--font-inter), system-ui, sans-serif",
     }}>
       <div style={{
         background: "#fff", borderRadius: "18px", padding: "40px",
@@ -322,7 +322,7 @@ function LoginContent() {
 
   return (
     <div
-      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+      style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
       className="flex min-h-screen flex-col md:flex-row"
     >
       {/* ══════════════════════════════════════════════════════════

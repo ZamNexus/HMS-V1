@@ -126,9 +126,13 @@ export default function EncounterListPage() {
                         {format(new Date(e.date), "dd MMM yyyy")}
                       </TableCell>
                       <TableCell className="py-4">
-                        <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
+                        <Link
+                          href={`/encounters/${e.id}`}
+                          onClick={(ev) => ev.stopPropagation()}
+                          className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1CC0CE]"
+                        >
                           {e.encId}
-                        </span>
+                        </Link>
                       </TableCell>
                       <TableCell className="py-4 font-bold text-[#0D1B2E]">
                         {patient?.name || "Unknown Patient"}
