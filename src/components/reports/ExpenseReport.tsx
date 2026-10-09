@@ -1,3 +1,4 @@
+"use client"
 import * as React from "react"
 import { format } from "date-fns"
 import { Cell, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts"

@@ -78,9 +78,9 @@ export default function PatientProfilePage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" onClick={() => router.push(`/patients/${patient.id}/edit`)}>
+            <Button asChild variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10"><Link href={`/patients/${patient.id}/edit`}>
               <Pencil className="h-4 w-4" /> Edit Patient
-            </Button>
+            </Link></Button>
             <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
               <Link href={`/encounters/new?patientId=${patient.id}`}><Plus className="h-4 w-4" /> New Encounter</Link>
             </Button>

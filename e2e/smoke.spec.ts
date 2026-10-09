@@ -122,6 +122,48 @@ test("a receptionist registers a patient and lands on the new profile", async ({
   await expect(page.getByRole("heading", { level: 1, name })).toBeVisible()
 })
 
+test("navigation controls are real links and navigate", async ({ page }) => {
+  // Landing page
+  await page.goto("/")
+  await expect(page.getByRole("link", { name: "Get Started" })).toHaveAttribute("href", "/login")
+  await signIn(page, "admin")
+
+  // Dashboard call-to-action
+  const register = page.getByRole("link", { name: "Register Patient" })
+  await expect(register).toHaveAttribute("href", "/patients/new")
+
+  // Billing tabs: links with aria-current on the active one
+  await page.goto("/billing/consultations")
+  const tabs = page.getByRole("link", { name: "Expenses", exact: true })
+  await expect(page.getByRole("link", { name: "Consultations", exact: true })).toHaveAttribute("aria-current", "page")
+  await tabs.click()
+  await expect(page).toHaveURL(/\/billing\/expenses$/)
+  await expect(tabs).toHaveAttribute("aria-current", "page")
+
+  // Breadcrumb and account menu
+  await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Citi Clinic" }).click()
+  await expect(page).toHaveURL(/\/dashboard$/)
+  await page.getByRole("button", { name: "Account menu" }).click()
+  await page.getByRole("menuitem", { name: "Profile Settings" }).click()
+  await expect(page).toHaveURL(/\/profile$/)
+})
+
+test("every breadcrumb link points at a page that exists", async ({ page, request }) => {
+  await signIn(page, "admin")
+  const hrefs = new Set<string>()
+  for (const path of ["/admin/users", "/admin/master-data", "/lab/orders/1/results", "/imaging/orders/1", "/encounters/3/discharge", "/billing/consultations/new", "/patients/1/edit", "/dashboard/stats"]) {
+    await page.goto(path)
+    for (const href of await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link").evaluateAll((as) => as.map((a) => a.getAttribute("href")!)))
+      hrefs.add(href)
+  }
+  const broken: string[] = []
+  for (const href of hrefs) {
+    const status = (await request.get(href, { headers: { cookie: "hms_user=x" } })).status()
+    if (status !== 200) broken.push(`${href} → ${status}`)
+  }
+  expect(broken).toEqual([])
+})
+
 test("saving an incomplete form explains what is missing", async ({ page }) => {
   await signIn(page, "admin")
   await sidebar(page).getByRole("link", { name: "Medical Staff", exact: true }).click()

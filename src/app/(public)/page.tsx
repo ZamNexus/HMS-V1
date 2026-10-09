@@ -1,4 +1,5 @@
 "use client"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth"
 import { ROLE_LABELS } from "@/data/users"
@@ -186,9 +187,9 @@ export default function LandingPage() {
               <span className="hidden text-xs text-muted-foreground sm:inline">
                 Signed in as <span className="font-medium text-foreground">{ROLE_LABELS[user.role]}</span>
               </span>
-              <Button size="sm" onClick={() => router.push("/dashboard")}>
+              <Button asChild size="sm"><Link href={"/dashboard"}>
                 Dashboard
-              </Button>
+              </Link></Button>
               <Button
                 variant="ghost"
                 size="sm"
@@ -199,13 +200,12 @@ export default function LandingPage() {
               </Button>
             </div>
           ) : (
-            <Button
+            <Button asChild
               variant="outline"
               size="sm"
-              onClick={() => router.push("/login")}
-            >
+            ><Link href={"/login"}>
               Sign In
-            </Button>
+            </Link></Button>
           )}
         </div>
       </header>
@@ -224,13 +224,12 @@ export default function LandingPage() {
             One system for admissions, wards, pharmacy, and billing — built for every role in the clinic.
           </p>
           <div className="pt-1">
-            <Button
+            <Button asChild
               size="lg"
-              onClick={() => router.push("/login")}
               className="bg-primary shadow-md hover:bg-primary/90 hover:shadow-lg transition-shadow"
-            >
+            ><Link href={"/login"}>
               Get Started
-            </Button>
+            </Link></Button>
           </div>
         </div>
 
@@ -267,13 +266,12 @@ export default function LandingPage() {
               <p className="mb-4 flex-1 text-xs leading-relaxed text-muted-foreground">{desc}</p>
 
               {/* Access button */}
-              <Button
+              <Button asChild
                 size="sm"
                 className="w-full bg-primary shadow-sm hover:bg-primary/90 transition-shadow hover:shadow"
-                onClick={() => router.push(`/login?role=${key}`)}
-              >
+              ><Link href={`/login?role=${key}`}>
                 Access
-              </Button>
+              </Link></Button>
             </div>
           ))}
         </div>

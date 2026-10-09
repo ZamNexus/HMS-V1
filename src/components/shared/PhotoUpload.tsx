@@ -1,3 +1,4 @@
+"use client"
 import * as React from "react"
 import { Camera, X } from "lucide-react"
 

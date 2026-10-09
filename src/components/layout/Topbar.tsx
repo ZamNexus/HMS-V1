@@ -1,6 +1,7 @@
 "use client"
 import * as React from "react"
-import { usePathname, useRouter } from "next/navigation"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { format } from "date-fns"
 import { 
   Bell, LogOut, Menu, User as UserIcon, KeyRound, Clock, 
@@ -44,12 +45,16 @@ const BREADCRUMB_LABELS: Record<string, string> = {
   ipd: "IPD",
 }
 
+// Path prefixes that are only URL groupings, with no page of their own
+const NO_PAGE = new Set(["/admin", "/lab", "/imaging"])
+
 function useBreadcrumb() {
   const pathname = usePathname()
   const segments = pathname.split("/").filter(Boolean)
   return segments.map((s, i) => ({
     label: BREADCRUMB_LABELS[s] ?? s.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
     to: "/" + segments.slice(0, i + 1).join("/"),
+    linkable: !NO_PAGE.has("/" + segments.slice(0, i + 1).join("/")),
   }))
 }
 
@@ -96,7 +101,6 @@ function useNotifications() {
 
 export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { user, logout } = useAuth()
-  const router = useRouter()
   const crumbs = useBreadcrumb()
   const notifications = useNotifications()
 
@@ -123,12 +127,11 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
 
         {/* Breadcrumb Trail */}
         <nav aria-label="Breadcrumb" className="hidden sm:flex items-center gap-1.5 text-xs text-slate-500 font-medium overflow-hidden">
-          <button 
-            onClick={() => router.push("/dashboard")} 
+          <Link href={"/dashboard"} 
             className="text-slate-500 hover:text-[#0891B2] transition-colors leading-none mt-[1px]"
           >
             Citi Clinic
-          </button>
+          </Link>
           {crumbs.length === 0 ? (
             <>
               <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
@@ -138,15 +141,14 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
             crumbs.map((c, i) => (
               <React.Fragment key={c.to}>
                 <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
-                {i === crumbs.length - 1 ? (
+                {i === crumbs.length - 1 || !c.linkable ? (
                   <span className="font-semibold text-slate-900 truncate leading-none mt-[1px]">{c.label}</span>
                 ) : (
-                  <button 
-                    onClick={() => router.push(c.to)} 
+                  <Link href={c.to} 
                     className="hover:text-[#0891B2] transition-colors truncate leading-none mt-[1px]"
                   >
                     {c.label}
-                  </button>
+                  </Link>
                 )}
               </React.Fragment>
             ))
@@ -167,7 +169,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         {/* Notifications Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 outline-none">
+            <button aria-label={`Notifications (${notifications.length})`} className="relative flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 outline-none">
               <Bell className="h-4 w-4" />
               {notifications.length > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white">
@@ -191,11 +193,10 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
             ) : (
               <div className="space-y-1">
                 {notifications.map((n) => (
-                  <DropdownMenuItem
+                  <DropdownMenuItem asChild
                     key={n.id}
-                    onClick={() => router.push(n.to)}
                     className="flex cursor-pointer items-start gap-2.5 rounded-lg p-2.5 hover:bg-slate-50"
-                  >
+                  ><Link href={n.to}>
                     {n.tone === "danger" ? (
                       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                     ) : (
@@ -205,7 +206,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
                       <div className="text-xs font-semibold text-slate-900">{n.title}</div>
                       <div className="text-[11px] text-slate-500 truncate">{n.detail}</div>
                     </div>
-                  </DropdownMenuItem>
+                  </Link></DropdownMenuItem>
                 ))}
               </div>
             )}
@@ -215,7 +216,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
         {/* User Profile Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2.5 rounded-full border border-slate-200 bg-white p-1 pr-2.5 transition-all hover:border-slate-300 hover:shadow-sm outline-none">
+            <button aria-label="Account menu" className="flex items-center gap-2.5 rounded-full border border-slate-200 bg-white p-1 pr-2.5 transition-all hover:border-slate-300 hover:shadow-sm outline-none">
               <Avatar className="h-7 w-7 ring-1 ring-[#1CC0CE]/30 flex items-center justify-center">
                 <AvatarFallback className="bg-gradient-to-br from-[#0F2A4D] to-[#16375F] text-[11px] font-bold text-white flex items-center justify-center w-full h-full">
                   {initials(user.name)}
@@ -235,20 +236,18 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem 
+            <DropdownMenuItem asChild 
               className="rounded-lg p-2 cursor-pointer hover:bg-slate-50"
-              onClick={() => router.push("/profile")}
-            >
+            ><Link href={"/profile"}>
               <UserIcon className="mr-2 h-4 w-4 text-slate-400" />
               <span>Profile Settings</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem 
+            </Link></DropdownMenuItem>
+            <DropdownMenuItem asChild 
               className="rounded-lg p-2 cursor-pointer hover:bg-slate-50"
-              onClick={() => router.push("/profile")}
-            >
+            ><Link href={"/profile"}>
               <KeyRound className="mr-2 h-4 w-4 text-slate-400" />
               <span>Change Password</span>
-            </DropdownMenuItem>
+            </Link></DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem 
               className="rounded-lg p-2 cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700" 

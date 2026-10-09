@@ -128,14 +128,14 @@ export default function DashboardPage() {
           
           <div className="flex flex-wrap shrink-0 gap-3 mt-2 lg:mt-0">
             {showRevenue && (
-              <Button variant="outline" className="rounded-xl h-11 px-5 font-bold bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm" onClick={() => router.push("/dashboard/stats")}>
+              <Button asChild variant="outline" className="rounded-xl h-11 px-5 font-bold bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm"><Link href={"/dashboard/stats"}>
                 <Activity className="h-4 w-4 mr-2" /> Financial Stats
-              </Button>
+              </Link></Button>
             )}
             {canAddPatient && (
-              <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-black shadow-lg shadow-[#0F2A4D]/30 ring-1 ring-white/10" onClick={() => router.push("/patients/new")}>
+              <Button asChild className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-black shadow-lg shadow-[#0F2A4D]/30 ring-1 ring-white/10"><Link href={"/patients/new"}>
                 Register Patient <ArrowRight className="h-4 w-4 ml-2 text-white/70" />
-              </Button>
+              </Link></Button>
             )}
           </div>
         </div>
@@ -156,9 +156,9 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-          <Button className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0 shadow-sm h-11 px-6" onClick={() => router.push("/pharmacy/inventory")}>
+          <Button asChild className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0 shadow-sm h-11 px-6"><Link href={"/pharmacy/inventory"}>
             Restock Inventory
-          </Button>
+          </Link></Button>
         </div>
       )}
 

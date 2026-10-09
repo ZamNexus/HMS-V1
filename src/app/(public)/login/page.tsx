@@ -220,8 +220,7 @@ function AlreadySignedIn({
 
         {/* Actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <button
-            onClick={() => router.push("/dashboard")}
+          <Link href={"/dashboard"}
             style={{
               width: "100%", padding: "13px 16px", borderRadius: "10px",
               background: "linear-gradient(180deg, #1D4080 0%, #0F2A4D 100%)",
@@ -232,7 +231,7 @@ function AlreadySignedIn({
             }}
           >
             Continue as {ROLE_LABELS[user.role] ?? "User"} <IcoArrow />
-          </button>
+          </Link>
 
           <button
             onClick={() => { logout(); router.push("/login" + (roleParam ? `?role=${roleParam}` : "")) }}

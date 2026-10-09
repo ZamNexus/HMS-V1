@@ -1,3 +1,4 @@
+"use client"
 import * as React from "react"
 import { Search, User, X } from "lucide-react"
 import { differenceInYears } from "date-fns"

@@ -2,7 +2,7 @@
 import * as React from "react"
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import { useRouter, useParams } from "next/navigation"
+import { useParams } from "next/navigation"
 import type { BillingTab } from "./tabs"
 import { format } from "date-fns"
 import { Plus, Wallet, TrendingUp, TrendingDown, Receipt as ReceiptIcon, CreditCard, PiggyBank } from "lucide-react"
@@ -60,7 +60,6 @@ const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white
 export default function BillingHubPage() {
   const params = useParams()
   const tab = (params?.tab as string) || "consultations"
-  const router = useRouter()
   const { toast } = useToast()
   const [dateRange, setDateRange] = React.useState<(typeof DATE_RANGES)[number]>("This Month")
   const [paymentModalOpen, setPaymentModalOpen] = React.useState(false)
@@ -136,9 +135,9 @@ export default function BillingHubPage() {
         {TABS.map((t) => {
           const isActive = tab === t.key
           return (
-            <button
+            <Link href={`/billing/${t.key}`}
               key={t.key}
-              onClick={() => router.push(`/billing/${t.key}`)}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex items-center gap-2 shrink-0 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200",
                 isActive
@@ -148,7 +147,7 @@ export default function BillingHubPage() {
             >
               <t.icon className={cn("h-4 w-4", isActive ? "text-[#1CC0CE]" : "text-slate-400")} />
               {t.label}
-            </button>
+            </Link>
           )
         })}
       </div>

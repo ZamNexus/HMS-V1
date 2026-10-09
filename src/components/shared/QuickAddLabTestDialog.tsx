@@ -1,3 +1,4 @@
+"use client"
 import * as React from "react"
 
 import { LAB_TESTS, LAB_TEST_CATEGORIES } from "@/data/labTests"

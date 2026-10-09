@@ -1,7 +1,8 @@
 "use client"
 import * as React from "react"
+import Link from "next/link"
 import { Suspense } from "react"
-import { useRouter, useParams, useSearchParams } from "next/navigation"
+import { useParams, useSearchParams } from "next/navigation"
 import type { PharmacyTab } from "./tabs"
 import { format } from "date-fns"
 import { AlertTriangle, Pill, Plus, Printer, Search, ClipboardList, Activity, Wallet, TrendingDown } from "lucide-react"
@@ -54,7 +55,6 @@ function medicineStatus(m: Medicine): { label: string; days?: number } {
 export default function PharmacyPage() {
   const params = useParams()
   const tab = (params?.tab as string) || "inventory"
-  const router = useRouter()
 
   const totalItems = MEDICINES.length
   const inventoryValue = MEDICINES.reduce((acc, m) => acc + (m.stock * m.saleRate), 0)
@@ -105,9 +105,9 @@ export default function PharmacyPage() {
         {TABS.map((t) => {
           const isActive = tab === t.key
           return (
-            <button
+            <Link href={`/pharmacy/${t.key}`}
               key={t.key}
-              onClick={() => router.push(`/pharmacy/${t.key}`)}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex items-center gap-2 shrink-0 rounded-xl px-5 py-3 text-sm font-bold transition-all duration-200",
                 isActive
@@ -117,7 +117,7 @@ export default function PharmacyPage() {
             >
               <t.icon className={cn("h-4 w-4", isActive ? "text-[#1CC0CE]" : "text-slate-400")} />
               {t.label}
-            </button>
+            </Link>
           )
         })}
       </div>
