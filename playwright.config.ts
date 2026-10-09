@@ -15,10 +15,9 @@ export default defineConfig({
   projects: [
     {
       name: "chrome",
-      // Uses the locally installed Google Chrome, so no Playwright browser download
-      // is needed. On CI without Chrome, run `npx playwright install chromium` and
-      // drop `channel`.
-      use: { ...devices["Desktop Chrome"], channel: "chrome" },
+      // Locally: the installed Google Chrome, so no Playwright browser download.
+      // CI: Playwright's own Chromium (installed by the workflow).
+      use: { ...devices["Desktop Chrome"], channel: process.env.CI ? undefined : "chrome" },
     },
   ],
   // Smoke tests run against a production build, not the dev server
