@@ -68,6 +68,17 @@ test("signed-out visitors are redirected from dashboard pages to login", async (
   }
 })
 
+test("unknown billing and pharmacy tabs return 404; known tabs load", async ({ request }) => {
+  // The demo proxy only checks that the session cookie exists
+  const headers = { cookie: "hms_user=x" }
+  for (const path of ["/billing/bogus", "/pharmacy/bogus", "/billing/Consultations"]) {
+    expect((await request.get(path, { headers, maxRedirects: 0 })).status(), path).toBe(404)
+  }
+  for (const path of ["/billing/consultations", "/billing/expenses", "/pharmacy/inventory", "/pharmacy/dispense"]) {
+    expect((await request.get(path, { headers, maxRedirects: 0 })).status(), path).toBe(200)
+  }
+})
+
 test("a nurse is denied the admin pages", async ({ page }) => {
   await signIn(page, "nurse")
   await page.goto("/admin/users")
