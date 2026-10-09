@@ -167,6 +167,7 @@ export default function DoctorsPage() {
 }
 
 function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const doc = isNew ? null : target
@@ -236,35 +237,35 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
             
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 bg-white p-6 rounded-2xl ring-1 ring-slate-200/60 shadow-sm">
               <div className="md:col-span-2"><h4 className="text-sm font-black text-[#0D1B2E] uppercase tracking-wider mb-2 border-b border-slate-100 pb-2">Professional Info</h4></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Specialization</Label><Input className={inputClass} value={specialization} onChange={(e) => setSpecialization(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Degrees</Label><Input className={inputClass} value={qualifications} onChange={(e) => setQualifications(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">PMC Reg. No.</Label><Input className={inputClass} value={pmcRegNo} onChange={(e) => setPmcRegNo(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Consultation Fee (Rs.) *</Label><Input type="number" className={inputClass} value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Rev. Share (%)</Label><Input type="number" min={0} max={100} className={inputClass} value={sharePct || ""} onChange={(e) => setSharePct(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-full-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name *</Label><Input id={`${uid}-full-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-specialization`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Specialization</Label><Input id={`${uid}-specialization`} className={inputClass} value={specialization} onChange={(e) => setSpecialization(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-degrees`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Degrees</Label><Input id={`${uid}-degrees`} className={inputClass} value={qualifications} onChange={(e) => setQualifications(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-pmc-reg-no`} className="text-xs font-bold uppercase tracking-wider text-slate-500">PMC Reg. No.</Label><Input id={`${uid}-pmc-reg-no`} className={inputClass} value={pmcRegNo} onChange={(e) => setPmcRegNo(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-consultation-fee-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Consultation Fee (Rs.) *</Label><Input id={`${uid}-consultation-fee-rs`} type="number" className={inputClass} value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-rev-share`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Rev. Share (%)</Label><Input id={`${uid}-rev-share`} type="number" min={0} max={100} className={inputClass} value={sharePct || ""} onChange={(e) => setSharePct(Number(e.target.value))} /></div>
             </div>
 
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 bg-white p-6 rounded-2xl ring-1 ring-slate-200/60 shadow-sm">
               <div className="md:col-span-2 flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
                 <h4 className="text-sm font-black text-[#0D1B2E] uppercase tracking-wider">Availability & Status</h4>
                 <div className="flex items-center gap-3">
-                  <Label className="cursor-pointer font-bold text-sm text-slate-600">{active ? "Active" : "Inactive"}</Label>
-                  <Switch checked={active} onCheckedChange={setActive} />
+                  <Label htmlFor={`${uid}-field`} className="cursor-pointer font-bold text-sm text-slate-600">{active ? "Active" : "Inactive"}</Label>
+                  <Switch id={`${uid}-field`} checked={active} onCheckedChange={setActive} />
                 </div>
               </div>
               
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Working Hours</Label>
+                <Label htmlFor={`${uid}-working-hours`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Working Hours</Label>
                 <div className="flex gap-2 items-center">
-                  <Input type="time" className={inputClass} value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} />
+                  <Input id={`${uid}-working-hours`} type="time" className={inputClass} value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} />
                   <span className="text-slate-400 font-bold">to</span>
                   <Input type="time" className={inputClass} value={hoursTo} onChange={(e) => setHoursTo(e.target.value)} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Days</Label>
-                <div className="flex flex-wrap gap-2">
+                <Label id={`${uid}-available-days-label`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Days</Label>
+                <div role="group" aria-labelledby={`${uid}-available-days-label`} className="flex flex-wrap gap-2">
                   {DAYS.map((day) => {
                     const isSelected = days.has(day)
                     return (
@@ -288,12 +289,12 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
 
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 bg-white p-6 rounded-2xl ring-1 ring-slate-200/60 shadow-sm">
               <div className="md:col-span-2"><h4 className="text-sm font-black text-[#0D1B2E] uppercase tracking-wider mb-2 border-b border-slate-100 pb-2">Contact & Personal</h4></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CNIC</Label><Input className={inputClass} placeholder="12345-1234567-1" value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">City</Label><Input className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label><Textarea rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none bg-slate-50" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-email`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input id={`${uid}-email`} className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-cnic`} className="text-xs font-bold uppercase tracking-wider text-slate-500">CNIC</Label><Input id={`${uid}-cnic`} className={inputClass} placeholder="12345-1234567-1" value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-city`} className="text-xs font-bold uppercase tracking-wider text-slate-500">City</Label><Input id={`${uid}-city`} className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label htmlFor={`${uid}-address`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input id={`${uid}-address`} className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label htmlFor={`${uid}-notes`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label><Textarea id={`${uid}-notes`} rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none bg-slate-50" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             </div>
           </div>
         </div>

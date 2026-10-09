@@ -425,6 +425,7 @@ function ExpensesTab() {
 }
 
 function ExpenseModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [category, setCategory] = React.useState(EXPENSE_CATEGORIES[0])
   const [description, setDescription] = React.useState("")
@@ -453,21 +454,21 @@ function ExpenseModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
       <DialogContent className="sm:max-w-[425px] rounded-[1.5rem]">
         <DialogHeader><DialogTitle>Add Expense</DialogTitle></DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</Label><Input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</Label><Input id={`${uid}-date`} type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{EXPENSE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Description *</Label><Input className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-description`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Description *</Label><Input id={`${uid}-description`} className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-amount`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input id={`${uid}-amount`} type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Mode</Label>
+              <Label htmlFor={`${uid}-mode`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as "Cash" | "Bank")}>
-                <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-mode`} className={selectClass}><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="Cash">Cash</SelectItem><SelectItem value="Bank">Bank</SelectItem></SelectContent>
               </Select>
             </div>
@@ -483,6 +484,7 @@ function ExpenseModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [patientId, setPatientId] = React.useState<string>("")
   const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
@@ -515,21 +517,21 @@ function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
         <DialogHeader><DialogTitle>Record Payment</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 pt-2">
           <div className="space-y-1.5 md:col-span-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
-            <Select value={patientId} onValueChange={setPatientId}><SelectTrigger className={selectClass}><SelectValue placeholder="Select patient" /></SelectTrigger>
+            <Label htmlFor={`${uid}-patient`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
+            <Select value={patientId} onValueChange={setPatientId}><SelectTrigger id={`${uid}-patient`} className={selectClass}><SelectValue placeholder="Select patient" /></SelectTrigger>
               <SelectContent>{PATIENTS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name} — {p.mrNo}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Date</Label><Input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-payment-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Date</Label><Input id={`${uid}-payment-date`} type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-amount`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input id={`${uid}-amount`} type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Mode</Label>
-            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+            <Label htmlFor={`${uid}-mode`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Mode</Label>
+            <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}><SelectTrigger id={`${uid}-mode`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{(["Cash", "Card", "Bank Transfer", "Cheque"] as PaymentMode[]).map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Against</Label><Input className={inputClass} placeholder="Advance or invoice no." value={against} onChange={(e) => setAgainst(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reference No.</Label><Input className={inputClass} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-against`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Against</Label><Input id={`${uid}-against`} className={inputClass} placeholder="Advance or invoice no." value={against} onChange={(e) => setAgainst(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-reference-no`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Reference No.</Label><Input id={`${uid}-reference-no`} className={inputClass} value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0 mt-4">
           <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -541,6 +543,7 @@ function PaymentModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [patientId, setPatientId] = React.useState<string>("")
   const [type, setType] = React.useState<ReceiptType>("Advance Deposit")
@@ -569,19 +572,19 @@ function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
         <DialogHeader><DialogTitle>New Receipt</DialogTitle></DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
-            <Select value={patientId} onValueChange={setPatientId}><SelectTrigger className={selectClass}><SelectValue placeholder="Select patient" /></SelectTrigger>
+            <Label htmlFor={`${uid}-patient`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
+            <Select value={patientId} onValueChange={setPatientId}><SelectTrigger id={`${uid}-patient`} className={selectClass}><SelectValue placeholder="Select patient" /></SelectTrigger>
               <SelectContent>{PATIENTS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name} — {p.mrNo}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as ReceiptType)}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
+            <Select value={type} onValueChange={(v) => setType(v as ReceiptType)}><SelectTrigger id={`${uid}-type`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{(["Advance Deposit", "Refund", "Credit Note"] as ReceiptType[]).map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</Label><Input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-amount`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input id={`${uid}-amount`} type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</Label><Input id={`${uid}-date`} type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0 mt-4">
           <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={() => onOpenChange(false)}>Cancel</Button>
@@ -593,6 +596,7 @@ function ReceiptModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenCh
 }
 
 function TransferModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenChange: (v: boolean) => void; onSaved: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [date, setDate] = React.useState(new Date().toISOString().slice(0, 10))
   const [type, setType] = React.useState<"Deposit" | "Withdrawal">("Deposit")
@@ -624,22 +628,22 @@ function TransferModal({ open, onOpenChange, onSaved }: { open: boolean; onOpenC
       <DialogContent className="sm:max-w-[425px] rounded-[1.5rem]">
         <DialogHeader><DialogTitle>Record Transfer</DialogTitle></DialogHeader>
         <div className="space-y-4 pt-2">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</Label><Input type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Date</Label><Input id={`${uid}-date`} type="date" className={inputClass} value={date} onChange={(e) => setDate(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as "Deposit" | "Withdrawal")}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
+            <Select value={type} onValueChange={(v) => setType(v as "Deposit" | "Withdrawal")}><SelectTrigger id={`${uid}-type`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="Deposit">Deposit</SelectItem><SelectItem value="Withdrawal">Withdrawal</SelectItem></SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Description *</Label><Input className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-amount`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Amount *</Label><Input id={`${uid}-amount`} type="number" className={inputClass} value={amount || ""} onChange={(e) => setAmount(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-description`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Description *</Label><Input id={`${uid}-description`} className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank</Label>
-            <Select value={bank} onValueChange={setBank}><SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+            <Label htmlFor={`${uid}-bank`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank</Label>
+            <Select value={bank} onValueChange={setBank}><SelectTrigger id={`${uid}-bank`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{BANKS.filter((b) => b.active).map((b) => <SelectItem key={b.id} value={b.bankName}>{b.bankName} — {b.accountNo}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reference</Label><Input className={inputClass} value={reference} onChange={(e) => setReference(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-reference`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Reference</Label><Input id={`${uid}-reference`} className={inputClass} value={reference} onChange={(e) => setReference(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0 mt-4">
           <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={() => onOpenChange(false)}>Cancel</Button>

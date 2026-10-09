@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/use-toast"
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Cheque", "Insurance"]
 
 function ConsultationFormContent() {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const params = useSearchParams()
@@ -91,17 +92,17 @@ function ConsultationFormContent() {
       <Card>
         <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <Label>Patient *</Label>
-            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+            <Label htmlFor={`${uid}-patient`}>Patient *</Label>
+            <PatientPicker id={`${uid}-patient`} value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
 
           <PatientInfoPanel patient={patient} />
 
           {patient && (
             <div className="space-y-1.5">
-              <Label>OPD/IPD Encounter</Label>
+              <Label htmlFor={`${uid}-opd-ipd-encounter`}>OPD/IPD Encounter</Label>
               <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                <SelectTrigger id={`${uid}-opd-ipd-encounter`}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not linked to a visit</SelectItem>
                   {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
@@ -112,10 +113,10 @@ function ConsultationFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Doctor *</Label>
+              <Label htmlFor={`${uid}-doctor`}>Doctor *</Label>
               <div className="flex gap-2">
                 <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-doctor`}><SelectValue placeholder="Select doctor" /></SelectTrigger>
                   <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
@@ -124,8 +125,8 @@ function ConsultationFormContent() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Consultation Fee</Label>
-              <Input type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} disabled={includedInPackage} />
+              <Label htmlFor={`${uid}-consultation-fee`}>Consultation Fee</Label>
+              <Input id={`${uid}-consultation-fee`} type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} disabled={includedInPackage} />
             </div>
             <div className="flex items-end pb-2">
               <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -137,20 +138,20 @@ function ConsultationFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Discount</Label>
+              <Label htmlFor={`${uid}-discount`}>Discount</Label>
               <div className="flex gap-2">
                 <Select value={discountType} onValueChange={(v) => setDiscountType(v as "flat" | "percent")}>
-                  <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-discount`} className="w-24"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="flat">Flat</SelectItem><SelectItem value="percent">%</SelectItem></SelectContent>
                 </Select>
                 <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} disabled={includedInPackage} />
               </div>
             </div>
-            <div className="space-y-1.5"><Label>GST %</Label><Input type="number" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} disabled={includedInPackage} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-gst`}>GST %</Label><Input id={`${uid}-gst`} type="number" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} disabled={includedInPackage} /></div>
             <div className="space-y-1.5">
-              <Label>Payment Mode</Label>
+              <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                 <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -164,21 +165,21 @@ function ConsultationFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {mode === "Card" && (
-              <div className="space-y-1.5"><Label>Credit Card Amount</Label><Input type="number" value={creditCardAmount} onChange={(e) => setCreditCardAmount(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-credit-card-amount`}>Credit Card Amount</Label><Input id={`${uid}-credit-card-amount`} type="number" value={creditCardAmount} onChange={(e) => setCreditCardAmount(Number(e.target.value))} /></div>
             )}
             <div className="space-y-1.5">
-              <Label>Amount Received</Label>
-              <Input type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} />
+              <Label htmlFor={`${uid}-amount-received`}>Amount Received</Label>
+              <Input id={`${uid}-amount-received`} type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
-              <Label>Balance</Label>
-              <Input readOnly value={formatCurrency(balance)} className={balance > 0 ? "text-danger-600" : ""} />
+              <Label htmlFor={`${uid}-balance`}>Balance</Label>
+              <Input id={`${uid}-balance`} readOnly value={formatCurrency(balance)} className={balance > 0 ? "text-danger-600" : ""} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label>Notes</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label htmlFor={`${uid}-notes`}>Notes</Label>
+            <Textarea id={`${uid}-notes`} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </CardContent>
       </Card>

@@ -269,6 +269,7 @@ function InventoryTab() {
 }
 
 function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [type, setType] = React.useState<"Add" | "Remove">("Add")
   const [qty, setQty] = React.useState(0)
@@ -307,8 +308,8 @@ function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; on
               </button>
             ))}
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Quantity *</Label><Input type="number" className={inputClass} value={qty || ""} onChange={(e) => setQty(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reason</Label><Input className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-quantity`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Quantity *</Label><Input id={`${uid}-quantity`} type="number" className={inputClass} value={qty || ""} onChange={(e) => setQty(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-reason`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Reason</Label><Input id={`${uid}-reason`} className={inputClass} value={reason} onChange={(e) => setReason(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0 mt-6">
           <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={onClose}>Cancel</Button>
@@ -320,6 +321,7 @@ function StockAdjustModal({ medicine, onClose }: { medicine: Medicine | null; on
 }
 
 function MedicineModal({ target, onClose }: { target: Medicine | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const med = isNew ? null : (target as Medicine)
@@ -361,20 +363,20 @@ function MedicineModal({ target, onClose }: { target: Medicine | "new" | null; o
       <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle>{isNew ? "Add Medicine" : `Edit Medicine — ${med?.name}`}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 pt-2">
-          <div className="space-y-1.5 md:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Medicine Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Generic Name</Label><Input className={inputClass} value={generic} onChange={(e) => setGeneric(e.target.value)} /></div>
+          <div className="space-y-1.5 md:col-span-2"><Label htmlFor={`${uid}-medicine-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Medicine Name *</Label><Input id={`${uid}-medicine-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-generic-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Generic Name</Label><Input id={`${uid}-generic-name`} className={inputClass} value={generic} onChange={(e) => setGeneric(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{MEDICINE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Batch No. *</Label><Input className={inputClass} value={batchNo} onChange={(e) => setBatchNo(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Expiry Date *</Label><Input type="date" className={inputClass} value={expiry} onChange={(e) => setExpiry(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Stock Quantity *</Label><Input type="number" className={inputClass} value={stock || ""} onChange={(e) => setStock(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sale Rate (Rs.) *</Label><Input type="number" className={inputClass} value={saleRate || ""} onChange={(e) => setSaleRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Reorder Level</Label><Input type="number" className={inputClass} value={reorderLevel || ""} onChange={(e) => setReorderLevel(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-batch-no`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Batch No. *</Label><Input id={`${uid}-batch-no`} className={inputClass} value={batchNo} onChange={(e) => setBatchNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-expiry-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Expiry Date *</Label><Input id={`${uid}-expiry-date`} type="date" className={inputClass} value={expiry} onChange={(e) => setExpiry(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-stock-quantity`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Stock Quantity *</Label><Input id={`${uid}-stock-quantity`} type="number" className={inputClass} value={stock || ""} onChange={(e) => setStock(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-sale-rate-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Sale Rate (Rs.) *</Label><Input id={`${uid}-sale-rate-rs`} type="number" className={inputClass} value={saleRate || ""} onChange={(e) => setSaleRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-reorder-level`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Reorder Level</Label><Input id={`${uid}-reorder-level`} type="number" className={inputClass} value={reorderLevel || ""} onChange={(e) => setReorderLevel(Number(e.target.value))} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0 mt-6">
           <Button variant="ghost" className="rounded-xl font-bold h-11" onClick={onClose}>Cancel</Button>
@@ -393,6 +395,7 @@ const DISPENSE_MODES: PaymentMode[] = ["Cash", "Card", "On Account"]
 const MODE_LABELS: Partial<Record<PaymentMode, string>> = { "On Account": "Credit" }
 
 function DispenseTab() {
+  const uid = React.useId()
   const { toast } = useToast()
   const params = useSearchParams()
   const [patient, setPatient] = React.useState<Patient | null>(() => {
@@ -482,8 +485,8 @@ function DispenseTab() {
       <Card className="rounded-[1.5rem] border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5">
         <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
-            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+            <Label htmlFor={`${uid}-patient`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Patient *</Label>
+            <PatientPicker id={`${uid}-patient`} value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
 
           <PatientInfoPanel patient={patient} />
@@ -491,9 +494,9 @@ function DispenseTab() {
           {patient && (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 p-4 rounded-xl bg-slate-50 ring-1 ring-slate-100">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">OPD/IPD Encounter</Label>
+                <Label htmlFor={`${uid}-opd-ipd-encounter`} className="text-xs font-bold uppercase tracking-wider text-slate-500">OPD/IPD Encounter</Label>
                 <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                  <SelectTrigger className={selectClass}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-opd-ipd-encounter`} className={selectClass}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Not linked to a visit</SelectItem>
                     {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
@@ -501,10 +504,10 @@ function DispenseTab() {
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Doctor</Label>
+                <Label htmlFor={`${uid}-doctor`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Doctor</Label>
                 <div className="flex gap-2">
                   <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                    <SelectTrigger className={selectClass}><SelectValue placeholder="Select doctor (optional)" /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-doctor`} className={selectClass}><SelectValue placeholder="Select doctor (optional)" /></SelectTrigger>
                     <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
                   </Select>
                   <Button type="button" variant="outline" size="icon" className="h-11 w-11 shrink-0 rounded-xl bg-white border-slate-200" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
@@ -567,8 +570,8 @@ function DispenseTab() {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Pharmacist Remarks</Label>
-            <Textarea rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
+            <Label htmlFor={`${uid}-pharmacist-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Pharmacist Remarks</Label>
+            <Textarea id={`${uid}-pharmacist-remarks`} rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -621,9 +624,9 @@ function DispenseTab() {
           </div>
 
           <div className="space-y-2 pt-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Mode</Label>
+            <Label htmlFor={`${uid}-payment-mode`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Payment Mode</Label>
             <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-payment-mode`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{DISPENSE_MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
             </Select>
           </div>

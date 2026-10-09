@@ -209,6 +209,7 @@ function ServiceHistoryDialog({ target, onClose }: { target: ServiceCatalogItem 
 }
 
 function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const svc = isNew ? null : target
@@ -246,24 +247,24 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
       <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Service" : "Edit Service"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input id={`${uid}-code`} className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Local Name (اردو)</Label><Input className={inputClass} dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GST %</Label><Input className={inputClass} type="number" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount %</Label><Input className={inputClass} type="number" value={discountPct || ""} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-service-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name *</Label><Input id={`${uid}-service-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-local-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Local Name (اردو)</Label><Input id={`${uid}-local-name`} className={inputClass} dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-rate-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate (Rs.)</Label><Input id={`${uid}-rate-rs`} className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-gst`} className="text-xs font-bold uppercase tracking-wider text-slate-500">GST %</Label><Input id={`${uid}-gst`} className={inputClass} type="number" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-discount`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount %</Label><Input id={`${uid}-discount`} className={inputClass} type="number" value={discountPct || ""} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
           <div className="flex items-center gap-3 pt-6">
             <Checkbox checked={barcode} onCheckedChange={(v) => setBarcode(v === true)} id="svc-barcode" className="h-5 w-5 rounded-md" />
             <Label htmlFor="svc-barcode" className="cursor-pointer font-bold text-slate-700">Enable Barcode Generation</Label>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Textarea rows={2} className={cn(inputClass, "h-auto resize-none")} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Textarea id={`${uid}-remarks`} rows={2} className={cn(inputClass, "h-auto resize-none")} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -337,6 +338,7 @@ function LabTestsTab() {
 }
 
 function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -370,17 +372,17 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Lab/Imaging Test" : "Edit Test"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input id={`${uid}-code`} className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as LabTest["category"])}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Turnaround (hours)</Label><Input className={inputClass} type="number" value={turnaroundHours || ""} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-test-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input id={`${uid}-test-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-fee-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input id={`${uid}-fee-rs`} className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-turnaround-hours`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Turnaround (hours)</Label><Input id={`${uid}-turnaround-hours`} className={inputClass} type="number" value={turnaroundHours || ""} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -434,6 +436,7 @@ function BanksTab() {
 }
 
 function BankModal({ target, onClose }: { target: BankAccount | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -465,10 +468,10 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Bank Account" : "Edit Bank Account"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name *</Label><Input className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Title</Label><Input className={inputClass} value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No. *</Label><Input className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch</Label><Input className={inputClass} value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-bank-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name *</Label><Input id={`${uid}-bank-name`} className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-account-title`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Title</Label><Input id={`${uid}-account-title`} className={inputClass} value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-account-no`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No. *</Label><Input id={`${uid}-account-no`} className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-branch`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch</Label><Input id={`${uid}-branch`} className={inputClass} value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -524,6 +527,7 @@ function PanelsTab() {
 }
 
 function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const panel = isNew ? null : target
@@ -557,17 +561,17 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Panel" : "Edit Panel"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-panel-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name *</Label><Input id={`${uid}-panel-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
+            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-type`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{PANEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Commission %</Label><Input className={inputClass} type="number" value={commissionPct || ""} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input className={inputClass} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-commission`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Commission %</Label><Input id={`${uid}-commission`} className={inputClass} type="number" value={commissionPct || ""} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-contact-person`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input id={`${uid}-contact-person`} className={inputClass} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -681,6 +685,7 @@ function GuardianRelationsTab() {
 }
 
 function GuardianRelationModal({ target, onClose }: { target: GuardianRelationItem | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -710,8 +715,8 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
       <DialogContent className="sm:max-w-md rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Guardian Relation" : "Edit Guardian Relation"}</DialogTitle></DialogHeader>
         <div className="space-y-5 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-relation-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label><Input id={`${uid}-relation-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input id={`${uid}-remarks`} className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-6 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -768,6 +773,7 @@ function EcgUltrasoundTab() {
 }
 
 function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -799,10 +805,10 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add ECG/Ultrasound Test" : "Edit Test"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code *</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-test-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code *</Label><Input id={`${uid}-test-code`} className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-fee-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input id={`${uid}-fee-rs`} className={inputClass} type="number" value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-test-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input id={`${uid}-test-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input id={`${uid}-remarks`} className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -874,6 +880,7 @@ function DiseasesTab() {
 }
 
 function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -904,15 +911,15 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Diagnosis" : "Edit Diagnosis"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code *</Label><Input className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-icd-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code *</Label><Input id={`${uid}-icd-code`} className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{DISEASE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label><Input id={`${uid}-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -962,6 +969,7 @@ function ExpenseCategoriesTab() {
 }
 
 function ClinicSettingsTab() {
+  const uid = React.useId()
   const { toast } = useToast()
   const [settings, setSettings] = React.useState(CLINIC_SETTINGS)
 
@@ -970,12 +978,12 @@ function ClinicSettingsTab() {
       <h3 className="text-xl font-black text-[#0D1B2E] mb-6 pb-4 border-b border-slate-100">Clinic Settings</h3>
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (English)</Label><Input className={inputClass} value={settings.nameEn} onChange={(e) => setSettings((s) => ({ ...s, nameEn: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (Urdu)</Label><Input className={inputClass} dir="rtl" value={settings.nameUr} onChange={(e) => setSettings((s) => ({ ...s, nameUr: e.target.value }))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input className={inputClass} value={settings.address} onChange={(e) => setSettings((s) => ({ ...s, address: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input className={inputClass} value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tagline</Label><Input className={inputClass} value={settings.tagline} onChange={(e) => setSettings((s) => ({ ...s, tagline: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-clinic-name-english`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (English)</Label><Input id={`${uid}-clinic-name-english`} className={inputClass} value={settings.nameEn} onChange={(e) => setSettings((s) => ({ ...s, nameEn: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-clinic-name-urdu`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (Urdu)</Label><Input id={`${uid}-clinic-name-urdu`} className={inputClass} dir="rtl" value={settings.nameUr} onChange={(e) => setSettings((s) => ({ ...s, nameUr: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-address`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input id={`${uid}-address`} className={inputClass} value={settings.address} onChange={(e) => setSettings((s) => ({ ...s, address: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-email`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input id={`${uid}-email`} className={inputClass} value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-tagline`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Tagline</Label><Input id={`${uid}-tagline`} className={inputClass} value={settings.tagline} onChange={(e) => setSettings((s) => ({ ...s, tagline: e.target.value }))} /></div>
           
           <div className="space-y-1.5 sm:col-span-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Logo</Label>
@@ -984,18 +992,18 @@ function ClinicSettingsTab() {
             </div>
           </div>
           
-          <div className="space-y-1.5 sm:col-span-2 pt-4 border-t border-slate-100"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Print Header</Label><Input className={inputClass} value={settings.printHeader} onChange={(e) => setSettings((s) => ({ ...s, printHeader: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2 pt-4 border-t border-slate-100"><Label htmlFor={`${uid}-print-header`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Print Header</Label><Input id={`${uid}-print-header`} className={inputClass} value={settings.printHeader} onChange={(e) => setSettings((s) => ({ ...s, printHeader: e.target.value }))} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Currency Symbol</Label>
-            <Input className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.currencySymbol} />
+            <Label htmlFor={`${uid}-currency-symbol`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Currency Symbol</Label>
+            <Input id={`${uid}-currency-symbol`} className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.currencySymbol} />
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact support to change</p>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Default City</Label><Input className={inputClass} value={settings.defaultCity} onChange={(e) => setSettings((s) => ({ ...s, defaultCity: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</Label><Input className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.timezone} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-default-city`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Default City</Label><Input id={`${uid}-default-city`} className={inputClass} value={settings.defaultCity} onChange={(e) => setSettings((s) => ({ ...s, defaultCity: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-timezone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</Label><Input id={`${uid}-timezone`} className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.timezone} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Year Start</Label>
+            <Label htmlFor={`${uid}-financial-year-start`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Year Start</Label>
             <Select value={settings.fiscalYearStart} onValueChange={(v) => setSettings((s) => ({ ...s, fiscalYearStart: v }))}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-financial-year-start`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>
                 {["January", "April", "July", "October"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
               </SelectContent>

@@ -37,6 +37,7 @@ interface TestSettings {
 }
 
 function LabOrderFormContent() {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const params = useSearchParams()
@@ -125,17 +126,17 @@ function LabOrderFormContent() {
         <Card className="lg:col-span-3">
           <CardContent className="space-y-4 p-6">
             <div className="space-y-1.5">
-              <Label>Patient *</Label>
-              <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+              <Label htmlFor={`${uid}-patient`}>Patient *</Label>
+              <PatientPicker id={`${uid}-patient`} value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
             </div>
 
             <PatientInfoPanel patient={patient} />
 
             {patient && (
               <div className="space-y-1.5">
-                <Label>Link to Encounter (optional)</Label>
+                <Label htmlFor={`${uid}-link-to-encounter-optional`}>Link to Encounter (optional)</Label>
                 <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-link-to-encounter-optional`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.diagnosis}</SelectItem>)}
@@ -145,10 +146,10 @@ function LabOrderFormContent() {
             )}
 
             <div className="space-y-1.5">
-              <Label>Ordering Doctor</Label>
+              <Label htmlFor={`${uid}-ordering-doctor`}>Ordering Doctor</Label>
               <div className="flex gap-2">
                 <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-ordering-doctor`}><SelectValue placeholder="Select doctor" /></SelectTrigger>
                   <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
@@ -158,13 +159,13 @@ function LabOrderFormContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Collection Date/Time</Label>
-              <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+              <Label htmlFor={`${uid}-collection-date-time`}>Collection Date/Time</Label>
+              <Input id={`${uid}-collection-date-time`} type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
             </div>
 
             <div className="space-y-1.5">
-              <Label>Priority</Label>
-              <RadioGroup className="flex gap-4 pt-1" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
+              <Label id={`${uid}-priority-label`}>Priority</Label>
+              <RadioGroup aria-labelledby={`${uid}-priority-label`} className="flex gap-4 pt-1" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
                 {(["Normal", "Urgent"] as const).map((p) => (
                   <div key={p} className="flex items-center gap-1.5"><RadioGroupItem value={p} id={`p-${p}`} /><Label htmlFor={`p-${p}`} className="cursor-pointer font-normal">{p}</Label></div>
                 ))}
@@ -172,29 +173,29 @@ function LabOrderFormContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Clinical Notes</Label>
-              <Textarea rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
+              <Label htmlFor={`${uid}-clinical-notes`}>Clinical Notes</Label>
+              <Textarea id={`${uid}-clinical-notes`} rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
             </div>
 
             {selected.size > 0 && (
               <div className="grid grid-cols-1 gap-4 rounded-md border border-border bg-muted/30 p-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Sample Type</Label>
+                  <Label htmlFor={`${uid}-sample-type`}>Sample Type</Label>
                   <Select value={sampleType} onValueChange={setSampleType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-sample-type`}><SelectValue /></SelectTrigger>
                     <SelectContent>{["Blood", "Urine", "Stool", "Swab", "Sputum", "Other"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5"><Label>Sample ID</Label><Input readOnly value="Auto-generated on save" className="font-mono text-xs" /></div>
+                <div className="space-y-1.5"><Label htmlFor={`${uid}-sample-id`}>Sample ID</Label><Input id={`${uid}-sample-id`} readOnly value="Auto-generated on save" className="font-mono text-xs" /></div>
               </div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>Flat Discount (Rs.)</Label><Input type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-flat-discount-rs`}>Flat Discount (Rs.)</Label><Input id={`${uid}-flat-discount-rs`} type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} /></div>
               <div className="space-y-1.5">
-                <Label>Payment Mode</Label>
+                <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
                 <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                   <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
                 </Select>
               </div>

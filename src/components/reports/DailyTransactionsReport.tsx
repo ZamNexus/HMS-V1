@@ -44,6 +44,7 @@ interface Row {
  * live as filters change, consistent with every other report in this app.
  */
 export function DailyTransactionsReport() {
+  const uid = React.useId()
   const today = new Date().toISOString().slice(0, 10)
   const [from, setFrom] = React.useState(today)
   const [to, setTo] = React.useState(today)
@@ -100,26 +101,26 @@ export function DailyTransactionsReport() {
     <div className="space-y-4">
       <Card className="no-print">
         <CardContent className="grid grid-cols-1 gap-4 p-5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="space-y-1.5"><Label>From</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>To</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-from`}>From</Label><Input id={`${uid}-from`} type="date" value={from} onChange={(e) => setFrom(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-to`}>To</Label><Input id={`${uid}-to`} type="date" value={to} onChange={(e) => setTo(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label>Data Type</Label>
+            <Label htmlFor={`${uid}-data-type`}>Data Type</Label>
             <Select value={dataType} onValueChange={(v) => setDataType(v as DataType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-data-type`}><SelectValue /></SelectTrigger>
               <SelectContent>{DATA_TYPES.map((t) => <SelectItem key={t} value={t}>{t === "All" ? "All" : `${t} Only`}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Cash / Credit</Label>
+            <Label htmlFor={`${uid}-cash-credit`}>Cash / Credit</Label>
             <Select value={cashCredit} onValueChange={(v) => setCashCredit(v as typeof cashCredit)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-cash-credit`}><SelectValue /></SelectTrigger>
               <SelectContent><SelectItem value="All">All</SelectItem><SelectItem value="Cash">Cash</SelectItem><SelectItem value="Credit">Credit</SelectItem></SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Doctor</Label>
+            <Label htmlFor={`${uid}-doctor`}>Doctor</Label>
             <Select value={doctorId} onValueChange={setDoctorId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-doctor`}><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Doctors</SelectItem>
                 {DOCTORS.map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}
@@ -127,9 +128,9 @@ export function DailyTransactionsReport() {
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label>Organization</Label>
+            <Label htmlFor={`${uid}-organization`}>Organization</Label>
             <Select value={panelId} onValueChange={setPanelId}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-organization`}><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 {PANELS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
@@ -137,8 +138,8 @@ export function DailyTransactionsReport() {
             </Select>
           </div>
           <div className="space-y-1.5 lg:col-span-2">
-            <Label>Patient</Label>
-            <PatientPicker value={patient} onChange={setPatient} />
+            <Label htmlFor={`${uid}-patient`}>Patient</Label>
+            <PatientPicker id={`${uid}-patient`} value={patient} onChange={setPatient} />
           </div>
         </CardContent>
       </Card>

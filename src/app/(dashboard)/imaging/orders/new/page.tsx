@@ -36,6 +36,7 @@ interface TestSettings {
 }
 
 function ImagingOrderFormContent() {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const params = useSearchParams()
@@ -116,17 +117,17 @@ function ImagingOrderFormContent() {
       <Card>
         <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <Label>Patient *</Label>
-            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+            <Label htmlFor={`${uid}-patient`}>Patient *</Label>
+            <PatientPicker id={`${uid}-patient`} value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
 
           <PatientInfoPanel patient={patient} />
 
           {patient && (
             <div className="space-y-1.5">
-              <Label>OPD/IPD Encounter</Label>
+              <Label htmlFor={`${uid}-opd-ipd-encounter`}>OPD/IPD Encounter</Label>
               <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                <SelectTrigger id={`${uid}-opd-ipd-encounter`}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not linked to a visit</SelectItem>
                   {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
@@ -137,10 +138,10 @@ function ImagingOrderFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Ordering Doctor</Label>
+              <Label htmlFor={`${uid}-ordering-doctor`}>Ordering Doctor</Label>
               <div className="flex gap-2">
                 <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-ordering-doctor`}><SelectValue placeholder="Select doctor" /></SelectTrigger>
                   <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
@@ -149,13 +150,13 @@ function ImagingOrderFormContent() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Date/Time</Label>
-              <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+              <Label htmlFor={`${uid}-date-time`}>Date/Time</Label>
+              <Input id={`${uid}-date-time`} type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Payment Mode</Label>
+              <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                 <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -216,8 +217,8 @@ function ImagingOrderFormContent() {
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label>Flat Discount (Rs.)</Label>
-              <Input type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} />
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-flat-discount-rs`}>Flat Discount (Rs.)</Label>
+              <Input id={`${uid}-flat-discount-rs`} type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} />
             </div>
             <div className="flex flex-col items-end justify-end gap-0.5">
               {grossTotal !== total && <span className="text-xs text-muted-foreground">Gross: {formatCurrency(grossTotal)}</span>}
@@ -229,8 +230,8 @@ function ImagingOrderFormContent() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Remarks / Notes</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label htmlFor={`${uid}-remarks-notes`}>Remarks / Notes</Label>
+            <Textarea id={`${uid}-remarks-notes`} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </CardContent>
       </Card>

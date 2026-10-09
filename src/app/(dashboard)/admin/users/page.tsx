@@ -166,6 +166,7 @@ export default function UserManagementPage() {
 }
 
 function UserSheet({ target, onClose }: { target: User | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const user = isNew ? null : target
@@ -217,31 +218,31 @@ function UserSheet({ target, onClose }: { target: User | "new" | null; onClose: 
       <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
         <SheetHeader><SheetTitle className="text-2xl font-black text-[#0D1B2E]">{isNew ? "Add New User" : "Edit User"}</SheetTitle></SheetHeader>
         <div className="mt-8 space-y-5">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email *</Label><Input type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-full-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name *</Label><Input id={`${uid}-full-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-email`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Email *</Label><Input id={`${uid}-email`} type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Role *</Label>
+            <Label htmlFor={`${uid}-role`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Role *</Label>
             <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-role`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{ROLES.map((r) => <SelectItem key={r} value={r} className="font-medium">{ROLE_LABELS[r]}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} placeholder="03XX-XXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CNIC</Label><Input className={inputClass} value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} placeholder="03XX-XXXXXXX" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-cnic`} className="text-xs font-bold uppercase tracking-wider text-slate-500">CNIC</Label><Input id={`${uid}-cnic`} className={inputClass} value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
           </div>
           
           <div className="pt-4 border-t border-slate-100 space-y-5">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Password {!isNew && <span className="font-normal normal-case tracking-normal text-slate-400">(leave blank to keep current)</span>}</Label>
-              <Input type="password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Label htmlFor={`${uid}-password`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Password {!isNew && <span className="font-normal normal-case tracking-normal text-slate-400">(leave blank to keep current)</span>}</Label>
+              <Input id={`${uid}-password`} type="password" className={inputClass} value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
-            <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Confirm Password</Label><Input type="password" className={inputClass} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-confirm-password`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Confirm Password</Label><Input id={`${uid}-confirm-password`} type="password" className={inputClass} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} /></div>
           </div>
           
           <div className="pt-4 border-t border-slate-100 space-y-3">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Status</Label>
-            <RadioGroup className="flex gap-4 p-2 rounded-xl bg-slate-50 ring-1 ring-slate-100" value={active ? "Active" : "Inactive"} onValueChange={(v) => setActive(v === "Active")}>
+            <Label id={`${uid}-account-status-label`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Status</Label>
+            <RadioGroup aria-labelledby={`${uid}-account-status-label`} className="flex gap-4 p-2 rounded-xl bg-slate-50 ring-1 ring-slate-100" value={active ? "Active" : "Inactive"} onValueChange={(v) => setActive(v === "Active")}>
               <label className={cn("flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg cursor-pointer transition-all", active ? "bg-white shadow-sm ring-1 ring-black/5 text-[#0D1B2E]" : "text-slate-500 hover:bg-slate-100")}>
                 <RadioGroupItem value="Active" id="st-active" className="sr-only" />
                 <span className="font-bold text-sm">Active</span>

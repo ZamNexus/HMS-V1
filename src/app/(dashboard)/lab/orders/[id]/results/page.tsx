@@ -28,6 +28,7 @@ function flagFor(value: number, low: number, high: number): LabResultParam["flag
 }
 
 export default function LabResultEntryPage() {
+  const uid = React.useId()
   const params = useParams()
   const id = params?.id as string | undefined
   const router = useRouter()
@@ -145,15 +146,16 @@ export default function LabResultEntryPage() {
                 ) : (
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <div className="space-y-1">
-                      <Label className="text-xs font-normal text-muted-foreground">Result</Label>
+                      <Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-result-${t.testId}`}>Result</Label>
                       <Input
+                        id={`${uid}-result-${t.testId}`}
                         value={paramResults[`${t.testId}::single`] ?? t.results?.[0]?.result ?? ""}
                         onChange={(e) => setParam(t.testId, "single", e.target.value)}
                       />
                     </div>
-                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground">Unit</Label><Input readOnly value={test.unit} /></div>
-                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground">Normal Range</Label><Input readOnly value={test.normalRange} /></div>
-                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground">Flag</Label><Input readOnly value="Auto" /></div>
+                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-unit-${t.testId}`}>Unit</Label><Input id={`${uid}-unit-${t.testId}`} readOnly value={test.unit} /></div>
+                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-range-${t.testId}`}>Normal Range</Label><Input id={`${uid}-range-${t.testId}`} readOnly value={test.normalRange} /></div>
+                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-flag-${t.testId}`}>Flag</Label><Input id={`${uid}-flag-${t.testId}`} readOnly value="Auto" /></div>
                   </div>
                 )}
               </CardContent>
@@ -163,10 +165,10 @@ export default function LabResultEntryPage() {
 
         <Card>
           <CardContent className="space-y-3 p-5">
-            <div className="space-y-1.5"><Label>Pathologist&apos;s Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-pathologist-apos-s-remarks`}>Pathologist&apos;s Remarks</Label><Textarea id={`${uid}-pathologist-apos-s-remarks`} rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>Performed By</Label><Input readOnly value={user?.name ?? ""} /></div>
-              <div className="space-y-1.5"><Label>Verified By</Label><Input value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} placeholder="Pathologist / doctor name" /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-performed-by`}>Performed By</Label><Input id={`${uid}-performed-by`} readOnly value={user?.name ?? ""} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-verified-by`}>Verified By</Label><Input id={`${uid}-verified-by`} value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} placeholder="Pathologist / doctor name" /></div>
             </div>
           </CardContent>
         </Card>

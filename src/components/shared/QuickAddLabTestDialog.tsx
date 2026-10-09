@@ -23,6 +23,7 @@ export function QuickAddLabTestDialog({
   onCreated: (id: number) => void
   defaultCategory?: LabTestCategory
 }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [code, setCode] = React.useState("")
   const [name, setName] = React.useState("")
@@ -49,17 +50,17 @@ export function QuickAddLabTestDialog({
       <DialogContent size="md">
         <DialogHeader><DialogTitle>Register New Test</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Code *</Label><Input value={code} onChange={(e) => setCode(e.target.value)} autoFocus /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-code`}>Code *</Label><Input id={`${uid}-code`} value={code} onChange={(e) => setCode(e.target.value)} autoFocus /></div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label htmlFor={`${uid}-category`}>Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as LabTestCategory)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`}><SelectValue /></SelectTrigger>
               <SelectContent>{LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Test Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Fee (Rs.) *</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label>Turnaround (hours)</Label><Input type="number" value={turnaroundHours} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-test-name`}>Test Name *</Label><Input id={`${uid}-test-name`} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-fee-rs`}>Fee (Rs.) *</Label><Input id={`${uid}-fee-rs`} type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-turnaround-hours`}>Turnaround (hours)</Label><Input id={`${uid}-turnaround-hours`} type="number" value={turnaroundHours} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>

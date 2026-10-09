@@ -21,6 +21,7 @@ import { useToast } from "@/components/ui/use-toast"
 const CONDITIONS = ["Recovered", "Improved", "Stable", "Against Medical Advice", "Expired"]
 
 export default function DischargeSummaryPage() {
+  const uid = React.useId()
   const params = useParams()
   const id = params?.id as string | undefined
   const router = useRouter()
@@ -74,42 +75,42 @@ export default function DischargeSummaryPage() {
         <CardContent className="space-y-5 p-6">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Discharge Date</Label>
-              <Input type="date" value={dischargeDate} onChange={(e) => setDischargeDate(e.target.value)} />
+              <Label htmlFor={`${uid}-discharge-date`}>Discharge Date</Label>
+              <Input id={`${uid}-discharge-date`} type="date" value={dischargeDate} onChange={(e) => setDischargeDate(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Length of Stay</Label>
-              <Input readOnly value={`${Math.max(los, 0)} day${los === 1 ? "" : "s"}`} />
+              <Label htmlFor={`${uid}-length-of-stay`}>Length of Stay</Label>
+              <Input id={`${uid}-length-of-stay`} readOnly value={`${Math.max(los, 0)} day${los === 1 ? "" : "s"}`} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label className="flex items-center gap-2">
+            <Label htmlFor={`${uid}-discharge-diagnosis-icdlookup-`} className="flex items-center gap-2">
               Discharge Diagnosis * <IcdLookup onSelect={(name) => setDischargeDiagnosis((d) => (d ? `${d}, ${name}` : name))} />
             </Label>
-            <Textarea rows={2} value={dischargeDiagnosis} onChange={(e) => setDischargeDiagnosis(e.target.value)} />
+            <Textarea id={`${uid}-discharge-diagnosis-icdlookup-`} rows={2} value={dischargeDiagnosis} onChange={(e) => setDischargeDiagnosis(e.target.value)} />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Discharge Summary</Label>
-            <Textarea rows={8} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Full clinical narrative..." />
+            <Label htmlFor={`${uid}-discharge-summary`}>Discharge Summary</Label>
+            <Textarea id={`${uid}-discharge-summary`} rows={8} value={summary} onChange={(e) => setSummary(e.target.value)} placeholder="Full clinical narrative..." />
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Condition on Discharge</Label>
+              <Label htmlFor={`${uid}-condition-on-discharge`}>Condition on Discharge</Label>
               <Select value={condition} onValueChange={setCondition}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-condition-on-discharge`}><SelectValue /></SelectTrigger>
                 <SelectContent>{CONDITIONS.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Follow-up Date</Label>
-              <Input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+              <Label htmlFor={`${uid}-follow-up-date`}>Follow-up Date</Label>
+              <Input id={`${uid}-follow-up-date`} type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
             </div>
             <div className="space-y-1.5 md:col-span-1">
-              <Label>Follow-up Instructions</Label>
-              <Input value={followUpInstructions} onChange={(e) => setFollowUpInstructions(e.target.value)} />
+              <Label htmlFor={`${uid}-follow-up-instructions`}>Follow-up Instructions</Label>
+              <Input id={`${uid}-follow-up-instructions`} value={followUpInstructions} onChange={(e) => setFollowUpInstructions(e.target.value)} />
             </div>
           </div>
 

@@ -36,6 +36,7 @@ function emptyRx(): PrescriptionItem {
 }
 
 function EncounterFormContent() {
+  const uid = React.useId()
   const params = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
@@ -185,8 +186,8 @@ function EncounterFormContent() {
         <Card>
           <CardContent className="space-y-5 p-6">
             <div>
-              <Label className="mb-2 block">Encounter Type</Label>
-              <div className="inline-flex rounded-md border border-border p-1">
+              <Label id={`${uid}-encounter-type-label`} className="mb-2 block">Encounter Type</Label>
+              <div role="group" aria-labelledby={`${uid}-encounter-type-label`} className="inline-flex rounded-md border border-border p-1">
                 {(["OPD", "IPD"] as EncounterType[]).map((t) => (
                   <button
                     key={t}
@@ -203,18 +204,18 @@ function EncounterFormContent() {
             {type === "IPD" && (
               <div className="grid grid-cols-1 gap-4 rounded-md border border-border bg-muted/30 p-4 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label>Ward</Label>
+                  <Label htmlFor={`${uid}-ward`}>Ward</Label>
                   <Select value={ward} onValueChange={(v) => { setWard(v); setBedNo("") }}>
-                    <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-ward`}><SelectValue placeholder="Select ward" /></SelectTrigger>
                     <SelectContent>
                       {WARDS.map((w) => <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Bed No.</Label>
+                  <Label htmlFor={`${uid}-bed-no`}>Bed No.</Label>
                   <Select value={bedNo} onValueChange={setBedNo} disabled={!ward}>
-                    <SelectTrigger><SelectValue placeholder={ward ? "Select an available bed" : "Select ward first"} /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-bed-no`}><SelectValue placeholder={ward ? "Select an available bed" : "Select ward first"} /></SelectTrigger>
                     <SelectContent>
                       {WARDS.find((w) => w.name === ward)?.beds.filter((b) => b.status === "available").map((b) => (
                         <SelectItem key={b.bedNo} value={b.bedNo}>{b.bedNo}</SelectItem>
@@ -226,8 +227,8 @@ function EncounterFormContent() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Admission Type</Label>
-                  <RadioGroup className="flex gap-4 pt-2" value={admissionType} onValueChange={(v) => setAdmissionType(v as "Emergency" | "Planned")}>
+                  <Label id={`${uid}-admission-type-label`}>Admission Type</Label>
+                  <RadioGroup aria-labelledby={`${uid}-admission-type-label`} className="flex gap-4 pt-2" value={admissionType} onValueChange={(v) => setAdmissionType(v as "Emergency" | "Planned")}>
                     {(["Emergency", "Planned"] as const).map((a) => (
                       <div key={a} className="flex items-center gap-1.5">
                         <RadioGroupItem value={a} id={`adm-${a}`} /><Label htmlFor={`adm-${a}`} className="cursor-pointer font-normal">{a}</Label>
@@ -240,10 +241,10 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Doctor *</Label>
+                <Label htmlFor={`${uid}-doctor`}>Doctor *</Label>
                 <div className="flex gap-2">
                   <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-doctor`}><SelectValue placeholder="Select doctor" /></SelectTrigger>
                     <SelectContent>
                       {activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name} — {d.specialization}</SelectItem>)}
                     </SelectContent>
@@ -254,19 +255,19 @@ function EncounterFormContent() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Date &amp; Time</Label>
-                <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+                <Label htmlFor={`${uid}-date-amp-time`}>Date &amp; Time</Label>
+                <Input id={`${uid}-date-amp-time`} type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Token No</Label>
-                <Input type="number" value={tokenNo} onChange={(e) => setTokenNo(Number(e.target.value))} />
+                <Label htmlFor={`${uid}-token-no`}>Token No</Label>
+                <Input id={`${uid}-token-no`} type="number" value={tokenNo} onChange={(e) => setTokenNo(Number(e.target.value))} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Priority</Label>
-                <RadioGroup className="flex gap-4 pt-2" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
+                <Label id={`${uid}-priority-label`}>Priority</Label>
+                <RadioGroup aria-labelledby={`${uid}-priority-label`} className="flex gap-4 pt-2" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
                   {(["Normal", "Urgent"] as const).map((p) => (
                     <div key={p} className="flex items-center gap-1.5">
                       <RadioGroupItem value={p} id={`pri-${p}`} /><Label htmlFor={`pri-${p}`} className="cursor-pointer font-normal">{p}</Label>
@@ -275,25 +276,26 @@ function EncounterFormContent() {
                 </RadioGroup>
               </div>
               <div className="space-y-1.5">
-                <Label>Advised By</Label>
-                <Input value={advisedBy} onChange={(e) => setAdvisedBy(e.target.value)} placeholder="Referring physician / self" />
+                <Label htmlFor={`${uid}-advised-by`}>Advised By</Label>
+                <Input id={`${uid}-advised-by`} value={advisedBy} onChange={(e) => setAdvisedBy(e.target.value)} placeholder="Referring physician / self" />
               </div>
               <div className="space-y-1.5">
-                <Label>Referred By</Label>
-                <Input value={referredBy} onChange={(e) => setReferredBy(e.target.value)} placeholder="Referral source (optional)" />
+                <Label htmlFor={`${uid}-referred-by`}>Referred By</Label>
+                <Input id={`${uid}-referred-by`} value={referredBy} onChange={(e) => setReferredBy(e.target.value)} placeholder="Referral source (optional)" />
               </div>
             </div>
 
             <div>
-              <Label className="mb-2 block">Vitals</Label>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <Label id={`${uid}-vitals-label`} className="mb-2 block">Vitals</Label>
+              <div role="group" aria-labelledby={`${uid}-vitals-label`} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {([
                   ["bp", "BP (mmHg)"], ["pulse", "Pulse (/min)"], ["temp", "Temp (°F)"],
                   ["weight", "Weight (kg)"], ["spo2", "SpO2 (%)"], ["rbs", "RBS mg/dL"],
                 ] as const).map(([key, label]) => (
                   <div key={key} className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">{label}</Label>
+                    <Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-vital-${key}`}>{label}</Label>
                     <Input
+                      id={`${uid}-vital-${key}`}
                       value={vitals[key as keyof typeof vitals]}
                       placeholder={key === "temp" ? "98.6" : undefined}
                       onChange={(e) => setVitals((v) => ({ ...v, [key]: e.target.value }))}
@@ -301,8 +303,8 @@ function EncounterFormContent() {
                   </div>
                 ))}
                 <div className="space-y-1">
-                  <Label className="text-xs font-normal text-muted-foreground">Height (cm)</Label>
-                  <Input value={vitals.height} onChange={(e) => setVitals((v) => ({ ...v, height: e.target.value }))} />
+                  <Label htmlFor={`${uid}-height-cm`} className="text-xs font-normal text-muted-foreground">Height (cm)</Label>
+                  <Input id={`${uid}-height-cm`} value={vitals.height} onChange={(e) => setVitals((v) => ({ ...v, height: e.target.value }))} />
                 </div>
               </div>
               {bmi && (
@@ -314,26 +316,26 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Chief Complaint *</Label>
-                <Textarea rows={2} value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
+                <Label htmlFor={`${uid}-chief-complaint`}>Chief Complaint *</Label>
+                <Textarea id={`${uid}-chief-complaint`} rows={2} value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>History</Label>
-                <Textarea rows={2} value={history} onChange={(e) => setHistory(e.target.value)} />
+                <Label htmlFor={`${uid}-history`}>History</Label>
+                <Textarea id={`${uid}-history`} rows={2} value={history} onChange={(e) => setHistory(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>On Examination</Label>
-                <Textarea rows={2} value={onExamination} onChange={(e) => setOnExamination(e.target.value)} />
+                <Label htmlFor={`${uid}-on-examination`}>On Examination</Label>
+                <Textarea id={`${uid}-on-examination`} rows={2} value={onExamination} onChange={(e) => setOnExamination(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">
+                <Label htmlFor={`${uid}-diagnosis-icdlookup-onselect-n`} className="flex items-center gap-2">
                   Diagnosis * <IcdLookup onSelect={(name) => setDiagnosis((d) => (d ? `${d}, ${name}` : name))} />
                 </Label>
-                <Textarea rows={2} value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} />
+                <Textarea id={`${uid}-diagnosis-icdlookup-onselect-n`} rows={2} value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label>Clinical Notes</Label>
-                <Textarea rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
+                <Label htmlFor={`${uid}-clinical-notes`}>Clinical Notes</Label>
+                <Textarea id={`${uid}-clinical-notes`} rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -348,9 +350,9 @@ function EncounterFormContent() {
               return (
                 <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-border p-3 md:grid-cols-7">
                   <div className="md:col-span-2 space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Medicine</Label>
+                    <Label htmlFor={`${uid}-medicine-${i}`} className="text-xs font-normal text-muted-foreground">Medicine</Label>
                     <Select value={row.medicine || undefined} onValueChange={(v) => updateRow(i, { medicine: v })}>
-                      <SelectTrigger><SelectValue placeholder="Search medicine..." /></SelectTrigger>
+                      <SelectTrigger id={`${uid}-medicine-${i}`}><SelectValue placeholder="Search medicine..." /></SelectTrigger>
                       <SelectContent>
                         {MEDICINES.map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
                       </SelectContent>
@@ -362,31 +364,31 @@ function EncounterFormContent() {
                     )}
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Dose</Label>
-                    <Input value={row.dose} onChange={(e) => updateRow(i, { dose: e.target.value })} />
+                    <Label htmlFor={`${uid}-dose-${i}`} className="text-xs font-normal text-muted-foreground">Dose</Label>
+                    <Input id={`${uid}-dose-${i}`} value={row.dose} onChange={(e) => updateRow(i, { dose: e.target.value })} />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Route</Label>
+                    <Label htmlFor={`${uid}-route-${i}`} className="text-xs font-normal text-muted-foreground">Route</Label>
                     <Select value={row.route} onValueChange={(v) => updateRow(i, { route: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger id={`${uid}-route-${i}`}><SelectValue /></SelectTrigger>
                       <SelectContent>{ROUTES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Freq</Label>
+                    <Label htmlFor={`${uid}-freq-${i}`} className="text-xs font-normal text-muted-foreground">Freq</Label>
                     <Select value={row.frequency} onValueChange={(v) => updateRow(i, { frequency: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger id={`${uid}-freq-${i}`}><SelectValue /></SelectTrigger>
                       <SelectContent>{FREQS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Duration</Label>
-                    <Input value={row.duration} onChange={(e) => updateRow(i, { duration: e.target.value })} />
+                    <Label htmlFor={`${uid}-duration-${i}`} className="text-xs font-normal text-muted-foreground">Duration</Label>
+                    <Input id={`${uid}-duration-${i}`} value={row.duration} onChange={(e) => updateRow(i, { duration: e.target.value })} />
                   </div>
                   <div className="flex items-end gap-1">
                     <div className="flex-1 space-y-1">
-                      <Label className="text-xs font-normal text-muted-foreground">Instructions</Label>
-                      <Input value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
+                      <Label htmlFor={`${uid}-instructions-${i}`} className="text-xs font-normal text-muted-foreground">Instructions</Label>
+                      <Input id={`${uid}-instructions-${i}`} value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
                     </div>
                     <Button aria-label="Remove medicine" type="button" variant="ghost" size="icon" onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}>
                       <Trash2 className="h-4 w-4 text-danger-600" />
@@ -401,12 +403,12 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 pt-2 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>General Instructions</Label>
-                <Textarea rows={2} value={generalInstructions} onChange={(e) => setGeneralInstructions(e.target.value)} />
+                <Label htmlFor={`${uid}-general-instructions`}>General Instructions</Label>
+                <Textarea id={`${uid}-general-instructions`} rows={2} value={generalInstructions} onChange={(e) => setGeneralInstructions(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Follow-up Date</Label>
-                <Input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+                <Label htmlFor={`${uid}-follow-up-date`}>Follow-up Date</Label>
+                <Input id={`${uid}-follow-up-date`} type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -418,14 +420,14 @@ function EncounterFormContent() {
           <CardContent className="space-y-5 p-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Consultation Fee</Label>
-                <Input type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} />
+                <Label htmlFor={`${uid}-consultation-fee`}>Consultation Fee</Label>
+                <Input id={`${uid}-consultation-fee`} type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Discount</Label>
+                <Label htmlFor={`${uid}-discount`}>Discount</Label>
                 <div className="flex gap-2">
                   <Select value={discountType} onValueChange={(v) => setDiscountType(v as "flat" | "percent")}>
-                    <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-discount`} className="w-24"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="flat">Flat</SelectItem>
                       <SelectItem value="percent">%</SelectItem>
@@ -443,8 +445,8 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Payment Status</Label>
-                <RadioGroup className="flex gap-4 pt-2" value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as typeof paymentStatus)}>
+                <Label id={`${uid}-payment-status-label`}>Payment Status</Label>
+                <RadioGroup aria-labelledby={`${uid}-payment-status-label`} className="flex gap-4 pt-2" value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as typeof paymentStatus)}>
                   {(["paid", "unpaid", "partial"] as const).map((p) => (
                     <div key={p} className="flex items-center gap-1.5">
                       <RadioGroupItem value={p} id={`ps-${p}`} /><Label htmlFor={`ps-${p}`} className="cursor-pointer font-normal capitalize">{p}</Label>
@@ -454,15 +456,15 @@ function EncounterFormContent() {
               </div>
               {paymentStatus === "partial" && (
                 <div className="space-y-1.5">
-                  <Label>Amount Received</Label>
-                  <Input type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} />
+                  <Label htmlFor={`${uid}-amount-received`}>Amount Received</Label>
+                  <Input id={`${uid}-amount-received`} type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} />
                   <p className="text-xs text-muted-foreground">Balance: {formatCurrency(Math.max(0, netTotal - amountReceived))}</p>
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Payment Mode</Label>
+                <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
                 <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                   <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                 </Select>
               </div>

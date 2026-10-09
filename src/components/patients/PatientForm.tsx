@@ -68,6 +68,7 @@ const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white 
 const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 
 export function PatientForm({ mode }: { mode: "create" | "edit" }) {
+  const uid = React.useId()
   const params = useParams()
   const id = params?.id as string | undefined
   const router = useRouter()
@@ -215,8 +216,8 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
               <Input id="medicalRecordNo" placeholder="Manual reference (optional)" className={inputClass} {...register("medicalRecordNo")} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Registration Date</Label>
-              <Input type="date" defaultValue={existing?.registrationDate ?? new Date().toISOString().slice(0, 10)} readOnly className={inputClass} />
+              <Label htmlFor={`${uid}-registration-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Registration Date</Label>
+              <Input id={`${uid}-registration-date`} type="date" defaultValue={existing?.registrationDate ?? new Date().toISOString().slice(0, 10)} readOnly className={inputClass} />
             </div>
             
             <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
@@ -255,8 +256,8 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Gender *</Label>
-              <RadioGroup
+              <Label id={`${uid}-gender-label`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Gender *</Label>
+              <RadioGroup aria-labelledby={`${uid}-gender-label`}
                 className="flex h-11 items-center gap-6 rounded-xl border border-slate-200 bg-white px-4"
                 defaultValue={existing?.gender ?? "Male"}
                 onValueChange={(v) => setValue("gender", v as Gender)}
@@ -275,9 +276,9 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
               <Input id="cnic" placeholder="12345-1234567-1" className={inputClass} {...register("cnic")} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Blood Group</Label>
+              <Label htmlFor={`${uid}-blood-group`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Blood Group</Label>
               <Select defaultValue={existing?.bloodGroup ?? "Unknown"} onValueChange={(v) => setValue("bloodGroup", v)}>
-                <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-blood-group`} className={selectClass}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {BLOOD_GROUPS.map((bg) => <SelectItem key={bg} value={bg}>{bg}</SelectItem>)}
                 </SelectContent>
@@ -341,10 +342,10 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Guardian/Relation</Label>
+              <Label htmlFor={`${uid}-guardian-relation`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Guardian/Relation</Label>
               <div className="flex gap-2">
                 <Select defaultValue={existing?.guardianRelation ?? "Self"} onValueChange={(v) => setValue("guardianRelation", v)}>
-                  <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-guardian-relation`} className={selectClass}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {GUARDIAN_RELATIONS.filter((r) => r.active).map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
                   </SelectContent>
@@ -363,10 +364,10 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
             ) : <div className="hidden md:block" />}
             
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel/Organisation</Label>
+              <Label htmlFor={`${uid}-panel-organisation`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel/Organisation</Label>
               <div className="flex gap-2">
                 <Select defaultValue={existing?.panelId ? String(existing.panelId) : "none"} onValueChange={(v) => setValue("panelId", v)}>
-                  <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-panel-organisation`} className={selectClass}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None (Self-Pay)</SelectItem>
                     {PANELS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
@@ -446,6 +447,7 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
 }
 
 function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: number) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [name, setName] = React.useState("")
   const [type, setType] = React.useState<PanelType>("Insurance")
@@ -472,18 +474,18 @@ function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onCl
         <DialogHeader><DialogTitle>Register New Organisation</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label>
-            <Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            <Label htmlFor={`${uid}-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label>
+            <Input id={`${uid}-name`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
+            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-type`} className="h-11 rounded-xl bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
               <SelectContent>{PANEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-contact-person`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input id={`${uid}-contact-person`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" className="rounded-xl font-bold" onClick={onClose}>Cancel</Button>
@@ -495,6 +497,7 @@ function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onCl
 }
 
 function QuickAddRelationDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (name: string) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [name, setName] = React.useState("")
 
@@ -515,8 +518,8 @@ function QuickAddRelationDialog({ open, onClose, onCreated }: { open: boolean; o
       <DialogContent className="sm:max-w-[425px] rounded-[1.5rem]">
         <DialogHeader><DialogTitle>Register New Relation</DialogTitle></DialogHeader>
         <div className="space-y-1.5 pt-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label>
-          <Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="e.g. Uncle, Guardian" />
+          <Label htmlFor={`${uid}-relation-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label>
+          <Input id={`${uid}-relation-name`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="e.g. Uncle, Guardian" />
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" className="rounded-xl font-bold" onClick={onClose}>Cancel</Button>

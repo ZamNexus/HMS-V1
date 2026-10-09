@@ -12,9 +12,12 @@ import { Button } from "@/components/ui/button"
 export function PatientPicker({
   value,
   onChange,
+  id,
 }: {
   value: Patient | null
   onChange: (patient: Patient | null) => void
+  /** Id for the search input, so a <Label htmlFor> can point at it */
+  id?: string
 }) {
   const [query, setQuery] = React.useState("")
 
@@ -54,6 +57,7 @@ export function PatientPicker({
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
+          id={id}
           className="pl-9"
           placeholder="Search by patient name, MR No. or phone..."
           value={query}

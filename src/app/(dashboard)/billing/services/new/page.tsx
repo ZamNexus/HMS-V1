@@ -31,6 +31,7 @@ const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Cheque", "Insura
 const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology", "Procedure", "Diagnostic", "Emergency"]
 
 function ServicesInvoiceFormContent() {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const params = useSearchParams()
@@ -119,17 +120,17 @@ function ServicesInvoiceFormContent() {
       <Card>
         <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <Label>Patient *</Label>
-            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+            <Label htmlFor={`${uid}-patient`}>Patient *</Label>
+            <PatientPicker id={`${uid}-patient`} value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
           </div>
 
           <PatientInfoPanel patient={patient} />
 
           {patient && (
             <div className="space-y-1.5">
-              <Label>OPD/IPD Encounter</Label>
+              <Label htmlFor={`${uid}-opd-ipd-encounter`}>OPD/IPD Encounter</Label>
               <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                <SelectTrigger id={`${uid}-opd-ipd-encounter`}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not linked to a visit</SelectItem>
                   {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
@@ -140,10 +141,10 @@ function ServicesInvoiceFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label>Doctor (optional)</Label>
+              <Label htmlFor={`${uid}-doctor-optional`}>Doctor (optional)</Label>
               <div className="flex gap-2">
                 <Select value={doctorId} onValueChange={setDoctorId}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-doctor-optional`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
                     {activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}
@@ -155,31 +156,31 @@ function ServicesInvoiceFormContent() {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Payment Mode</Label>
+              <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                 <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
 
           <div>
-            <Label className="mb-2 block">Vitals</Label>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <Label id={`${uid}-vitals-label`} className="mb-2 block">Vitals</Label>
+            <div role="group" aria-labelledby={`${uid}-vitals-label`} className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {([["bp", "BP"], ["sugar", "Sugar"], ["weight", "Weight"], ["temperature", "Temperature"]] as const).map(([key, label]) => (
                 <div key={key} className="space-y-1">
-                  <Label className="text-xs font-normal text-muted-foreground">{label}</Label>
-                  <Input value={vitals[key]} onChange={(e) => setVitals((v) => ({ ...v, [key]: e.target.value }))} />
+                  <Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-vital-${key}`}>{label}</Label>
+                  <Input id={`${uid}-vital-${key}`} value={vitals[key]} onChange={(e) => setVitals((v) => ({ ...v, [key]: e.target.value }))} />
                 </div>
               ))}
             </div>
           </div>
 
           <div>
-            <Label className="mb-2 block">Service Line Items</Label>
+            <Label htmlFor={`${uid}-service-line-items`} className="mb-2 block">Service Line Items</Label>
             <div className="mb-2 flex gap-2">
               <Select value={pendingService} onValueChange={setPendingService}>
-                <SelectTrigger className="flex-1"><SelectValue placeholder="Search service..." /></SelectTrigger>
+                <SelectTrigger id={`${uid}-service-line-items`} className="flex-1"><SelectValue placeholder="Search service..." /></SelectTrigger>
                 <SelectContent>{SERVICE_CATALOG.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name} — {formatCurrency(s.rate)}</SelectItem>)}</SelectContent>
               </Select>
               <Button type="button" variant="outline" onClick={addService}><Plus className="h-4 w-4" /> Add Service</Button>
@@ -216,17 +217,17 @@ function ServicesInvoiceFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Discount</Label>
+              <Label htmlFor={`${uid}-discount`}>Discount</Label>
               <div className="flex gap-2">
                 <Select value={discountType} onValueChange={(v) => setDiscountType(v as "flat" | "percent")}>
-                  <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-discount`} className="w-24"><SelectValue /></SelectTrigger>
                   <SelectContent><SelectItem value="flat">Flat</SelectItem><SelectItem value="percent">%</SelectItem></SelectContent>
                 </Select>
                 <Input type="number" value={discount} onChange={(e) => setDiscount(Number(e.target.value))} />
               </div>
             </div>
-            <div className="space-y-1.5"><Label>GST %</Label><Input type="number" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
-            <div className="space-y-1.5"><Label>Amount Received</Label><Input type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-gst`}>GST %</Label><Input id={`${uid}-gst`} type="number" value={gstPct} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-amount-received`}>Amount Received</Label><Input id={`${uid}-amount-received`} type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} /></div>
           </div>
 
           <div className="rounded-md bg-accent-50 p-4 text-right">
@@ -236,8 +237,8 @@ function ServicesInvoiceFormContent() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Remarks</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label htmlFor={`${uid}-remarks`}>Remarks</Label>
+            <Textarea id={`${uid}-remarks`} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </CardContent>
       </Card>
@@ -255,6 +256,7 @@ function ServicesInvoiceFormContent() {
 }
 
 function QuickAddServiceDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: number) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const [name, setName] = React.useState("")
   const [code, setCode] = React.useState("")
@@ -281,16 +283,16 @@ function QuickAddServiceDialog({ open, onClose, onCreated }: { open: boolean; on
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader><DialogTitle>Register New Service</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label>Code *</Label><Input value={code} onChange={(e) => setCode(e.target.value)} autoFocus /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-code`}>Code *</Label><Input id={`${uid}-code`} value={code} onChange={(e) => setCode(e.target.value)} autoFocus /></div>
           <div className="space-y-1.5">
-            <Label>Category</Label>
+            <Label htmlFor={`${uid}-category`}>Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`}><SelectValue /></SelectTrigger>
               <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label>Service Name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label>Rate (Rs.) *</Label><Input type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-service-name`}>Service Name *</Label><Input id={`${uid}-service-name`} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-rate-rs`}>Rate (Rs.) *</Label><Input id={`${uid}-rate-rs`} type="number" value={rate} onChange={(e) => setRate(Number(e.target.value))} /></div>
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
