@@ -3,18 +3,17 @@ import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Check, Plus, Trash2 } from "lucide-react"
+import { Check, Plus } from "lucide-react"
 
-import { ENCOUNTERS, nextEncounterId, nextTokenNo } from "@/data/encounters"
-import { getPatient } from "@/data/patients"
-import { DOCTORS, activeDoctors } from "@/data/doctors"
-import { MEDICINES } from "@/data/medicines"
-import { WARDS } from "@/data/wards"
+import { nextTokenNo } from "@/data/encounters"
+import { dataSource, encounterTotals, encountersService, errorSummary, pharmacyContractStatus, type PatientRecord } from "@/lib/services"
+import { useDoctors, useMedicines, usePatient, useWards } from "@/lib/useReferenceData"
 import { IcdLookup } from "@/components/shared/IcdLookup"
-import type { Encounter, EncounterType, Patient, PrescriptionItem, PaymentMode } from "@/types"
+import type { EncounterType, PrescriptionItem, PaymentMode } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
-import { PatientPicker } from "@/components/shared/PatientPicker"
+import { PatientRecordPicker } from "@/components/shared/PatientPicker"
 import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
+import { PrescriptionRows } from "@/components/encounters/PrescriptionRows"
 import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { Button } from "@/components/ui/button"
@@ -27,32 +26,43 @@ import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
 
 const STEPS = ["Patient", "Details", "Prescription", "Billing"]
-const ROUTES = ["Oral", "IV", "IM", "Topical", "Inhaled", "Drops"]
-const FREQS = ["OD", "BD", "TDS", "QDS", "SOS", "As directed"]
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Insurance"]
+// The prescription step picks from the pharmacy medicine list. In API mode that list is offered only when its endpoint is confirmed; until then
+// the step says so and shows no medicine, no stock and no demo data (mock mode is always connected to its demo medicines).
+const medicinesContract = pharmacyContractStatus(dataSource)
 
 function emptyRx(): PrescriptionItem {
   return { medicine: "", dose: "", route: "Oral", frequency: "OD", duration: "", instructions: "" }
 }
 
 function EncounterFormContent() {
+  const uid = React.useId()
   const params = useSearchParams()
   const router = useRouter()
   const { toast } = useToast()
 
   const [step, setStep] = React.useState(0)
-  const [patient, setPatient] = React.useState<Patient | null>(() => {
-    const pid = params?.get("patientId")
-    return pid ? getPatient(Number(pid)) ?? null : null
-  })
+  // ?patientId= is an opaque string id (never Number()-ed). `picked` overrides the preselected patient once the user chooses/clears.
+  const preselected = usePatient(params?.get("patientId") ?? undefined)
+  const [picked, setPicked] = React.useState<PatientRecord | null | undefined>(undefined)
+  const patient = picked !== undefined ? picked : preselected.data
 
   const [type, setType] = React.useState<EncounterType>((params?.get("type") as EncounterType) || "OPD")
-  const [ward, setWard] = React.useState("")
+  const [wardId, setWardId] = React.useState("")
   const [bedNo, setBedNo] = React.useState("")
   const [admissionType, setAdmissionType] = React.useState<"Emergency" | "Planned">("Planned")
-  const [doctorId, setDoctorId] = React.useState<number | undefined>(activeDoctors()[0]?.userId)
+  // Doctors come from the shared reference data; the first active doctor is the default until one is chosen.
+  const doctors = useDoctors()
+  const [chosenDoctorId, setChosenDoctorId] = React.useState<string | undefined>(undefined)
+  const doctorId = chosenDoctorId ?? doctors.active[0]?.id
   const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
-  const [tokenNo, setTokenNo] = React.useState<number>(() => nextTokenNo())
+  // The daily token is only suggested from the demo data in mock mode. Whether the backend assigns it is CONTRACT REQUIRED,
+  // so real-API mode never invents one.
+  const [tokenNo, setTokenNo] = React.useState<number | undefined>(() => (dataSource === "mock" ? nextTokenNo() : undefined))
+  const wards = useWards(type === "IPD")
+  const medicinesPending = !medicinesContract.can("medicines.list")
+  const medicines = useMedicines(!medicinesPending) // not even requested while the contract is missing
+  const selectedWard = wards.lookup.get(wardId)
   const [priority, setPriority] = React.useState<"Normal" | "Urgent">("Normal")
   const [vitals, setVitals] = React.useState({ bp: "", pulse: "", temp: "", weight: "", height: "", spo2: "", rbs: "" })
   const [chiefComplaint, setChiefComplaint] = React.useState("")
@@ -66,7 +76,7 @@ function EncounterFormContent() {
   const [generalInstructions, setGeneralInstructions] = React.useState("")
   const [followUpDate, setFollowUpDate] = React.useState("")
 
-  const doctor = DOCTORS.find((d) => d.userId === doctorId)
+  const doctor = doctors.lookup.get(doctorId)
   const [fee, setFee] = React.useState(doctor?.fee ?? 0)
   React.useEffect(() => setFee(doctor?.fee ?? 0), [doctorId]) // eslint-disable-line react-hooks/exhaustive-deps
   const [discountType, setDiscountType] = React.useState<"flat" | "percent">("flat")
@@ -75,8 +85,9 @@ function EncounterFormContent() {
   const [paymentMode, setPaymentMode] = React.useState<PaymentMode>("Cash")
   const [amountReceived, setAmountReceived] = React.useState(0)
 
-  const netTotal = discountType === "flat" ? Math.max(0, fee - discount) : Math.max(0, fee - (fee * discount) / 100)
-  const balance = paymentStatus === "paid" ? 0 : paymentStatus === "unpaid" ? netTotal : Math.max(0, netTotal - amountReceived)
+  const { netTotal } = encounterTotals({ fee, discountType, discount, paymentStatus, amountReceived })
+  const [saving, setSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState("")
 
   const bmi = React.useMemo(() => {
     const w = parseFloat(vitals.weight)
@@ -95,56 +106,46 @@ function EncounterFormContent() {
     setRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)))
   }
 
-  const save = () => {
-    if (!patient) return
-    const encId = nextEncounterId(type)
-    const record: Encounter = {
-      id: Math.max(0, ...ENCOUNTERS.map((e) => e.id)) + 1,
-      encId,
-      patientId: patient.id,
-      type,
-      doctorId: doctorId!,
-      date: new Date().toISOString(),
-      tokenNo,
-      ward: type === "IPD" ? ward : undefined,
-      bedNo: type === "IPD" ? bedNo : undefined,
-      admissionType: type === "IPD" ? admissionType : undefined,
-      priority,
-      chiefComplaint,
-      history,
-      onExamination,
-      diagnosis,
-      clinicalNotes,
-      advisedBy: advisedBy || undefined,
-      referredBy: referredBy || undefined,
-      vitals: { bp: vitals.bp, pulse: vitals.pulse, temp: vitals.temp, weight: vitals.weight, spo2: vitals.spo2, rbs: vitals.rbs },
-      prescription: rows.filter((r) => r.medicine.trim() !== ""),
-      generalInstructions,
-      followUpDate: followUpDate || undefined,
-      fee,
-      discount,
-      discountType,
-      netTotal,
-      paymentStatus,
-      paymentMode,
-      amountReceived: paymentStatus === "unpaid" ? 0 : paymentStatus === "paid" ? netTotal : amountReceived,
-      balance,
-      status: "open",
+  const save = async () => {
+    if (!patient || !doctorId) return
+    setSaveError("")
+    setSaving(true)
+    try {
+      const record = await encountersService.create({
+        patientId: patient.id,
+        doctorId,
+        type,
+        tokenNo,
+        wardId: type === "IPD" ? wardId || undefined : undefined,
+        bedNo: type === "IPD" ? bedNo || undefined : undefined,
+        admissionType: type === "IPD" ? admissionType : undefined,
+        priority,
+        chiefComplaint,
+        history,
+        onExamination,
+        diagnosis,
+        clinicalNotes,
+        advisedBy: advisedBy || undefined,
+        referredBy: referredBy || undefined,
+        vitals: { bp: vitals.bp, pulse: vitals.pulse, temp: vitals.temp, weight: vitals.weight, spo2: vitals.spo2, rbs: vitals.rbs },
+        prescription: medicinesPending ? [] : rows.filter((r) => r.medicine.trim() !== ""),
+        generalInstructions,
+        followUpDate: followUpDate || undefined,
+        fee,
+        discount,
+        discountType,
+        paymentStatus,
+        paymentMode,
+        amountReceived,
+      })
+      toast({ title: `Encounter ${record.encId} saved` })
+      router.push(`/encounters/${record.id}`)
+    } catch (err) {
+      setSaveError(errorSummary(err))
+      toast({ variant: "destructive", title: "Could not save encounter", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    ENCOUNTERS.push(record)
-
-    if (type === "IPD" && ward && bedNo) {
-      const w = WARDS.find((x) => x.name === ward)
-      const bed = w?.beds.find((b) => b.bedNo === bedNo)
-      if (bed) {
-        bed.status = "occupied"
-        bed.patientId = patient.id
-        bed.since = new Date().toISOString().slice(0, 10)
-      }
-    }
-
-    toast({ title: `Encounter ${encId} saved` })
-    router.push(`/encounters/${record.id}`)
   }
 
   return (
@@ -152,7 +153,7 @@ function EncounterFormContent() {
       <div className="mb-6 flex items-center gap-2">
         {STEPS.map((s, i) => (
           <React.Fragment key={s}>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2" aria-current={i === step ? "step" : undefined}>
               <div
                 className={cn(
                   "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
@@ -161,9 +162,10 @@ function EncounterFormContent() {
               >
                 {i < step ? <Check className="h-4 w-4" /> : i + 1}
               </div>
-              <span className={cn("text-sm font-medium", i === step ? "text-foreground" : "text-muted-foreground")}>{s}</span>
+              {/* On phones only the current step's label is shown; the others stay available to screen readers */}
+              <span className={cn("text-sm font-medium", i === step ? "text-foreground" : "sr-only text-muted-foreground sm:not-sr-only")}>{s}</span>
             </div>
-            {i < STEPS.length - 1 && <div className="mx-2 h-px w-8 bg-border" />}
+            {i < STEPS.length - 1 && <div className="mx-1 h-px w-4 shrink-0 bg-border sm:mx-2 sm:w-8" />}
           </React.Fragment>
         ))}
       </div>
@@ -171,7 +173,7 @@ function EncounterFormContent() {
       {step === 0 && (
         <Card>
           <CardContent className="space-y-4 p-6">
-            <PatientPicker value={patient} onChange={setPatient} />
+            <PatientRecordPicker value={patient ?? null} onChange={setPicked} />
             <PatientInfoPanel patient={patient} />
             <Link href="/patients/new" target="_blank" className="inline-block text-xs font-medium text-secondary hover:underline">
               + Register New Patient
@@ -184,8 +186,8 @@ function EncounterFormContent() {
         <Card>
           <CardContent className="space-y-5 p-6">
             <div>
-              <Label className="mb-2 block">Encounter Type</Label>
-              <div className="inline-flex rounded-md border border-border p-1">
+              <Label id={`${uid}-encounter-type-label`} className="mb-2 block">Encounter Type</Label>
+              <div role="group" aria-labelledby={`${uid}-encounter-type-label`} className="inline-flex rounded-md border border-border p-1">
                 {(["OPD", "IPD"] as EncounterType[]).map((t) => (
                   <button
                     key={t}
@@ -202,31 +204,32 @@ function EncounterFormContent() {
             {type === "IPD" && (
               <div className="grid grid-cols-1 gap-4 rounded-md border border-border bg-muted/30 p-4 md:grid-cols-3">
                 <div className="space-y-1.5">
-                  <Label>Ward</Label>
-                  <Select value={ward} onValueChange={(v) => { setWard(v); setBedNo("") }}>
-                    <SelectTrigger><SelectValue placeholder="Select ward" /></SelectTrigger>
+                  <Label htmlFor={`${uid}-ward`}>Ward</Label>
+                  <Select value={wardId} onValueChange={(v) => { setWardId(v); setBedNo("") }} disabled={wards.loading || Boolean(wards.error)}>
+                    <SelectTrigger id={`${uid}-ward`}><SelectValue placeholder={wards.loading ? "Loading wards…" : "Select ward"} /></SelectTrigger>
                     <SelectContent>
-                      {WARDS.map((w) => <SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>)}
+                      {wards.items.map((w) => <SelectItem key={w.id} value={w.id}>{w.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {Boolean(wards.error) && <p role="alert" className="text-xs text-red-600">Wards unavailable: {errorSummary(wards.error)}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Bed No.</Label>
-                  <Select value={bedNo} onValueChange={setBedNo} disabled={!ward}>
-                    <SelectTrigger><SelectValue placeholder={ward ? "Select an available bed" : "Select ward first"} /></SelectTrigger>
+                  <Label htmlFor={`${uid}-bed-no`}>Bed No.</Label>
+                  <Select value={bedNo} onValueChange={setBedNo} disabled={!selectedWard}>
+                    <SelectTrigger id={`${uid}-bed-no`}><SelectValue placeholder={selectedWard ? "Select an available bed" : "Select ward first"} /></SelectTrigger>
                     <SelectContent>
-                      {WARDS.find((w) => w.name === ward)?.beds.filter((b) => b.status === "available").map((b) => (
+                      {selectedWard?.beds.filter((b) => b.status === "available").map((b) => (
                         <SelectItem key={b.bedNo} value={b.bedNo}>{b.bedNo}</SelectItem>
                       ))}
-                      {ward && WARDS.find((w) => w.name === ward)?.beds.every((b) => b.status !== "available") && (
+                      {selectedWard && selectedWard.beds.every((b) => b.status !== "available") && (
                         <div className="px-2 py-1.5 text-xs text-muted-foreground">No available beds in this ward</div>
                       )}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Admission Type</Label>
-                  <RadioGroup className="flex gap-4 pt-2" value={admissionType} onValueChange={(v) => setAdmissionType(v as "Emergency" | "Planned")}>
+                  <Label id={`${uid}-admission-type-label`}>Admission Type</Label>
+                  <RadioGroup aria-labelledby={`${uid}-admission-type-label`} className="flex gap-4 pt-2" value={admissionType} onValueChange={(v) => setAdmissionType(v as "Emergency" | "Planned")}>
                     {(["Emergency", "Planned"] as const).map((a) => (
                       <div key={a} className="flex items-center gap-1.5">
                         <RadioGroupItem value={a} id={`adm-${a}`} /><Label htmlFor={`adm-${a}`} className="cursor-pointer font-normal">{a}</Label>
@@ -239,33 +242,34 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Doctor *</Label>
+                <Label htmlFor={`${uid}-doctor`}>Doctor *</Label>
                 <div className="flex gap-2">
-                  <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                    <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
+                  <Select value={doctorId} onValueChange={setChosenDoctorId} disabled={doctors.loading}>
+                    <SelectTrigger id={`${uid}-doctor`}><SelectValue placeholder={doctors.loading ? "Loading doctors…" : "Select doctor"} /></SelectTrigger>
                     <SelectContent>
-                      {activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name} — {d.specialization}</SelectItem>)}
+                      {doctors.active.map((d) => <SelectItem key={d.id} value={d.id}>{d.name} — {d.specialization}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+                {Boolean(doctors.error) && <p role="alert" className="text-xs text-red-600">Doctors unavailable: {errorSummary(doctors.error)}</p>}
               </div>
               <div className="space-y-1.5">
-                <Label>Date &amp; Time</Label>
-                <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+                <Label htmlFor={`${uid}-date-amp-time`}>Date &amp; Time</Label>
+                <Input id={`${uid}-date-amp-time`} type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Token No</Label>
-                <Input type="number" value={tokenNo} onChange={(e) => setTokenNo(Number(e.target.value))} />
+                <Label htmlFor={`${uid}-token-no`}>Token No</Label>
+                <Input id={`${uid}-token-no`} type="number" value={tokenNo ?? ""} onChange={(e) => setTokenNo(e.target.value === "" ? undefined : Number(e.target.value))} />
               </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               <div className="space-y-1.5">
-                <Label>Priority</Label>
-                <RadioGroup className="flex gap-4 pt-2" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
+                <Label id={`${uid}-priority-label`}>Priority</Label>
+                <RadioGroup aria-labelledby={`${uid}-priority-label`} className="flex gap-4 pt-2" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
                   {(["Normal", "Urgent"] as const).map((p) => (
                     <div key={p} className="flex items-center gap-1.5">
                       <RadioGroupItem value={p} id={`pri-${p}`} /><Label htmlFor={`pri-${p}`} className="cursor-pointer font-normal">{p}</Label>
@@ -274,25 +278,26 @@ function EncounterFormContent() {
                 </RadioGroup>
               </div>
               <div className="space-y-1.5">
-                <Label>Advised By</Label>
-                <Input value={advisedBy} onChange={(e) => setAdvisedBy(e.target.value)} placeholder="Referring physician / self" />
+                <Label htmlFor={`${uid}-advised-by`}>Advised By</Label>
+                <Input id={`${uid}-advised-by`} value={advisedBy} onChange={(e) => setAdvisedBy(e.target.value)} placeholder="Referring physician / self" />
               </div>
               <div className="space-y-1.5">
-                <Label>Referred By</Label>
-                <Input value={referredBy} onChange={(e) => setReferredBy(e.target.value)} placeholder="Referral source (optional)" />
+                <Label htmlFor={`${uid}-referred-by`}>Referred By</Label>
+                <Input id={`${uid}-referred-by`} value={referredBy} onChange={(e) => setReferredBy(e.target.value)} placeholder="Referral source (optional)" />
               </div>
             </div>
 
             <div>
-              <Label className="mb-2 block">Vitals</Label>
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              <Label id={`${uid}-vitals-label`} className="mb-2 block">Vitals</Label>
+              <div role="group" aria-labelledby={`${uid}-vitals-label`} className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                 {([
                   ["bp", "BP (mmHg)"], ["pulse", "Pulse (/min)"], ["temp", "Temp (°F)"],
                   ["weight", "Weight (kg)"], ["spo2", "SpO2 (%)"], ["rbs", "RBS mg/dL"],
                 ] as const).map(([key, label]) => (
                   <div key={key} className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">{label}</Label>
+                    <Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-vital-${key}`}>{label}</Label>
                     <Input
+                      id={`${uid}-vital-${key}`}
                       value={vitals[key as keyof typeof vitals]}
                       placeholder={key === "temp" ? "98.6" : undefined}
                       onChange={(e) => setVitals((v) => ({ ...v, [key]: e.target.value }))}
@@ -300,8 +305,8 @@ function EncounterFormContent() {
                   </div>
                 ))}
                 <div className="space-y-1">
-                  <Label className="text-xs font-normal text-muted-foreground">Height (cm)</Label>
-                  <Input value={vitals.height} onChange={(e) => setVitals((v) => ({ ...v, height: e.target.value }))} />
+                  <Label htmlFor={`${uid}-height-cm`} className="text-xs font-normal text-muted-foreground">Height (cm)</Label>
+                  <Input id={`${uid}-height-cm`} value={vitals.height} onChange={(e) => setVitals((v) => ({ ...v, height: e.target.value }))} />
                 </div>
               </div>
               {bmi && (
@@ -313,26 +318,26 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Chief Complaint *</Label>
-                <Textarea rows={2} value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
+                <Label htmlFor={`${uid}-chief-complaint`}>Chief Complaint *</Label>
+                <Textarea id={`${uid}-chief-complaint`} rows={2} value={chiefComplaint} onChange={(e) => setChiefComplaint(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>History</Label>
-                <Textarea rows={2} value={history} onChange={(e) => setHistory(e.target.value)} />
+                <Label htmlFor={`${uid}-history`}>History</Label>
+                <Textarea id={`${uid}-history`} rows={2} value={history} onChange={(e) => setHistory(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>On Examination</Label>
-                <Textarea rows={2} value={onExamination} onChange={(e) => setOnExamination(e.target.value)} />
+                <Label htmlFor={`${uid}-on-examination`}>On Examination</Label>
+                <Textarea id={`${uid}-on-examination`} rows={2} value={onExamination} onChange={(e) => setOnExamination(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label className="flex items-center gap-2">
+                <Label htmlFor={`${uid}-diagnosis-icdlookup-onselect-n`} className="flex items-center gap-2">
                   Diagnosis * <IcdLookup onSelect={(name) => setDiagnosis((d) => (d ? `${d}, ${name}` : name))} />
                 </Label>
-                <Textarea rows={2} value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} />
+                <Textarea id={`${uid}-diagnosis-icdlookup-onselect-n`} rows={2} value={diagnosis} onChange={(e) => setDiagnosis(e.target.value)} />
               </div>
               <div className="space-y-1.5 md:col-span-2">
-                <Label>Clinical Notes</Label>
-                <Textarea rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
+                <Label htmlFor={`${uid}-clinical-notes`}>Clinical Notes</Label>
+                <Textarea id={`${uid}-clinical-notes`} rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -342,70 +347,24 @@ function EncounterFormContent() {
       {step === 2 && (
         <Card>
           <CardContent className="space-y-3 p-6">
-            {rows.map((row, i) => {
-              const med = MEDICINES.find((m) => m.name === row.medicine)
-              return (
-                <div key={i} className="grid grid-cols-1 gap-2 rounded-md border border-border p-3 md:grid-cols-7">
-                  <div className="md:col-span-2 space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Medicine</Label>
-                    <Select value={row.medicine || undefined} onValueChange={(v) => updateRow(i, { medicine: v })}>
-                      <SelectTrigger><SelectValue placeholder="Search medicine..." /></SelectTrigger>
-                      <SelectContent>
-                        {MEDICINES.map((m) => <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {med && (
-                      <p className={cn("text-xs", med.stock < med.reorderLevel ? "text-warning-700" : "text-muted-foreground")}>
-                        Stock: {med.stock} {med.unit}{med.stock < med.reorderLevel ? " (low stock)" : ""}
-                      </p>
-                    )}
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Dose</Label>
-                    <Input value={row.dose} onChange={(e) => updateRow(i, { dose: e.target.value })} />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Route</Label>
-                    <Select value={row.route} onValueChange={(v) => updateRow(i, { route: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{ROUTES.map((r) => <SelectItem key={r} value={r}>{r}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Freq</Label>
-                    <Select value={row.frequency} onValueChange={(v) => updateRow(i, { frequency: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>{FREQS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs font-normal text-muted-foreground">Duration</Label>
-                    <Input value={row.duration} onChange={(e) => updateRow(i, { duration: e.target.value })} />
-                  </div>
-                  <div className="flex items-end gap-1">
-                    <div className="flex-1 space-y-1">
-                      <Label className="text-xs font-normal text-muted-foreground">Instructions</Label>
-                      <Input value={row.instructions} onChange={(e) => updateRow(i, { instructions: e.target.value })} />
-                    </div>
-                    <Button type="button" variant="ghost" size="icon" onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}>
-                      <Trash2 className="h-4 w-4 text-danger-600" />
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
-            <Button type="button" variant="outline" onClick={() => setRows((r) => [...r, emptyRx()])}>
-              <Plus className="h-4 w-4" /> Add Medicine
-            </Button>
+            <PrescriptionRows
+              uid={uid}
+              rows={rows}
+              medicines={medicines}
+              pending={medicinesPending}
+              onUpdate={updateRow}
+              onRemove={(i) => setRows((r) => r.filter((_, idx) => idx !== i))}
+              onAdd={() => setRows((r) => [...r, emptyRx()])}
+            />
 
             <div className="grid grid-cols-1 gap-4 pt-2 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>General Instructions</Label>
-                <Textarea rows={2} value={generalInstructions} onChange={(e) => setGeneralInstructions(e.target.value)} />
+                <Label htmlFor={`${uid}-general-instructions`}>General Instructions</Label>
+                <Textarea id={`${uid}-general-instructions`} rows={2} value={generalInstructions} onChange={(e) => setGeneralInstructions(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Follow-up Date</Label>
-                <Input type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
+                <Label htmlFor={`${uid}-follow-up-date`}>Follow-up Date</Label>
+                <Input id={`${uid}-follow-up-date`} type="date" value={followUpDate} onChange={(e) => setFollowUpDate(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -417,14 +376,14 @@ function EncounterFormContent() {
           <CardContent className="space-y-5 p-6">
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Consultation Fee</Label>
-                <Input type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} />
+                <Label htmlFor={`${uid}-consultation-fee`}>Consultation Fee</Label>
+                <Input id={`${uid}-consultation-fee`} type="number" value={fee} onChange={(e) => setFee(Number(e.target.value))} />
               </div>
               <div className="space-y-1.5">
-                <Label>Discount</Label>
+                <Label htmlFor={`${uid}-discount`}>Discount</Label>
                 <div className="flex gap-2">
                   <Select value={discountType} onValueChange={(v) => setDiscountType(v as "flat" | "percent")}>
-                    <SelectTrigger className="w-24"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-discount`} className="w-24"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="flat">Flat</SelectItem>
                       <SelectItem value="percent">%</SelectItem>
@@ -442,8 +401,8 @@ function EncounterFormContent() {
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="space-y-1.5">
-                <Label>Payment Status</Label>
-                <RadioGroup className="flex gap-4 pt-2" value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as typeof paymentStatus)}>
+                <Label id={`${uid}-payment-status-label`}>Payment Status</Label>
+                <RadioGroup aria-labelledby={`${uid}-payment-status-label`} className="flex gap-4 pt-2" value={paymentStatus} onValueChange={(v) => setPaymentStatus(v as typeof paymentStatus)}>
                   {(["paid", "unpaid", "partial"] as const).map((p) => (
                     <div key={p} className="flex items-center gap-1.5">
                       <RadioGroupItem value={p} id={`ps-${p}`} /><Label htmlFor={`ps-${p}`} className="cursor-pointer font-normal capitalize">{p}</Label>
@@ -453,15 +412,15 @@ function EncounterFormContent() {
               </div>
               {paymentStatus === "partial" && (
                 <div className="space-y-1.5">
-                  <Label>Amount Received</Label>
-                  <Input type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} />
+                  <Label htmlFor={`${uid}-amount-received`}>Amount Received</Label>
+                  <Input id={`${uid}-amount-received`} type="number" value={amountReceived} onChange={(e) => setAmountReceived(Number(e.target.value))} />
                   <p className="text-xs text-muted-foreground">Balance: {formatCurrency(Math.max(0, netTotal - amountReceived))}</p>
                 </div>
               )}
               <div className="space-y-1.5">
-                <Label>Payment Mode</Label>
+                <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
                 <Select value={paymentMode} onValueChange={(v) => setPaymentMode(v as PaymentMode)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                   <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -469,6 +428,8 @@ function EncounterFormContent() {
           </CardContent>
         </Card>
       )}
+
+      {saveError && <p role="alert" className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600">{saveError}</p>}
 
       <div className="mt-6 flex justify-between">
         <Button type="button" variant="ghost" disabled={step === 0} onClick={() => setStep((s) => s - 1)}>
@@ -484,13 +445,13 @@ function EncounterFormContent() {
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={save}>Save Draft</Button>
-            <Button type="button" onClick={save}>Save Encounter</Button>
+            <Button type="button" variant="outline" disabled={saving} onClick={save}>Save Draft</Button>
+            <Button type="button" disabled={saving} onClick={save}>{saving ? "Saving…" : "Save Encounter"}</Button>
           </div>
         )}
       </div>
 
-      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreated={(id) => setDoctorId(id)} />
+      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreatedRecord={(d) => { doctors.reload(); setChosenDoctorId(d.id) }} />
     </>
   )
 }

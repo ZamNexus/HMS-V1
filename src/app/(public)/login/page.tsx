@@ -6,9 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { useAuth } from "@/lib/auth"
+import { useAuth, roleLabel } from "@/lib/auth"
 import { ROLE_LABELS } from "@/data/users"
 import { useToast } from "@/components/ui/use-toast"
+import { Toaster } from "@/components/ui/toaster"
 
 // ─── Role labels (extended with public Patient role) ─────────────
 const ALL_ROLE_LABELS: Record<string, string> = {
@@ -16,9 +17,10 @@ const ALL_ROLE_LABELS: Record<string, string> = {
   patient: "Patient",
 }
 
-// ─── Form schema (unchanged) ─────────────────────────────────────
+// ─── Form schema ─────────────────────────────────────────────────
 const schema = z.object({
-  email: z.string().min(1, "Email is required").email("Enter a valid email address"),
+  hospitalCode: z.string().trim().min(1, "Hospital code is required"),
+  identifier: z.string().trim().min(1, "Username or email is required"),
   password: z.string().min(1, "Password is required"),
   remember: z.boolean().optional(),
 })
@@ -157,7 +159,7 @@ function AlreadySignedIn({
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "#F3F5F8", padding: "24px", fontFamily: "'Inter', system-ui, sans-serif",
+      background: "#F3F5F8", padding: "24px", fontFamily: "var(--font-inter), system-ui, sans-serif",
     }}>
       <div style={{
         background: "#fff", borderRadius: "18px", padding: "40px",
@@ -201,26 +203,25 @@ function AlreadySignedIn({
             display: "flex", alignItems: "center", justifyContent: "center",
             color: "#fff", fontSize: "0.85rem", fontWeight: 700,
           }}>
-            {user.avatar}
+            {user.name.slice(0, 2).toUpperCase()}
           </div>
           <div>
             <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "#0D1B2E", marginBottom: "2px" }}>{user.name}</p>
-            <p style={{ fontSize: "0.78rem", color: "#64748B", marginBottom: "6px" }}>{user.email}</p>
+            <p style={{ fontSize: "0.78rem", color: "#64748B", marginBottom: "6px" }}>{user.identifier}</p>
             <span style={{
               display: "inline-flex", alignItems: "center",
               background: "rgba(28,192,206,0.10)", border: "1px solid rgba(28,192,206,0.30)",
               color: "#0891B2", borderRadius: "20px", padding: "2px 10px",
               fontSize: "0.72rem", fontWeight: 600,
             }}>
-              {ROLE_LABELS[user.role]}
+              {roleLabel(user.role)}
             </span>
           </div>
         </div>
 
         {/* Actions */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <button
-            onClick={() => router.push("/dashboard")}
+          <Link href={"/dashboard"}
             style={{
               width: "100%", padding: "13px 16px", borderRadius: "10px",
               background: "linear-gradient(180deg, #1D4080 0%, #0F2A4D 100%)",
@@ -230,8 +231,8 @@ function AlreadySignedIn({
               boxShadow: "0 4px 14px rgba(10,27,51,0.28)", fontFamily: "inherit",
             }}
           >
-            Continue as {ROLE_LABELS[user.role] ?? "User"} <IcoArrow />
-          </button>
+            {user.role ? `Continue as ${roleLabel(user.role)}` : "Continue to dashboard"} <IcoArrow />
+          </Link>
 
           <button
             onClick={() => { logout(); router.push("/login" + (roleParam ? `?role=${roleParam}` : "")) }}
@@ -276,25 +277,22 @@ function LoginContent() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { email: "", password: "", remember: false },
+    defaultValues: { hospitalCode: "", identifier: "", password: "", remember: false },
   })
 
-  // Track if we are currently attempting a login so we don't instantly logout after success
-  const isLoggingIn = React.useRef(false)
+  // Already logged in — show switch-account screen instead of form
+  if (user) {
+    return <AlreadySignedIn user={user} logout={logout} router={router} roleParam={roleParam} />
+  }
 
-  // Ensure strict authentication (CIA triad) - if the user hits the login page, clear any existing session
-  // to prevent unauthorized "continue as last role" access.
-  React.useEffect(() => {
-    if (user && !isLoggingIn.current) {
-      logout()
-    }
-  }, [user, logout])
-
-  const onSubmit = (values: FormValues) => {
-    isLoggingIn.current = true
-    const result = login(values.email, values.password)
+  const onSubmit = async (values: FormValues) => {
+    if (isSubmitting) return // ignore duplicate submits (e.g. repeated Enter) while a request is in flight
+    const result = await login({
+      hospitalCode: values.hospitalCode,
+      identifier: values.identifier,
+      password: values.password,
+    })
     if (!result.ok) {
-      isLoggingIn.current = false // reset on failure
       toast({ variant: "destructive", title: "Sign in failed", description: result.error })
       return
     }
@@ -329,7 +327,7 @@ function LoginContent() {
 
   return (
     <div
-      style={{ fontFamily: "'Inter', system-ui, sans-serif" }}
+      style={{ fontFamily: "var(--font-inter), system-ui, sans-serif" }}
       className="flex min-h-screen flex-col md:flex-row"
     >
       {/* ══════════════════════════════════════════════════════════
@@ -477,18 +475,57 @@ function LoginContent() {
           {/* ── Form ────────────────────────────────────────────── */}
           <form
             onSubmit={handleSubmit(onSubmit)}
+            // Defense in depth: if the form is ever submitted natively (before React attaches
+            // the handler), credentials go in a POST body, never in the URL query string.
+            method="post"
             noValidate
             autoComplete="off"
             style={{ display: "flex", flexDirection: "column", gap: "18px" }}
           >
 
-            {/* Email field */}
+            {/* Hospital code field */}
             <div>
               <label
-                htmlFor="email"
+                htmlFor="hospitalCode"
                 style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374B65", marginBottom: "7px" }}
               >
-                Email address
+                Hospital code
+              </label>
+              <div style={{ position: "relative" }}>
+                <span style={{
+                  position: "absolute", left: "14px", top: "50%",
+                  transform: "translateY(-50%)", color: "#9BA8BB",
+                  pointerEvents: "none", display: "flex", alignItems: "center",
+                }}>
+                  <IcoShield size={16} />
+                </span>
+                <input
+                  id="hospitalCode"
+                  type="text"
+                  autoComplete="off"
+                  placeholder="Hospital code"
+                  aria-invalid={!!errors.hospitalCode}
+                  {...register("hospitalCode")}
+                  style={{ ...baseInput, paddingLeft: "44px", borderColor: errors.hospitalCode ? "#ef4444" : "#D8E0EB" }}
+                  onFocus={onFocusInput}
+                  onBlur={(e) => onBlurInput(e, !!errors.hospitalCode)}
+                  suppressHydrationWarning
+                />
+              </div>
+              {errors.hospitalCode && (
+                <p style={{ color: "#ef4444", fontSize: "0.78rem", marginTop: "5px", fontWeight: 500 }}>
+                  {errors.hospitalCode.message}
+                </p>
+              )}
+            </div>
+
+            {/* Username / email field */}
+            <div>
+              <label
+                htmlFor="identifier"
+                style={{ display: "block", fontSize: "0.82rem", fontWeight: 600, color: "#374B65", marginBottom: "7px" }}
+              >
+                Username or email
               </label>
               <div style={{ position: "relative" }}>
                 <span style={{
@@ -499,21 +536,21 @@ function LoginContent() {
                   <IcoMail />
                 </span>
                 <input
-                  id="email"
-                  type="email"
+                  id="identifier"
+                  type="text"
                   autoComplete="off"
                   placeholder="you@citiclinic.pk"
-                  aria-invalid={!!errors.email}
-                  {...register("email")}
-                  style={{ ...baseInput, paddingLeft: "44px", borderColor: errors.email ? "#ef4444" : "#D8E0EB" }}
+                  aria-invalid={!!errors.identifier}
+                  {...register("identifier")}
+                  style={{ ...baseInput, paddingLeft: "44px", borderColor: errors.identifier ? "#ef4444" : "#D8E0EB" }}
                   onFocus={onFocusInput}
-                  onBlur={(e) => onBlurInput(e, !!errors.email)}
+                  onBlur={(e) => onBlurInput(e, !!errors.identifier)}
                   suppressHydrationWarning
                 />
               </div>
-              {errors.email && (
+              {errors.identifier && (
                 <p style={{ color: "#ef4444", fontSize: "0.78rem", marginTop: "5px", fontWeight: 500 }}>
-                  {errors.email.message}
+                  {errors.identifier.message}
                 </p>
               )}
             </div>
@@ -672,6 +709,7 @@ export default function LoginPage() {
   return (
     <React.Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-[#F3F5F8]">Loading...</div>}>
       <LoginContent />
+      <Toaster />
     </React.Suspense>
   )
 }

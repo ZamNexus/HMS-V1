@@ -1,20 +1,27 @@
 "use client"
 import * as React from "react"
-import { format } from "date-fns"
-import { Pencil, Plus, Trash2, History, Search } from "lucide-react"
+import { AlertTriangle, Pencil, Plus, Trash2, History, Search } from "lucide-react"
 
-import { SERVICE_CATALOG } from "@/data/services"
 import { PANELS } from "@/data/organisations"
 import { WARDS } from "@/data/wards"
-import { EXPENSE_CATEGORIES, SERVICES_INVOICES } from "@/data/billing"
-import { PATIENTS } from "@/data/patients"
-import { CLINIC_SETTINGS, BANKS } from "@/data/settings"
+import { CLINIC_SETTINGS } from "@/data/settings"
 import { GUARDIAN_RELATIONS } from "@/data/guardianRelations"
-import { ECG_ULTRASOUND_TESTS } from "@/data/ecgUltrasound"
 import { DISEASES } from "@/data/diseases"
-import { LAB_TESTS, LAB_TEST_CATEGORIES } from "@/data/labTests"
+import { LAB_TEST_CATEGORIES } from "@/data/labTests"
+import {
+  CROSS_MODULE_OPERATION_LABELS, FINANCE_OPERATION_LABELS, bankAccountsService, crossModuleContractStatus, dataSource, ecgUltrasoundTestsService, errorSummary, expenseCategoriesService,
+  financeContractStatus, isNotConnectedError, itemHistoryService, labTestsService, serviceCatalogService, serviceUsageService, viewState,
+  type BankAccountRecord, type EcgUltrasoundTestRecord, type LabTestRecord, type ServiceCatalogRecord,
+} from "@/lib/services"
+import { listAll } from "@/lib/services/reference/listAll"
+import { useBankAccounts, useExpenseCategories } from "@/lib/useReferenceData"
+import { useResource } from "@/lib/useResource"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ContractPending } from "@/components/shared/ContractPending"
+import { MockModeOnly } from "@/components/shared/MockModeOnly"
+import { ItemHistoryView, ServiceUsageView } from "@/components/shared/ItemHistoryView"
 import type {
-  PanelType, ServiceCatalogItem, Panel, GuardianRelationItem, EcgUltrasoundTest, Disease, LabTest, BankAccount,
+  PanelType, Panel, GuardianRelationItem, Disease, LabTestCategory,
 } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -30,6 +37,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
+
+// Panels, Wards, Guardian Relations, Diagnoses and Clinic Settings have NO service and NO confirmed API contract: they still read and
+// mutate the shared demo arrays directly. They are therefore wrapped in <MockModeOnly> — real demo behaviour in mock mode, an explicit
+// contract-pending notice (children never mounted) in API mode, so demo records are never shown or "saved" as if they were real.
+// Banks and Expense Categories (T7 / T6): in API mode an operation is offered only when its endpoint is configured.
+const financeContract = financeContractStatus(dataSource)
+// Services Catalog and its Item History (T12): in API mode each operation is offered only when its endpoint is confirmed.
+const catalogContract = crossModuleContractStatus(dataSource)
 
 const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology", "Procedure", "Diagnostic", "Emergency"]
 const PANEL_TYPES: PanelType[] = ["Insurance", "Corporate", "Government", "Other"]
@@ -68,14 +84,24 @@ export default function MasterDataPage() {
         <div className="mt-6">
           <TabsContent value="services" className="mt-0 outline-none"><ServicesTab /></TabsContent>
           <TabsContent value="labtests" className="mt-0 outline-none"><LabTestsTab /></TabsContent>
-          <TabsContent value="panels" className="mt-0 outline-none"><PanelsTab /></TabsContent>
-          <TabsContent value="wards" className="mt-0 outline-none"><WardsTab /></TabsContent>
-          <TabsContent value="guardian" className="mt-0 outline-none"><GuardianRelationsTab /></TabsContent>
+          <TabsContent value="panels" className="mt-0 outline-none">
+            <MockModeOnly source={dataSource} title="Panels are unavailable" awaiting={["panels / organisations (list, create, edit, activate)"]} testId="masterdata-panels-pending"><PanelsTab /></MockModeOnly>
+          </TabsContent>
+          <TabsContent value="wards" className="mt-0 outline-none">
+            <MockModeOnly source={dataSource} title="Wards and beds are unavailable" awaiting={["wards and beds (list, bed status)"]} testId="masterdata-wards-pending" noun="ward list"><WardsTab /></MockModeOnly>
+          </TabsContent>
+          <TabsContent value="guardian" className="mt-0 outline-none">
+            <MockModeOnly source={dataSource} title="Guardian relations are unavailable" awaiting={["guardian relations (list, create, edit, activate)"]} testId="masterdata-guardian-pending"><GuardianRelationsTab /></MockModeOnly>
+          </TabsContent>
           <TabsContent value="ecg" className="mt-0 outline-none"><EcgUltrasoundTab /></TabsContent>
-          <TabsContent value="diseases" className="mt-0 outline-none"><DiseasesTab /></TabsContent>
+          <TabsContent value="diseases" className="mt-0 outline-none">
+            <MockModeOnly source={dataSource} title="Diagnoses are unavailable" awaiting={["diagnoses / ICD codes (list, create, edit)"]} testId="masterdata-diseases-pending"><DiseasesTab /></MockModeOnly>
+          </TabsContent>
           <TabsContent value="expenses" className="mt-0 outline-none"><ExpenseCategoriesTab /></TabsContent>
           <TabsContent value="banks" className="mt-0 outline-none"><BanksTab /></TabsContent>
-          <TabsContent value="clinic" className="mt-0 outline-none"><ClinicSettingsTab /></TabsContent>
+          <TabsContent value="clinic" className="mt-0 outline-none">
+            <MockModeOnly source={dataSource} title="Clinic settings are unavailable" awaiting={["clinic settings (read, save)"]} testId="masterdata-clinic-pending" noun="settings form"><ClinicSettingsTab /></MockModeOnly>
+          </TabsContent>
         </div>
       </Tabs>
     </div>
@@ -83,15 +109,46 @@ export default function MasterDataPage() {
 }
 
 function ServicesTab() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
+  const { toast } = useToast()
   const [categoryFilter, setCategoryFilter] = React.useState("All")
-  const [modalTarget, setModalTarget] = React.useState<ServiceCatalogItem | "new" | null>(null)
-  const [historyTarget, setHistoryTarget] = React.useState<ServiceCatalogItem | null>(null)
+  const [modalTarget, setModalTarget] = React.useState<ServiceCatalogRecord | "new" | null>(null)
+  const [historyTarget, setHistoryTarget] = React.useState<ServiceCatalogRecord | null>(null)
+  const [busyId, setBusyId] = React.useState<string | null>(null)
 
-  const rows = categoryFilter === "All" ? SERVICE_CATALOG : SERVICE_CATALOG.filter((s) => s.category === categoryFilter)
+  const loadServices = React.useCallback(
+    (signal: AbortSignal) => listAll((o) => serviceCatalogService.list({ ...o, category: categoryFilter === "All" ? undefined : categoryFilter }), { signal }),
+    [categoryFilter]
+  )
+  const { data, error, loading, reload } = useResource(loadServices)
+  const rows = data?.items ?? []
+  const pending = isNotConnectedError(error)
+  const view = viewState({ data, error, loading, rowCount: rows.length })
+
+  // The Active switch is "deactivate" in the Task List's words; it goes through the same update operation as Edit.
+  const setActive = async (s: ServiceCatalogRecord, active: boolean) => {
+    const { id, ...rest } = s
+    setBusyId(id)
+    try {
+      await serviceCatalogService.update(id, { ...rest, active })
+      reload()
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not update the service", description: errorSummary(err) })
+    } finally {
+      setBusyId(null)
+    }
+  }
 
   return (
     <div className="space-y-4">
+      {catalogContract.pending && (
+        <div data-testid="services-catalog-banner" role="status" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-500/30">
+          <p className="font-bold">The services catalogue is not connected to the backend.</p>
+          <p className="mt-1">
+            No catalogue contract has been provided to the frontend (awaiting: {catalogContract.missing.filter((op) => op.startsWith("serviceCatalog.") || op === "itemHistory.list").map((op) => CROSS_MODULE_OPERATION_LABELS[op]).join("; ")}).
+            No request is sent and no demo service is shown; adding, editing, deactivating and Item History stay disabled until the matching contract is confirmed.
+          </p>
+        </div>
+      )}
       <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger className={cn(selectClass, "w-full md:w-64")}><SelectValue /></SelectTrigger>
@@ -100,10 +157,23 @@ function ServicesTab() {
             {SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
           </SelectContent>
         </Select>
-        <Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Service</Button>
+        <Button className={primaryBtnClass} disabled={!catalogContract.can("serviceCatalog.create")} title={catalogContract.can("serviceCatalog.create") ? undefined : "Not connected: the add-service contract has not been provided"} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Service</Button>
       </div>
 
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        {pending ? (
+          <div className="p-6"><ContractPending title="The services catalogue is unavailable" awaiting={[CROSS_MODULE_OPERATION_LABELS["serviceCatalog.list"]]} testId="services-catalog-pending" noun="catalogue" /></div>
+        ) : view === "error" ? (
+          <div className="p-10" role="alert">
+            <EmptyState icon={AlertTriangle} title="Couldn't load the services catalogue" subtitle={errorSummary(error)} action={<Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>} />
+          </div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading services">
+            {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
+          </div>
+        ) : view === "empty" ? (
+          <div className="p-10"><EmptyState icon={Search} title="No services found" subtitle={categoryFilter === "All" ? "The catalogue has no services yet." : "No services in this category."} /></div>
+        ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -135,12 +205,12 @@ function ServicesTab() {
                   <TableCell className="py-4 font-semibold text-slate-500">{s.gstPct ?? 0}%</TableCell>
                   <TableCell className="py-4 font-semibold text-slate-500">{s.discountPct ?? 0}%</TableCell>
                   <TableCell className="py-4">
-                    <Switch checked={s.active} onCheckedChange={(v) => { s.active = v; forceUpdate() }} />
+                    <Switch aria-label={`${s.name} active`} checked={s.active} disabled={busyId === s.id || !catalogContract.can("serviceCatalog.update")} onCheckedChange={(v) => setActive(s, v)} />
                   </TableCell>
                   <TableCell className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" title="Item History" onClick={() => setHistoryTarget(s)}><History className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
+                      <Button aria-label={`Item History for ${s.name}`} variant="ghost" size="icon" disabled={!catalogContract.can("itemHistory.list")} className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" title={catalogContract.can("itemHistory.list") ? "Item History" : "Item History is not connected: the audit-log contract has not been provided"} onClick={() => setHistoryTarget(s)}><History className="h-4 w-4" /></Button>
+                      <Button aria-label={`Edit ${s.name}`} variant="ghost" size="icon" disabled={!catalogContract.can("serviceCatalog.update")} className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(s)}><Pencil className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -148,66 +218,66 @@ function ServicesTab() {
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
-      <ServiceModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+      <ServiceModal target={modalTarget} onClose={(saved) => { setModalTarget(null); if (saved) reload() }} />
       <ServiceHistoryDialog target={historyTarget} onClose={() => setHistoryTarget(null)} />
     </div>
   )
 }
 
-function ServiceHistoryDialog({ target, onClose }: { target: ServiceCatalogItem | null; onClose: () => void }) {
-  const usages = React.useMemo(() => {
-    if (!target) return []
-    return SERVICES_INVOICES.flatMap((inv) =>
-      inv.lines.filter((l) => l.name === target.name).map((l) => ({
-        invoiceNo: inv.invoiceNo, date: inv.date, patientId: inv.patientId, qty: l.qty, rate: l.rate, amount: l.amount,
-      }))
-    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [target])
-
+/**
+ * Item History (T12) is the AUDIT LOG: backend events describing changes to the item, read by entity type and ID. The Task List restricts it
+ * to admins; that restriction must be enforced by the backend — this button being shown or hidden is not access control, and the frontend
+ * infers nothing from a role name. In API mode the audit view is CONTRACT REQUIRED and says so (never "no history"); in mock mode it says the
+ * demo keeps no audit log. The old invoice-line list is NOT audit history: it lives on its own clearly labelled "Invoice usage (demo)" tab,
+ * offered in mock mode only.
+ */
+function ServiceHistoryDialog({ target, onClose }: { target: ServiceCatalogRecord | null; onClose: () => void }) {
   return (
     <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
-        <DialogHeader><DialogTitle className="text-xl">History — {target?.name}</DialogTitle></DialogHeader>
-        <div className="pt-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-          {usages.length === 0 ? (
-            <div className="py-10"><EmptyState icon={History} title="No usage yet" subtitle="This service hasn't appeared on any invoice." /></div>
-          ) : (
-            <div className="rounded-xl border border-slate-100 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50/50">
-                    <TableHead className="font-bold text-slate-500 h-auto py-3">Invoice No.</TableHead>
-                    <TableHead className="font-bold text-slate-500 h-auto py-3">Date</TableHead>
-                    <TableHead className="font-bold text-slate-500 h-auto py-3">Patient</TableHead>
-                    <TableHead className="font-bold text-slate-500 h-auto py-3">Qty</TableHead>
-                    <TableHead className="font-bold text-slate-500 h-auto py-3">Rate</TableHead>
-                    <TableHead className="font-bold text-slate-500 h-auto py-3">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {usages.map((u, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="font-mono text-[11px] font-bold text-slate-500">{u.invoiceNo}</TableCell>
-                      <TableCell className="text-sm font-medium">{format(new Date(u.date), "dd MMM yyyy")}</TableCell>
-                      <TableCell className="font-bold">{PATIENTS.find((p) => p.id === u.patientId)?.name ?? "—"}</TableCell>
-                      <TableCell className="font-semibold">{u.qty}</TableCell>
-                      <TableCell className="font-medium text-slate-600">{formatCurrency(u.rate)}</TableCell>
-                      <TableCell className="font-black">{formatCurrency(u.amount)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </div>
+        <DialogHeader><DialogTitle className="text-xl">Item History — {target?.name}</DialogTitle></DialogHeader>
+        {target && <ServiceHistoryBody key={target.id} target={target} />}
         <DialogFooter className="mt-4"><Button variant="ghost" className="rounded-xl font-bold h-11" onClick={onClose}>Close</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" | null; onClose: () => void }) {
+function ServiceHistoryBody({ target }: { target: ServiceCatalogRecord }) {
+  return (
+    <Tabs defaultValue="audit" className="pt-2">
+      <TabsList aria-label="History views">
+        <TabsTrigger value="audit">Audit history</TabsTrigger>
+        {dataSource === "mock" && <TabsTrigger value="usage">Invoice usage (demo)</TabsTrigger>}
+      </TabsList>
+      <TabsContent value="audit" className="mt-4 max-h-[60vh] overflow-y-auto custom-scrollbar"><AuditHistoryPanel target={target} /></TabsContent>
+      {dataSource === "mock" && <TabsContent value="usage" className="mt-4 max-h-[60vh] overflow-y-auto custom-scrollbar"><ServiceUsagePanel target={target} /></TabsContent>}
+    </Tabs>
+  )
+}
+
+function AuditHistoryPanel({ target }: { target: ServiceCatalogRecord }) {
+  const load = React.useCallback(
+    (signal: AbortSignal) => itemHistoryService.list({ subject: "serviceCatalogItem", id: target.id, signal }),
+    [target.id]
+  )
+  const { data, error, loading, reload } = useResource(load)
+  return <ItemHistoryView source={dataSource} state={{ entries: data?.items ?? null, error, loading, onRetry: reload }} />
+}
+
+function ServiceUsagePanel({ target }: { target: ServiceCatalogRecord }) {
+  const load = React.useCallback(
+    (signal: AbortSignal) => serviceUsageService.list({ id: target.id, signal }),
+    [target.id]
+  )
+  const { data, error, loading, reload } = useResource(load)
+  return <ServiceUsageView state={{ entries: data?.items ?? null, error, loading, onRetry: reload }} />
+}
+
+function ServiceModal({ target, onClose }: { target: ServiceCatalogRecord | "new" | null; onClose: (saved?: boolean) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const svc = isNew ? null : target
@@ -220,23 +290,31 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
   const [discountPct, setDiscountPct] = React.useState(svc?.discountPct ?? 0)
   const [remarks, setRemarks] = React.useState(svc?.remarks ?? "")
   const [barcode, setBarcode] = React.useState(svc?.barcode ?? false)
+  const [saving, setSaving] = React.useState(false)
 
   React.useEffect(() => {
     setName(svc?.name ?? ""); setNameLocal(svc?.nameLocal ?? ""); setCode(svc?.code ?? ""); setCategory(svc?.category ?? SERVICE_CATEGORIES[0]); setRate(svc?.rate ?? 0)
     setGstPct(svc?.gstPct ?? 0); setDiscountPct(svc?.discountPct ?? 0); setRemarks(svc?.remarks ?? ""); setBarcode(svc?.barcode ?? false)
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = () => {
-    if (!name || !code) return
-    if (isNew) {
-      SERVICE_CATALOG.push({ id: Math.max(0, ...SERVICE_CATALOG.map((s) => s.id)) + 1, code, name, nameLocal, category, rate, gstPct, discountPct, remarks, barcode, active: true })
-      toast({ title: `${name} added to catalogue` })
-    } else if (svc) {
-      const idx = SERVICE_CATALOG.findIndex((s) => s.id === svc.id)
-      if (idx >= 0) SERVICE_CATALOG[idx] = { ...SERVICE_CATALOG[idx], name, nameLocal, code, category, rate, gstPct, discountPct, remarks, barcode }
-      toast({ title: `${name} updated` })
+  const save = async () => {
+    const problems = failedChecks([[code, "Code is required"], [name, "Service Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
+    setSaving(true)
+    try {
+      if (isNew) {
+        await serviceCatalogService.create({ code, name, nameLocal, category, rate, gstPct, discountPct, remarks, barcode, active: true })
+        toast({ title: `${name} added to catalogue` })
+      } else if (svc) {
+        await serviceCatalogService.update(svc.id, { code, name, nameLocal, category, rate, gstPct, discountPct, remarks, barcode, active: svc.active })
+        toast({ title: `${name} updated` })
+      }
+      onClose(true)
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not save the service", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    onClose()
   }
 
   return (
@@ -244,28 +322,28 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
       <DialogContent className="sm:max-w-2xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Service" : "Edit Service"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input id={`${uid}-code`} className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{SERVICE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Local Name (اردو)</Label><Input className={inputClass} dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">GST %</Label><Input className={inputClass} type="number" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount %</Label><Input className={inputClass} type="number" value={discountPct || ""} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-service-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Service Name *</Label><Input id={`${uid}-service-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-local-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Local Name (اردو)</Label><Input id={`${uid}-local-name`} className={inputClass} dir="rtl" value={nameLocal} onChange={(e) => setNameLocal(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-rate-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Rate (Rs.)</Label><Input id={`${uid}-rate-rs`} className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-gst`} className="text-xs font-bold uppercase tracking-wider text-slate-500">GST %</Label><Input id={`${uid}-gst`} className={inputClass} type="number" value={gstPct || ""} onChange={(e) => setGstPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-discount`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Discount %</Label><Input id={`${uid}-discount`} className={inputClass} type="number" value={discountPct || ""} onChange={(e) => setDiscountPct(Number(e.target.value))} /></div>
           <div className="flex items-center gap-3 pt-6">
             <Checkbox checked={barcode} onCheckedChange={(v) => setBarcode(v === true)} id="svc-barcode" className="h-5 w-5 rounded-md" />
             <Label htmlFor="svc-barcode" className="cursor-pointer font-bold text-slate-700">Enable Barcode Generation</Label>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Textarea rows={2} className={cn(inputClass, "h-auto resize-none")} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Textarea id={`${uid}-remarks`} rows={2} className={cn(inputClass, "h-auto resize-none")} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
-          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
-          <Button className={primaryBtnClass} onClick={save}>Save Service</Button>
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={() => onClose()}>Cancel</Button>
+          <Button className={primaryBtnClass} disabled={saving} onClick={save}>{saving ? "Saving…" : "Save Service"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -273,16 +351,20 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogItem | "new" 
 }
 
 function LabTestsTab() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
   const [categoryFilter, setCategoryFilter] = React.useState("All")
-  const [modalTarget, setModalTarget] = React.useState<LabTest | "new" | null>(null)
-
-  const rows = categoryFilter === "All" ? LAB_TESTS : LAB_TESTS.filter((t) => t.category === categoryFilter)
+  const [modalTarget, setModalTarget] = React.useState<LabTestRecord | "new" | null>(null)
+  const loadTests = React.useCallback(
+    () => listAll((o) => labTestsService.list({ ...o, category: categoryFilter === "All" ? undefined : (categoryFilter as LabTestCategory) })),
+    [categoryFilter]
+  )
+  const { data, error, loading, reload } = useResource(loadTests)
+  const rows = data?.items ?? []
+  const view = viewState({ data, error, loading, rowCount: rows.length })
 
   return (
     <div className="space-y-4">
       <div className="rounded-[1.25rem] bg-indigo-50/50 p-4 border border-indigo-100 text-sm font-medium text-indigo-800">
-        <p>Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module — edit a test's fee once and it updates both Laboratory and Imaging order forms.</p>
+        <p>Radiology and Cardiology tests here (e.g. X-Ray, Ultrasound, ECG) are the same catalogue used by the Imaging module — edit a test&apos;s fee once and it updates both Laboratory and Imaging order forms.</p>
       </div>
       <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -296,6 +378,17 @@ function LabTestsTab() {
       </div>
 
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        {view === "error" ? (
+          <div className="p-10" role="alert">
+            <EmptyState icon={AlertTriangle} title="Couldn't load lab tests" subtitle={errorSummary(error)} action={<Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>} />
+          </div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading lab tests">
+            {Array.from({ length: 5 }, (_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
+          </div>
+        ) : view === "empty" ? (
+          <div className="p-10"><EmptyState icon={Search} title="No tests found" subtitle={categoryFilter === "All" ? "The catalogue has no lab tests yet." : "No tests in this category."} /></div>
+        ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -321,21 +414,24 @@ function LabTestsTab() {
                   <TableCell className="py-4 font-black text-slate-900">{formatCurrency(t.rate)}</TableCell>
                   <TableCell className="py-4 font-bold text-slate-500">{t.turnaroundHours}h</TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${t.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
-      <LabTestModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+      <LabTestModal target={modalTarget} onClose={(saved) => { setModalTarget(null); if (saved) reload() }} />
     </div>
   )
 }
 
-function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onClose: () => void }) {
+function LabTestModal({ target, onClose }: { target: LabTestRecord | "new" | null; onClose: (saved?: boolean) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
+  const [saving, setSaving] = React.useState(false)
   const isNew = target === "new"
   const item = isNew ? null : target
   const [code, setCode] = React.useState(item?.code ?? "")
@@ -349,17 +445,25 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
     setRate(item?.rate ?? 0); setTurnaroundHours(item?.turnaroundHours ?? 4)
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = () => {
-    if (!name.trim() || !code.trim()) return
-    if (isNew) {
-      LAB_TESTS.push({ id: Math.max(0, ...LAB_TESTS.map((t) => t.id)) + 1, code, name, category, rate, unit: "-", normalRange: "-", turnaroundHours })
-      toast({ title: `${name} added to catalogue` })
-    } else if (item) {
-      const idx = LAB_TESTS.findIndex((t) => t.id === item.id)
-      if (idx >= 0) LAB_TESTS[idx] = { ...LAB_TESTS[idx], code, name, category, rate, turnaroundHours }
-      toast({ title: `${name} updated` })
+  const save = async () => {
+    const problems = failedChecks([[code.trim(), "Code is required"], [name.trim(), "Test Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
+    setSaving(true)
+    try {
+      const input = { code, name, category, rate, turnaroundHours }
+      if (isNew) {
+        await labTestsService.create(input)
+        toast({ title: `${name} added to catalogue` })
+      } else if (item) {
+        await labTestsService.update(item.id, input)
+        toast({ title: `${name} updated` })
+      }
+      onClose(true)
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not save the test", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    onClose()
   }
 
   return (
@@ -367,21 +471,21 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Lab/Imaging Test" : "Edit Test"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Code *</Label><Input id={`${uid}-code`} className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as LabTest["category"])}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Select value={category} onValueChange={(v) => setCategory(v as LabTestCategory)}>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{LAB_TEST_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Turnaround (hours)</Label><Input className={inputClass} type="number" value={turnaroundHours || ""} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-test-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input id={`${uid}-test-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-fee-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input id={`${uid}-fee-rs`} className={inputClass} type="number" value={rate || ""} onChange={(e) => setRate(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-turnaround-hours`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Turnaround (hours)</Label><Input id={`${uid}-turnaround-hours`} className={inputClass} type="number" value={turnaroundHours || ""} onChange={(e) => setTurnaroundHours(Number(e.target.value))} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
-          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
-          <Button className={primaryBtnClass} onClick={save}>Save Test</Button>
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={() => onClose()}>Cancel</Button>
+          <Button disabled={saving} className={primaryBtnClass} onClick={save}>Save Test</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -389,13 +493,34 @@ function LabTestModal({ target, onClose }: { target: LabTest | "new" | null; onC
 }
 
 function BanksTab() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-  const [modalTarget, setModalTarget] = React.useState<BankAccount | "new" | null>(null)
+  const { toast } = useToast()
+  const accounts = useBankAccounts(financeContract.can("bankAccounts.list"))
+  const [modalTarget, setModalTarget] = React.useState<BankAccountRecord | "new" | null>(null)
+  const listPending = !financeContract.can("bankAccounts.list")
+  const view = viewState({ data: accounts.items.length > 0 ? accounts.items : null, error: accounts.error, loading: accounts.loading, rowCount: accounts.items.length })
+
+  const toggleActive = async (b: BankAccountRecord, active: boolean) => {
+    try {
+      await bankAccountsService.update(b.id, { bankName: b.bankName, accountTitle: b.accountTitle, accountNo: b.accountNo, branch: b.branch, active })
+      accounts.reload()
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not update the bank account", description: errorSummary(err) })
+    }
+  }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Bank Account</Button></div>
+      <div className="flex justify-end"><Button className={primaryBtnClass} disabled={!financeContract.can("bankAccounts.create")} title={financeContract.can("bankAccounts.create") ? undefined : "Awaiting the backend API contract"} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Bank Account</Button></div>
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        {listPending ? (
+          <div className="p-6"><ContractPending title="Bank accounts are unavailable" awaiting={[FINANCE_OPERATION_LABELS["bankAccounts.list"]]} testId="masterdata-banks-pending" /></div>
+        ) : view === "error" ? (
+          <div className="p-10" role="alert"><EmptyState icon={AlertTriangle} title="Couldn't load bank accounts" subtitle={errorSummary(accounts.error)} action={<Button variant="outline" className="rounded-xl font-bold" onClick={accounts.reload}>Try again</Button>} /></div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading bank accounts">{Array.from({ length: 3 }, (_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}</div>
+        ) : view === "empty" ? (
+          <EmptyState icon={AlertTriangle} title="No bank accounts" subtitle="No bank accounts have been added yet." />
+        ) : (
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>
@@ -409,28 +534,30 @@ function BanksTab() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {BANKS.map((b) => (
+              {accounts.items.map((b) => (
                 <TableRow key={b.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
                   <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{b.bankName}</TableCell>
                   <TableCell className="py-4 font-semibold text-slate-700">{b.accountTitle}</TableCell>
                   <TableCell className="py-4"><span className="font-mono text-[11px] font-bold bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{b.accountNo}</span></TableCell>
                   <TableCell className="py-4 font-medium text-slate-500">{b.branch}</TableCell>
-                  <TableCell className="py-4"><Switch checked={b.active} onCheckedChange={(v) => { b.active = v; forceUpdate() }} /></TableCell>
+                  <TableCell className="py-4"><Switch aria-label={`Active: ${b.bankName}`} checked={b.active} disabled={!financeContract.can("bankAccounts.update")} onCheckedChange={(v) => { void toggleActive(b, v) }} /></TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${b.bankName}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" disabled={!financeContract.can("bankAccounts.update")} onClick={() => setModalTarget(b)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
+        )}
       </div>
-      <BankModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+      <BankModal target={modalTarget} onClose={(saved) => { setModalTarget(null); if (saved) accounts.reload() }} />
     </div>
   )
 }
 
-function BankModal({ target, onClose }: { target: BankAccount | "new" | null; onClose: () => void }) {
+function BankModal({ target, onClose }: { target: BankAccountRecord | "new" | null; onClose: (saved?: boolean) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -438,22 +565,35 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
   const [accountTitle, setAccountTitle] = React.useState(item?.accountTitle ?? "")
   const [accountNo, setAccountNo] = React.useState(item?.accountNo ?? "")
   const [branch, setBranch] = React.useState(item?.branch ?? "")
+  const [saving, setSaving] = React.useState(false)
+  const canSave = financeContract.can(isNew ? "bankAccounts.create" : "bankAccounts.update")
 
-  React.useEffect(() => {
+  // Reload the fields whenever the dialog is pointed at a different account (derived during render rather than in an effect).
+  const [seenTarget, setSeenTarget] = React.useState(target)
+  if (seenTarget !== target) {
+    setSeenTarget(target)
     setBankName(item?.bankName ?? ""); setAccountTitle(item?.accountTitle ?? ""); setAccountNo(item?.accountNo ?? ""); setBranch(item?.branch ?? "")
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
-  const save = () => {
-    if (!bankName.trim() || !accountNo.trim()) return
-    if (isNew) {
-      BANKS.push({ id: Math.max(0, ...BANKS.map((b) => b.id)) + 1, bankName, accountTitle, accountNo, branch, active: true })
-      toast({ title: `${bankName} added` })
-    } else if (item) {
-      const idx = BANKS.findIndex((b) => b.id === item.id)
-      if (idx >= 0) BANKS[idx] = { ...BANKS[idx], bankName, accountTitle, accountNo, branch }
-      toast({ title: `${bankName} updated` })
+  const save = async () => {
+    if (!canSave) return
+    const problems = failedChecks([[bankName.trim(), "Bank Name is required"], [accountNo.trim(), "Account No. is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
+    setSaving(true)
+    try {
+      if (isNew) {
+        await bankAccountsService.create({ bankName, accountTitle, accountNo, branch })
+        toast({ title: `${bankName} added` })
+      } else if (item) {
+        await bankAccountsService.update(item.id, { bankName, accountTitle, accountNo, branch })
+        toast({ title: `${bankName} updated` })
+      }
+      onClose(true)
+    } catch (err) {
+      toast({ variant: "destructive", title: isNew ? "Could not add the bank account" : "Could not update the bank account", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    onClose()
   }
 
   return (
@@ -461,14 +601,14 @@ function BankModal({ target, onClose }: { target: BankAccount | "new" | null; on
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Bank Account" : "Edit Bank Account"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name</Label><Input className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Title</Label><Input className={inputClass} value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No.</Label><Input className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch</Label><Input className={inputClass} value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-bank-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Bank Name *</Label><Input id={`${uid}-bank-name`} className={inputClass} value={bankName} onChange={(e) => setBankName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-account-title`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Account Title</Label><Input id={`${uid}-account-title`} className={inputClass} value={accountTitle} onChange={(e) => setAccountTitle(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-account-no`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Account No. *</Label><Input id={`${uid}-account-no`} className={inputClass} value={accountNo} onChange={(e) => setAccountNo(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-branch`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Branch</Label><Input id={`${uid}-branch`} className={inputClass} value={branch} onChange={(e) => setBranch(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
-          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
-          <Button className={primaryBtnClass} onClick={save}>Save Account</Button>
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={() => onClose()}>Cancel</Button>
+          <Button className={primaryBtnClass} disabled={saving || !canSave} title={canSave ? undefined : "Awaiting the backend API contract"} onClick={save}>Save Account</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -506,7 +646,7 @@ function PanelsTab() {
                   <TableCell className="py-4 font-bold text-emerald-600">{p.commissionPct}%</TableCell>
                   <TableCell className="py-4"><Switch checked={p.active} onCheckedChange={(v) => { p.active = v; forceUpdate() }} /></TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${p.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -520,6 +660,7 @@ function PanelsTab() {
 }
 
 function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const panel = isNew ? null : target
@@ -535,7 +676,8 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name) return
+    const problems = failedChecks([[name, "Panel Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       PANELS.push({ id: Math.max(0, ...PANELS.map((p) => p.id)) + 1, name, type, contactPerson, phone, commissionPct, active: true })
       toast({ title: `${name} added` })
@@ -552,17 +694,17 @@ function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Panel" : "Edit Panel"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-panel-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name *</Label><Input id={`${uid}-panel-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
+            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-type`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{PANEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Commission %</Label><Input className={inputClass} type="number" value={commissionPct || ""} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input className={inputClass} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-commission`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Commission %</Label><Input id={`${uid}-commission`} className={inputClass} type="number" value={commissionPct || ""} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-contact-person`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input id={`${uid}-contact-person`} className={inputClass} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -615,7 +757,14 @@ function WardsTab() {
                   <TableHeader><TableRow className="bg-slate-50/50"><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Bed</TableHead><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Status</TableHead><TableHead className="font-bold text-slate-500 py-3 h-auto text-xs">Since</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {w.beds.map((b) => (
-                      <TableRow key={b.bedNo} className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0" onClick={() => cycleBedStatus(w.id, b.bedNo)}>
+                      <TableRow
+                        key={b.bedNo}
+                        className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0 focus-visible:outline-none focus-visible:bg-slate-100"
+                        onClick={() => cycleBedStatus(w.id, b.bedNo)}
+                        tabIndex={0}
+                        aria-label={`Bed ${b.bedNo}: ${b.status}. Press Enter to change status`}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); cycleBedStatus(w.id, b.bedNo) } }}
+                      >
                         <TableCell className="font-mono text-[11px] font-bold text-slate-600">{b.bedNo}</TableCell>
                         <TableCell><StatusBadge status={b.status} /></TableCell>
                         <TableCell className="text-[11px] font-semibold text-slate-400">{b.since ?? "—"}</TableCell>
@@ -656,7 +805,7 @@ function GuardianRelationsTab() {
                 <TableCell className="py-4 font-medium text-slate-500">{r.remarks ?? "—"}</TableCell>
                 <TableCell className="py-4"><Switch checked={r.active} onCheckedChange={(v) => { r.active = v; forceUpdate() }} /></TableCell>
                 <TableCell className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button>
+                  <Button aria-label={`Edit ${r.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -669,6 +818,7 @@ function GuardianRelationsTab() {
 }
 
 function GuardianRelationModal({ target, onClose }: { target: GuardianRelationItem | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -680,7 +830,8 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name.trim()) return
+    const problems = failedChecks([[name.trim(), "Relation Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       GUARDIAN_RELATIONS.push({ id: Math.max(0, ...GUARDIAN_RELATIONS.map((r) => r.id)) + 1, name: name.trim(), remarks, active: true })
       toast({ title: `${name} added` })
@@ -697,8 +848,8 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
       <DialogContent className="sm:max-w-md rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Guardian Relation" : "Edit Guardian Relation"}</DialogTitle></DialogHeader>
         <div className="space-y-5 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-relation-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label><Input id={`${uid}-relation-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input id={`${uid}-remarks`} className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-6 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -710,13 +861,37 @@ function GuardianRelationModal({ target, onClose }: { target: GuardianRelationIt
 }
 
 function EcgUltrasoundTab() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-  const [modalTarget, setModalTarget] = React.useState<EcgUltrasoundTest | "new" | null>(null)
+  const { toast } = useToast()
+  const [modalTarget, setModalTarget] = React.useState<EcgUltrasoundTestRecord | "new" | null>(null)
+  const loadTests = React.useCallback(() => listAll((o) => ecgUltrasoundTestsService.list(o)), [])
+  const { data, error, loading, reload } = useResource(loadTests)
+  const rows = data?.items ?? []
+  const view = viewState({ data, error, loading, rowCount: rows.length })
+
+  const toggleActive = async (t: EcgUltrasoundTestRecord, active: boolean) => {
+    try {
+      await ecgUltrasoundTestsService.update(t.id, { code: t.code, name: t.name, fee: t.fee, remarks: t.remarks, active })
+      reload()
+    } catch (err) {
+      toast({ variant: "destructive", title: `Could not ${active ? "activate" : "deactivate"} ${t.name}`, description: errorSummary(err) })
+    }
+  }
 
   return (
     <div className="space-y-4">
       <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Test</Button></div>
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
+        {view === "error" ? (
+          <div className="p-10" role="alert">
+            <EmptyState icon={AlertTriangle} title="Couldn't load ECG/Ultrasound tests" subtitle={errorSummary(error)} action={<Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>} />
+          </div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading ECG/Ultrasound tests">
+            {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}
+          </div>
+        ) : view === "empty" ? (
+          <div className="p-10"><EmptyState icon={Search} title="No ECG/Ultrasound tests" subtitle="None have been added yet." /></div>
+        ) : (
         <Table>
           <TableHeader>
             <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
@@ -729,7 +904,7 @@ function EcgUltrasoundTab() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {ECG_ULTRASOUND_TESTS.map((t) => (
+            {rows.map((t) => (
               <TableRow key={t.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
                 <TableCell className="px-6 py-4">
                   <span className="inline-flex items-center rounded-md bg-[#1CC0CE]/10 px-2 py-1 text-xs font-bold font-mono text-[#0891B2] ring-1 ring-inset ring-[#1CC0CE]/20 whitespace-nowrap">
@@ -739,23 +914,26 @@ function EcgUltrasoundTab() {
                 <TableCell className="py-4 font-bold text-[#0D1B2E]">{t.name}</TableCell>
                 <TableCell className="py-4 font-black text-slate-900">{formatCurrency(t.fee)}</TableCell>
                 <TableCell className="py-4 font-medium text-slate-500">{t.remarks ?? "—"}</TableCell>
-                <TableCell className="py-4"><Switch checked={t.active} onCheckedChange={(v) => { t.active = v; forceUpdate() }} /></TableCell>
+                <TableCell className="py-4"><Switch checked={t.active} onCheckedChange={(v) => toggleActive(t, v)} /></TableCell>
                 <TableCell className="px-6 py-4 text-right">
-                  <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
+                  <Button aria-label={`Edit ${t.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(t)}><Pencil className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        )}
       </div>
       <p className="mt-4 text-xs font-bold text-slate-400">Master data only in this phase — direct ECG/Ultrasound invoicing is planned for a later release; these tests can be billed today as line items on a Services Invoice.</p>
-      <EcgUltrasoundModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+      <EcgUltrasoundModal target={modalTarget} onClose={(saved) => { setModalTarget(null); if (saved) reload() }} />
     </div>
   )
 }
 
-function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "new" | null; onClose: () => void }) {
+function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTestRecord | "new" | null; onClose: (saved?: boolean) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
+  const [saving, setSaving] = React.useState(false)
   const isNew = target === "new"
   const item = isNew ? null : target
   const [code, setCode] = React.useState(item?.code ?? "")
@@ -767,17 +945,24 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
     setCode(item?.code ?? ""); setName(item?.name ?? ""); setFee(item?.fee ?? 0); setRemarks(item?.remarks ?? "")
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const save = () => {
-    if (!name.trim() || !code.trim()) return
-    if (isNew) {
-      ECG_ULTRASOUND_TESTS.push({ id: Math.max(0, ...ECG_ULTRASOUND_TESTS.map((t) => t.id)) + 1, code, name, fee, remarks, active: true })
-      toast({ title: `${name} added` })
-    } else if (item) {
-      const idx = ECG_ULTRASOUND_TESTS.findIndex((t) => t.id === item.id)
-      if (idx >= 0) ECG_ULTRASOUND_TESTS[idx] = { ...ECG_ULTRASOUND_TESTS[idx], code, name, fee, remarks }
-      toast({ title: `${name} updated` })
+  const save = async () => {
+    const problems = failedChecks([[code.trim(), "Test Code is required"], [name.trim(), "Test Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
+    setSaving(true)
+    try {
+      if (isNew) {
+        await ecgUltrasoundTestsService.create({ code, name, fee, remarks, active: true })
+        toast({ title: `${name} added` })
+      } else if (item) {
+        await ecgUltrasoundTestsService.update(item.id, { code, name, fee, remarks, active: item.active })
+        toast({ title: `${name} updated` })
+      }
+      onClose(true)
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not save the test", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    onClose()
   }
 
   return (
@@ -785,14 +970,14 @@ function EcgUltrasoundModal({ target, onClose }: { target: EcgUltrasoundTest | "
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add ECG/Ultrasound Test" : "Edit Test"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code</Label><Input className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input className={inputClass} type="number" value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-test-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Code *</Label><Input id={`${uid}-test-code`} className={inputClass} value={code} onChange={(e) => setCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-fee-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Fee (Rs.)</Label><Input id={`${uid}-fee-rs`} className={inputClass} type="number" value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-test-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Test Name *</Label><Input id={`${uid}-test-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input id={`${uid}-remarks`} className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
-          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
-          <Button className={primaryBtnClass} onClick={save}>Save</Button>
+          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={() => onClose()}>Cancel</Button>
+          <Button disabled={saving} className={primaryBtnClass} onClick={save}>Save</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -846,7 +1031,7 @@ function DiseasesTab() {
                   <TableCell className="py-4 font-bold text-[#0D1B2E]">{d.name}</TableCell>
                   <TableCell className="py-4 font-medium text-slate-600">{d.category}</TableCell>
                   <TableCell className="px-6 py-4 text-right">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}><Pencil className="h-4 w-4" /></Button>
+                    <Button aria-label={`Edit ${d.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}><Pencil className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
               ))}
@@ -860,6 +1045,7 @@ function DiseasesTab() {
 }
 
 function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onClose: () => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const item = isNew ? null : target
@@ -872,7 +1058,8 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = () => {
-    if (!name.trim() || !icdCode.trim()) return
+    const problems = failedChecks([[icdCode.trim(), "ICD Code is required"], [name.trim(), "Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
       DISEASES.push({ id: Math.max(0, ...DISEASES.map((d) => d.id)) + 1, icdCode, name, category })
       toast({ title: `${name} added` })
@@ -889,15 +1076,15 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
       <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
         <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Diagnosis" : "Edit Diagnosis"}</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code</Label><Input className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-icd-code`} className="text-xs font-bold uppercase tracking-wider text-slate-500">ICD Code *</Label><Input id={`${uid}-icd-code`} className={inputClass} value={icdCode} onChange={(e) => setIcdCode(e.target.value)} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
+            <Label htmlFor={`${uid}-category`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Category</Label>
             <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-category`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>{DISEASE_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label><Input id={`${uid}-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
         </div>
         <DialogFooter className="mt-4 gap-2">
           <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
@@ -909,36 +1096,65 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
 }
 
 function ExpenseCategoriesTab() {
-  const [categories, setCategories] = React.useState<string[]>(EXPENSE_CATEGORIES)
-  const [editing, setEditing] = React.useState<number | null>(null)
+  const { toast } = useToast()
+  const heads = useExpenseCategories(financeContract.can("expenseCategories.list"))
+  const [editing, setEditing] = React.useState<string | null>(null)
   const [editValue, setEditValue] = React.useState("")
   const [newValue, setNewValue] = React.useState("")
+  const [busy, setBusy] = React.useState(false)
+  const listPending = !financeContract.can("expenseCategories.list")
+  const view = viewState({ data: heads.items.length > 0 ? heads.items : null, error: heads.error, loading: heads.loading, rowCount: heads.items.length })
+  const hint = (op: "expenseCategories.create" | "expenseCategories.update" | "expenseCategories.remove") => (financeContract.can(op) ? undefined : "Awaiting the backend API contract")
+
+  // Runs one head operation; a failure is shown (with the backend's request id when there is one), never swallowed.
+  const run = async (action: () => Promise<unknown>, failure: string) => {
+    setBusy(true)
+    try {
+      await action()
+      heads.reload()
+      return true
+    } catch (err) {
+      toast({ variant: "destructive", title: failure, description: errorSummary(err) })
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 max-w-md">
       <h3 className="text-lg font-black text-[#0D1B2E] mb-6">Expense Categories</h3>
+      {listPending ? (
+        <div className="mb-6"><ContractPending title="Expense categories are unavailable" awaiting={[FINANCE_OPERATION_LABELS["expenseCategories.list"]]} testId="masterdata-expense-categories-pending" /></div>
+      ) : view === "error" ? (
+        <div className="mb-6" role="alert"><EmptyState icon={AlertTriangle} title="Couldn't load expense categories" subtitle={errorSummary(heads.error)} action={<Button variant="outline" className="rounded-xl font-bold" onClick={heads.reload}>Try again</Button>} /></div>
+      ) : view === "loading" ? (
+        <div className="space-y-2 mb-6" role="status" aria-label="Loading expense categories">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-12 w-full rounded-xl" />)}</div>
+      ) : (
       <div className="space-y-2 mb-6">
-        {categories.map((c, i) => (
-          <div key={c + i} className="flex items-center justify-between rounded-xl p-3 bg-slate-50 ring-1 ring-slate-100 group">
-            {editing === i ? (
-              <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-9 rounded-lg" autoFocus />
+        {view === "empty" && <p className="text-sm text-slate-500">No expense categories yet.</p>}
+        {heads.items.map((c) => (
+          <div key={c.id} className="flex items-center justify-between rounded-xl p-3 bg-slate-50 ring-1 ring-slate-100 group">
+            {editing === c.id ? (
+              <Input aria-label={`New name for ${c.name}`} value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-9 rounded-lg" autoFocus />
             ) : (
-              <span className="text-sm font-bold text-slate-700">{c}</span>
+              <span className="text-sm font-bold text-slate-700">{c.name}</span>
             )}
-            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-              {editing === i ? (
-                <Button size="sm" className="h-8 rounded-lg bg-[#0F2A4D]" onClick={() => { setCategories((cs) => cs.map((x, idx) => idx === i ? editValue : x)); setEditing(null) }}>Save</Button>
+            <div className="flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+              {editing === c.id ? (
+                <Button size="sm" className="h-8 rounded-lg bg-[#0F2A4D]" disabled={busy || !editValue.trim()} onClick={async () => { if (await run(() => expenseCategoriesService.update(c.id, { name: editValue }), "Could not rename the category")) setEditing(null) }}>Save</Button>
               ) : (
-                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg" onClick={() => { setEditing(i); setEditValue(c) }}><Pencil className="h-3.5 w-3.5 text-slate-400" /></Button>
+                <Button aria-label={`Edit ${c.name}`} variant="ghost" size="icon" className="h-8 w-8 rounded-lg" disabled={!financeContract.can("expenseCategories.update")} title={hint("expenseCategories.update")} onClick={() => { setEditing(c.id); setEditValue(c.name) }}><Pencil className="h-3.5 w-3.5 text-slate-400" /></Button>
               )}
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" onClick={() => setCategories((cs) => cs.filter((_, idx) => idx !== i))}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
+              <Button aria-label={`Delete ${c.name}`} variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-red-50 hover:text-red-600" disabled={busy || !financeContract.can("expenseCategories.remove")} title={hint("expenseCategories.remove")} onClick={() => { void run(() => expenseCategoriesService.remove(c.id), "Could not delete the category") }}><Trash2 className="h-3.5 w-3.5 text-red-400" /></Button>
             </div>
           </div>
         ))}
       </div>
+      )}
       <div className="flex gap-2">
-        <Input placeholder="New category name..." className={inputClass} value={newValue} onChange={(e) => setNewValue(e.target.value)} />
-        <Button className={primaryBtnClass} onClick={() => { if (newValue.trim()) { setCategories((cs) => [...cs, newValue.trim()]); setNewValue("") } }}>
+        <Input placeholder="New category name..." className={inputClass} value={newValue} disabled={!financeContract.can("expenseCategories.create")} onChange={(e) => setNewValue(e.target.value)} />
+        <Button aria-label="Add category" className={primaryBtnClass} disabled={busy || !financeContract.can("expenseCategories.create")} title={hint("expenseCategories.create")} onClick={async () => { if (newValue.trim() && (await run(() => expenseCategoriesService.create({ name: newValue }), "Could not add the category"))) setNewValue("") }}>
           <Plus className="h-5 w-5" />
         </Button>
       </div>
@@ -947,6 +1163,7 @@ function ExpenseCategoriesTab() {
 }
 
 function ClinicSettingsTab() {
+  const uid = React.useId()
   const { toast } = useToast()
   const [settings, setSettings] = React.useState(CLINIC_SETTINGS)
 
@@ -955,12 +1172,12 @@ function ClinicSettingsTab() {
       <h3 className="text-xl font-black text-[#0D1B2E] mb-6 pb-4 border-b border-slate-100">Clinic Settings</h3>
       <div className="space-y-6">
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (English)</Label><Input className={inputClass} value={settings.nameEn} onChange={(e) => setSettings((s) => ({ ...s, nameEn: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (Urdu)</Label><Input className={inputClass} dir="rtl" value={settings.nameUr} onChange={(e) => setSettings((s) => ({ ...s, nameUr: e.target.value }))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input className={inputClass} value={settings.address} onChange={(e) => setSettings((s) => ({ ...s, address: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input className={inputClass} value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} /></div>
-          <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Tagline</Label><Input className={inputClass} value={settings.tagline} onChange={(e) => setSettings((s) => ({ ...s, tagline: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-clinic-name-english`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (English)</Label><Input id={`${uid}-clinic-name-english`} className={inputClass} value={settings.nameEn} onChange={(e) => setSettings((s) => ({ ...s, nameEn: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-clinic-name-urdu`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Clinic Name (Urdu)</Label><Input id={`${uid}-clinic-name-urdu`} className={inputClass} dir="rtl" value={settings.nameUr} onChange={(e) => setSettings((s) => ({ ...s, nameUr: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-address`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input id={`${uid}-address`} className={inputClass} value={settings.address} onChange={(e) => setSettings((s) => ({ ...s, address: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={settings.phone} onChange={(e) => setSettings((s) => ({ ...s, phone: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-email`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input id={`${uid}-email`} className={inputClass} value={settings.email} onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-tagline`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Tagline</Label><Input id={`${uid}-tagline`} className={inputClass} value={settings.tagline} onChange={(e) => setSettings((s) => ({ ...s, tagline: e.target.value }))} /></div>
           
           <div className="space-y-1.5 sm:col-span-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Logo</Label>
@@ -969,18 +1186,18 @@ function ClinicSettingsTab() {
             </div>
           </div>
           
-          <div className="space-y-1.5 sm:col-span-2 pt-4 border-t border-slate-100"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Print Header</Label><Input className={inputClass} value={settings.printHeader} onChange={(e) => setSettings((s) => ({ ...s, printHeader: e.target.value }))} /></div>
+          <div className="space-y-1.5 sm:col-span-2 pt-4 border-t border-slate-100"><Label htmlFor={`${uid}-print-header`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Print Header</Label><Input id={`${uid}-print-header`} className={inputClass} value={settings.printHeader} onChange={(e) => setSettings((s) => ({ ...s, printHeader: e.target.value }))} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Currency Symbol</Label>
-            <Input className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.currencySymbol} />
+            <Label htmlFor={`${uid}-currency-symbol`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Currency Symbol</Label>
+            <Input id={`${uid}-currency-symbol`} className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.currencySymbol} />
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact support to change</p>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Default City</Label><Input className={inputClass} value={settings.defaultCity} onChange={(e) => setSettings((s) => ({ ...s, defaultCity: e.target.value }))} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</Label><Input className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.timezone} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-default-city`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Default City</Label><Input id={`${uid}-default-city`} className={inputClass} value={settings.defaultCity} onChange={(e) => setSettings((s) => ({ ...s, defaultCity: e.target.value }))} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-timezone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Timezone</Label><Input id={`${uid}-timezone`} className={cn(inputClass, "bg-slate-100 font-bold text-slate-500")} readOnly value={settings.timezone} /></div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Year Start</Label>
+            <Label htmlFor={`${uid}-financial-year-start`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Financial Year Start</Label>
             <Select value={settings.fiscalYearStart} onValueChange={(v) => setSettings((s) => ({ ...s, fiscalYearStart: v }))}>
-              <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-financial-year-start`} className={selectClass}><SelectValue /></SelectTrigger>
               <SelectContent>
                 {["January", "April", "July", "October"].map((m) => <SelectItem key={m} value={m}>{m}</SelectItem>)}
               </SelectContent>

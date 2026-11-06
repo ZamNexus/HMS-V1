@@ -3,10 +3,12 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { differenceInDays } from "date-fns"
-import { Eye, Pencil, Printer, Plus, UserX, Search } from "lucide-react"
+import { AlertTriangle, Eye, Pencil, Printer, Plus, UserX, Search } from "lucide-react"
 
-import { PATIENTS } from "@/data/patients"
 import { ENCOUNTERS } from "@/data/encounters"
+import { dataSource, errorSummary, legacyPatientId, patientsService, viewState } from "@/lib/services"
+import { useResource } from "@/lib/useResource"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Pagination } from "@/components/shared/Pagination"
@@ -16,8 +18,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 
 const PAGE_SIZE = 10
 const FILTERS = ["All", "Active", "IPD", "Inactive"] as const
+const STATUS_FOR_FILTER = { All: undefined, Active: "active", IPD: "ipd", Inactive: "inactive" } as const
 
-function lastVisit(patientId: number): string {
+// "Last Visit" still comes from the (mock) encounters data, so it only applies to patients that have a legacy id.
+// Real backend patients show "—" until encounters are connected.
+function lastVisit(patientId: number | null): string {
+  if (patientId === null || dataSource !== "mock") return "—"
   const visits = ENCOUNTERS.filter((e) => e.patientId === patientId)
   if (visits.length === 0) return "—"
   const latest = visits.reduce((a, b) => (new Date(a.date) > new Date(b.date) ? a : b))
@@ -32,24 +38,21 @@ export default function PatientListPage() {
   const [search, setSearch] = React.useState("")
   const [filter, setFilter] = React.useState<(typeof FILTERS)[number]>("All")
   const [page, setPage] = React.useState(1)
+  const [query, setQuery] = React.useState("")
 
-  const filtered = React.useMemo(() => {
-    let list = PATIENTS
-    if (filter === "Active") list = list.filter((p) => p.status === "active")
-    if (filter === "IPD") list = list.filter((p) => p.status === "ipd")
-    if (filter === "Inactive") list = list.filter((p) => p.status === "inactive")
-    const q = search.trim().toLowerCase()
-    if (q) {
-      list = list.filter(
-        (p) => p.name.toLowerCase().includes(q) || p.mrNo.toLowerCase().includes(q) || p.phone.includes(q)
-      )
-    }
-    return list
-  }, [search, filter])
+  // Debounce the server-side search; any new search or filter restarts at page 1.
+  React.useEffect(() => {
+    const t = setTimeout(() => { setQuery(search.trim()); setPage(1) }, 250)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-
-  React.useEffect(() => setPage(1), [search, filter])
+  const loadPatients = React.useCallback(
+    (signal: AbortSignal) => patientsService.list({ search: query, status: STATUS_FOR_FILTER[filter], page, pageSize: PAGE_SIZE, signal }),
+    [query, filter, page]
+  )
+  const { data, error, loading, reload } = useResource(loadPatients)
+  const paged = data?.items ?? []
+  const view = viewState({ data, error, loading, rowCount: paged.length })
 
   return (
     <div className="space-y-6 pb-10">
@@ -58,7 +61,7 @@ export default function PatientListPage() {
         <div>
           <h1 className="text-3xl font-black text-[#0D1B2E] tracking-tight">Patients</h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            {PATIENTS.length} registered patients
+            {view === "error" ? "Patients unavailable" : data ? `${data.total} ${query || filter !== "All" ? "matching" : "registered"} patients` : "Loading patients…"}
           </p>
         </div>
         <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0" asChild>
@@ -88,7 +91,7 @@ export default function PatientListPage() {
               return (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => { setFilter(f); setPage(1) }}
                   className={cn(
                     "rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200",
                     isActive
@@ -106,9 +109,22 @@ export default function PatientListPage() {
 
       {/* ─── ELEVATED DATA TABLE ──────────────────────────────────────── */}
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
-        {paged.length === 0 ? (
+        {view === "error" ? (
+          <div className="p-10" role="alert">
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load patients"
+              subtitle={errorSummary(error)}
+              action={<Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>}
+            />
+          </div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading patients">
+            {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+          </div>
+        ) : view === "empty" ? (
           <div className="p-10">
-            <EmptyState icon={UserX} title="No patients found" subtitle="Try adjusting your search or filters." />
+            <EmptyState icon={UserX} title="No patients found" subtitle={query || filter !== "All" ? "Try adjusting your search or filters." : "No patients have been registered yet."} />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -149,7 +165,7 @@ export default function PatientListPage() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4 text-sm font-medium text-slate-600 whitespace-nowrap">{p.phone}</TableCell>
-                    <TableCell className="py-4 text-sm font-medium text-slate-500 whitespace-nowrap">{lastVisit(p.id)}</TableCell>
+                    <TableCell className="py-4 text-sm font-medium text-slate-500 whitespace-nowrap">{lastVisit(legacyPatientId(p))}</TableCell>
                     <TableCell className="py-4">
                       <StatusBadge status={p.status === "ipd" ? "IPD Admitted" : p.status} />
                     </TableCell>
@@ -189,9 +205,9 @@ export default function PatientListPage() {
         )}
         
         {/* Pagination Section */}
-        {paged.length > 0 && (
+        {data && paged.length > 0 && (
           <div className="border-t border-slate-100 bg-slate-50/50 p-4">
-            <Pagination page={page} pageSize={PAGE_SIZE} total={filtered.length} onPageChange={setPage} itemLabel="patients" />
+            <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} itemLabel="patients" />
           </div>
         )}
       </div>

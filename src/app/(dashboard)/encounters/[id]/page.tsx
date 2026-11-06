@@ -3,17 +3,20 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { format } from "date-fns"
-import { Printer, FlaskConical, ScanLine, Receipt, Stethoscope, Pill, LogOut, FileX } from "lucide-react"
+import { AlertTriangle, Printer, FlaskConical, ScanLine, Receipt, Stethoscope, Pill, LogOut, FileX } from "lucide-react"
 
-import { getEncounter, encountersForPatient } from "@/data/encounters"
-import { getPatient } from "@/data/patients"
-import { DOCTORS } from "@/data/doctors"
+import { DEFAULT_PAGE_SIZE, encountersService, errorSummary, formatMoneyString, isPositiveMoney, type BillSummary, type EncounterRecord } from "@/lib/services"
+import { isApiError } from "@/lib/api/client"
+import { useDoctors, useEncounter, usePatient } from "@/lib/useReferenceData"
+import { useResource } from "@/lib/useResource"
 import { cn, formatCurrency } from "@/lib/utils"
-import { encounterBillBreakdown } from "@/lib/billingAggregate"
+import { useBillSummary } from "@/lib/useBillSummary"
+import { BillSummaryNotice } from "@/components/shared/BillSummaryNotice"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -21,20 +24,57 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 export default function EncounterDetailPage() {
   const params = useParams()
   const id = params?.id as string | undefined
+  const { data, error, loading, reload } = useEncounter(id)
+
+  if (error && !data) {
+    const notFound = isApiError(error) && error.status === 404
+    return (
+      <div role="alert">
+        <EmptyState
+          icon={notFound ? FileX : AlertTriangle}
+          title={notFound ? "Encounter not found" : "Couldn't load this encounter"}
+          subtitle={notFound ? undefined : errorSummary(error)}
+          action={notFound ? undefined : <Button variant="outline" onClick={reload}>Try again</Button>}
+        />
+      </div>
+    )
+  }
+  if (loading || !data) {
+    return (
+      <div className="space-y-4" role="status" aria-label="Loading encounter">
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    )
+  }
+  return <EncounterDetail encounter={data} />
+}
+
+function EncounterDetail({ encounter }: { encounter: EncounterRecord }) {
   const router = useRouter()
-  const encounter = id ? getEncounter(Number(id)) : undefined
+  const patientQuery = usePatient(encounter.patientId)
+  const doctors = useDoctors()
+  const patient = patientQuery.data
+  const doctor = doctors.lookup.get(encounter.doctorId)
 
-  if (!encounter) return <EmptyState icon={FileX} title="Encounter not found" />
+  // The patient's other encounters (history tab), through the same service as the list.
+  const loadHistory = React.useCallback(
+    (signal: AbortSignal) => encountersService.list({ patientId: encounter.patientId, pageSize: DEFAULT_PAGE_SIZE, signal }),
+    [encounter.patientId]
+  )
+  const historyQuery = useResource(loadHistory)
+  const history = (historyQuery.data?.items ?? []).filter((e) => e.id !== encounter.id)
 
-  const patient = getPatient(encounter.patientId)
-  const doctor = DOCTORS.find((d) => d.userId === encounter.doctorId)
-  const history = patient ? encountersForPatient(patient.id).filter((e) => e.id !== encounter.id) : []
-  const bill = encounterBillBreakdown(encounter.id)
+  // The bill roll-up comes from billSummaryService (the backend owns every figure; nothing is summed here). Until its contract is
+  // confirmed, API mode shows an explicit "not connected" notice — never demo amounts and never a made-up zero.
+  const billState = useBillSummary({ kind: "encounter", id: encounter.id })
+  const bill = billState.data
 
   return (
     <div>
       <PageHeader
-        title={`${patient?.name ?? ""} — ${encounter.encId}`}
+        title={`${patient?.name ?? (patientQuery.loading ? "…" : "—")} — ${encounter.encId}`}
         subtitle={`${format(new Date(encounter.date), "dd MMM yyyy, HH:mm")} · ${doctor?.name ?? ""}`}
         actions={
           <>
@@ -53,16 +93,20 @@ export default function EncounterDetailPage() {
         }
       />
 
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
-        <BillStat label="Consultation" value={bill.consultation} />
-        <BillStat label="Services" value={bill.services} />
-        <BillStat label="Laboratory" value={bill.lab} />
-        <BillStat label="Imaging (X-Ray/ECG/USG)" value={bill.imaging} />
-        <BillStat label="Medicines" value={bill.medicine} />
-        <BillStat label="Total Bill" value={bill.total} emphasize />
-        <BillStat label="Received" value={bill.received} tone="success" />
-        <BillStat label="Balance" value={bill.balance} tone={bill.balance > 0 ? "danger" : "success"} emphasize />
-      </div>
+      {bill ? (
+        <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8" data-testid="encounter-bill-stats">
+          <BillStat label="Consultation" value={bill.consultation} />
+          <BillStat label="Services" value={bill.services} />
+          <BillStat label="Laboratory" value={bill.laboratory} />
+          <BillStat label="Imaging (X-Ray/ECG/USG)" value={bill.imaging} />
+          <BillStat label="Medicines" value={bill.medicines} />
+          <BillStat label="Total Bill" value={bill.total} emphasize />
+          <BillStat label="Received" value={bill.received} tone="success" />
+          <BillStat label="Balance" value={bill.balance} tone={isPositiveMoney(bill.balance) ? "danger" : "success"} emphasize />
+        </div>
+      ) : (
+        <div className="mb-6"><BillSummaryNotice state={billState} awaiting="encounter bill summary" testId="encounter-bill-pending" /></div>
+      )}
 
       <Tabs defaultValue="clinical">
         <TabsList>
@@ -125,23 +169,35 @@ export default function EncounterDetailPage() {
         </TabsContent>
 
         <TabsContent value="billing">
-          <Card>
-            <CardContent className="space-y-2 p-5 text-sm">
-              <div className="flex justify-between"><span className="text-muted-foreground">Consultation</span><span>{formatCurrency(bill.consultation)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Services</span><span>{formatCurrency(bill.services)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Laboratory</span><span>{formatCurrency(bill.lab)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Imaging (X-Ray)</span><span>{formatCurrency(bill.imaging)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Medicines</span><span>{formatCurrency(bill.medicine)}</span></div>
-              <div className="flex justify-between border-t border-border pt-2 font-semibold"><span>Total Bill</span><span>{formatCurrency(bill.total)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Amount Received</span><span className="text-success-600">{formatCurrency(bill.received)}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Balance</span><span className={bill.balance > 0 ? "font-semibold text-danger-600" : ""}>{formatCurrency(bill.balance)}</span></div>
-              <div className="pt-2"><StatusBadge status={encounter.paymentStatus} /></div>
-            </CardContent>
-          </Card>
+          {!bill ? (
+            <BillSummaryNotice state={billState} awaiting="encounter bill summary" testId="encounter-billing-tab-pending" />
+          ) : (
+            <Card>
+              <CardContent className="space-y-2 p-5 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">Consultation</span><span>{formatMoneyString(bill.consultation)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Services</span><span>{formatMoneyString(bill.services)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Laboratory</span><span>{formatMoneyString(bill.laboratory)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Imaging (X-Ray)</span><span>{formatMoneyString(bill.imaging)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Medicines</span><span>{formatMoneyString(bill.medicines)}</span></div>
+                <div className="flex justify-between border-t border-border pt-2 font-semibold"><span>Total Bill</span><span>{formatMoneyString(bill.total)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Amount Received</span><span className="text-success-600">{formatMoneyString(bill.received)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Balance</span><span className={isPositiveMoney(bill.balance) ? "font-semibold text-danger-600" : ""}>{formatMoneyString(bill.balance)}</span></div>
+                <div className="pt-2"><StatusBadge status={encounter.paymentStatus} /></div>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="history">
-          {history.length === 0 ? (
+          {historyQuery.error && !historyQuery.data ? (
+            <div role="alert">
+              <EmptyState icon={AlertTriangle} title="Couldn't load patient history" subtitle={errorSummary(historyQuery.error)} action={<Button variant="outline" onClick={historyQuery.reload}>Try again</Button>} />
+            </div>
+          ) : historyQuery.loading && !historyQuery.data ? (
+            <div className="space-y-2" role="status" aria-label="Loading patient history">
+              <Skeleton className="h-10 w-full" /><Skeleton className="h-10 w-full" />
+            </div>
+          ) : history.length === 0 ? (
             <EmptyState icon={FileX} title="No other encounters" />
           ) : (
             <Table>
@@ -153,9 +209,11 @@ export default function EncounterDetailPage() {
                 {history.map((h) => (
                   <TableRow key={h.id} className="cursor-pointer" onClick={() => router.push(`/encounters/${h.id}`)}>
                     <TableCell>{format(new Date(h.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell className="font-mono text-secondary">{h.encId}</TableCell>
+                    <TableCell className="font-mono text-secondary">
+                      <Link href={`/encounters/${h.id}`} onClick={(ev) => ev.stopPropagation()} className="hover:underline focus-visible:underline focus-visible:outline-none">{h.encId}</Link>
+                    </TableCell>
                     <TableCell><StatusBadge status={h.type} /></TableCell>
-                    <TableCell>{DOCTORS.find((d) => d.userId === h.doctorId)?.name}</TableCell>
+                    <TableCell>{doctors.lookup.get(h.doctorId)?.name}</TableCell>
                     <TableCell>{h.diagnosis}</TableCell>
                     <TableCell>{formatCurrency(h.netTotal)}</TableCell>
                   </TableRow>
@@ -179,12 +237,12 @@ function Section({ label, value }: { label: string; value?: string }) {
   )
 }
 
-function BillStat({ label, value, tone, emphasize }: { label: string; value: number; tone?: "success" | "danger"; emphasize?: boolean }) {
+function BillStat({ label, value, tone, emphasize }: { label: string; value: BillSummary["total"]; tone?: "success" | "danger"; emphasize?: boolean }) {
   const toneClass = tone === "success" ? "text-success-600" : tone === "danger" ? "text-danger-600" : "text-foreground"
   return (
     <div className="rounded-md border border-border bg-muted/30 p-3">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={cn("mt-0.5 font-mono", emphasize ? "text-base font-bold" : "text-sm font-medium", toneClass)}>{formatCurrency(value)}</div>
+      <div className={cn("mt-0.5 font-mono", emphasize ? "text-base font-bold" : "text-sm font-medium", toneClass)}>{formatMoneyString(value)}</div>
     </div>
   )
 }

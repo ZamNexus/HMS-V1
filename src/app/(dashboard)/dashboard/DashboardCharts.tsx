@@ -7,21 +7,16 @@ import {
 } from "recharts"
 import { formatCurrency } from "@/lib/utils"
 import { format } from "date-fns"
+import type { DashboardRevenuePoint, DashboardVisitPoint } from "@/lib/services"
 
-const WEEKLY_VISITS = [
-  { day: "Mon", count: 18 }, { day: "Tue", count: 22 }, { day: "Wed", count: 19 },
-  { day: "Thu", count: 31 }, { day: "Fri", count: 28 }, { day: "Sat", count: 15 }, { day: "Sun", count: 8 },
-]
-const REVENUE_7D = [35000, 42000, 38000, 51000, 44000, 39000, 42500]
-const revenueData = REVENUE_7D.map((v, i) => ({
-  label: format(new Date(Date.now() - (6 - i) * 86400000), "dd MMM"),
-  value: v,
-}))
+// Both charts draw what the dashboard service returned; nothing here is a constant any more. The revenue values are money strings from
+// the service — converted to numbers ONLY because the chart library needs numbers, for display.
 
-export function PatientFlowChart() {
+export function PatientFlowChart({ points }: { points: DashboardVisitPoint[] }) {
+  const data = points.map((p) => ({ day: p.label, count: p.count }))
   return (
     <ResponsiveContainer width="100%" height={280}>
-      <BarChart data={WEEKLY_VISITS} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+      <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
         <XAxis dataKey="day" tickLine={false} axisLine={false} fontSize={11} tick={{ fill: "#94A3B8", fontWeight: 700 }} dy={10} />
         <YAxis tickLine={false} axisLine={false} fontSize={11} tick={{ fill: "#94A3B8", fontWeight: 700 }} />
@@ -36,7 +31,8 @@ export function PatientFlowChart() {
   )
 }
 
-export function RevenueChart() {
+export function RevenueChart({ points }: { points: DashboardRevenuePoint[] }) {
+  const revenueData = points.map((p) => ({ label: format(new Date(`${p.date}T00:00:00`), "dd MMM"), value: Number(p.amount) }))
   return (
     <ResponsiveContainer width="100%" height={280}>
       <AreaChart data={revenueData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>

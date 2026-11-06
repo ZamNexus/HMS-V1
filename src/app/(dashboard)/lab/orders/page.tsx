@@ -3,38 +3,48 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { format } from "date-fns"
-import { FlaskConical, Plus, Search, AlertCircle, FileText, FileEdit } from "lucide-react"
+import { FlaskConical, Plus, Search, AlertCircle, AlertTriangle, FileText, FileEdit } from "lucide-react"
 
-import { LAB_ORDERS } from "@/data/lab"
-import { PATIENTS } from "@/data/patients"
-import type { LabOrderStatus } from "@/types"
+import {
+  DEFAULT_PAGE_SIZE, LAB_FILTERS, errorSummary, labFilterStatus, labOrdersService, viewState, type LabFilter,
+} from "@/lib/services"
+import { usePatients } from "@/lib/useReferenceData"
+import { useResource } from "@/lib/useResource"
 import { cn } from "@/lib/utils"
 import { EmptyState } from "@/components/shared/EmptyState"
+import { Pagination } from "@/components/shared/Pagination"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-
-const FILTERS = ["All", "Pending", "Collected", "In Progress", "Completed", "Delivered"] as const
 
 export default function LabOrderListPage() {
   const router = useRouter()
   const [search, setSearch] = React.useState("")
-  const [filter, setFilter] = React.useState<(typeof FILTERS)[number]>("All")
+  const [query, setQuery] = React.useState("")
+  const [filter, setFilter] = React.useState<LabFilter>("All")
+  const [page, setPage] = React.useState(1)
 
-  const pendingCount = LAB_ORDERS.filter((o) => o.status === "Pending").length
+  // Debounce the search; any new search or filter restarts at page 1.
+  React.useEffect(() => {
+    const t = setTimeout(() => { setQuery(search.trim()); setPage(1) }, 250)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const rows = React.useMemo(() => {
-    let list = [...LAB_ORDERS].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    if (filter !== "All") list = list.filter((o) => o.status === (filter as LabOrderStatus))
-    const q = search.trim().toLowerCase()
-    if (q) {
-      list = list.filter((o) => {
-        const patient = PATIENTS.find((p) => p.id === o.patientId)
-        return patient?.name.toLowerCase().includes(q) || o.labNo.toLowerCase().includes(q) || patient?.mrNo.toLowerCase().includes(q)
-      })
-    }
-    return list
-  }, [search, filter])
+  const loadOrders = React.useCallback(
+    (signal: AbortSignal) => labOrdersService.list({ search: query, status: labFilterStatus(filter), page, pageSize: DEFAULT_PAGE_SIZE, signal }),
+    [query, filter, page]
+  )
+  const { data, error, loading, reload } = useResource(loadOrders)
+  const rows = data?.items ?? []
+  const view = viewState({ data, error, loading, rowCount: rows.length })
+
+  // Header badge: how many orders are Pending overall (independent of the current filter/search). Hidden if unavailable.
+  const loadPending = React.useCallback((signal: AbortSignal) => labOrdersService.list({ status: "Pending", pageSize: 1, signal }), [])
+  const pendingQuery = useResource(loadPending)
+  const pendingCount = pendingQuery.data?.total ?? 0
+
+  const patients = usePatients(rows.map((r) => r.patientId))
 
   return (
     <div className="space-y-6 pb-10 max-w-7xl mx-auto">
@@ -51,7 +61,11 @@ export default function LabOrderListPage() {
             )}
           </div>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            {LAB_ORDERS.length} total laboratory orders
+            {view === "error"
+              ? "Laboratory orders unavailable"
+              : data
+                ? `${data.total} ${query || filter !== "All" ? "matching" : "total"} laboratory orders`
+                : "Loading laboratory orders…"}
           </p>
         </div>
         <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0" asChild>
@@ -76,12 +90,12 @@ export default function LabOrderListPage() {
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
           <div className="flex h-11 items-center gap-1 rounded-xl bg-slate-100/80 p-1">
-            {FILTERS.map((f) => {
+            {LAB_FILTERS.map((f) => {
               const isActive = filter === f
               return (
                 <button
                   key={f}
-                  onClick={() => setFilter(f)}
+                  onClick={() => { setFilter(f); setPage(1) }}
                   className={cn(
                     "rounded-lg px-4 py-2 text-xs font-bold transition-all duration-200 whitespace-nowrap",
                     isActive
@@ -99,9 +113,26 @@ export default function LabOrderListPage() {
 
       {/* ─── ELEVATED DATA TABLE ──────────────────────────────────────── */}
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
-        {rows.length === 0 ? (
+        {view === "error" ? (
+          <div className="p-10" role="alert">
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load lab orders"
+              subtitle={errorSummary(error)}
+              action={<Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>}
+            />
+          </div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading lab orders">
+            {Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+          </div>
+        ) : view === "empty" ? (
           <div className="p-10">
-            <EmptyState icon={FlaskConical} title="No lab orders found" subtitle="Try adjusting your search or filters." />
+            <EmptyState
+              icon={FlaskConical}
+              title="No lab orders found"
+              subtitle={query || filter !== "All" ? "Try adjusting your search or filters." : "No lab orders have been placed yet."}
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -120,14 +151,14 @@ export default function LabOrderListPage() {
               </TableHeader>
               <TableBody>
                 {rows.map((o) => {
-                  const patient = PATIENTS.find((p) => p.id === o.patientId)
+                  const patient = patients.lookup.get(o.patientId)
                   const testsLabel = o.tests.length > 2
                     ? `${o.tests.slice(0, 2).map((t) => t.testName).join(", ")} +${o.tests.length - 2} more`
                     : o.tests.map((t) => t.testName).join(", ")
                   return (
-                    <TableRow 
-                      key={o.id} 
-                      className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0" 
+                    <TableRow
+                      key={o.id}
+                      className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0"
                       onClick={() => router.push(`/lab/orders/${o.id}`)}
                     >
                       <TableCell className="px-6 py-4">
@@ -139,14 +170,14 @@ export default function LabOrderListPage() {
                         {format(new Date(o.date), "dd MMM yyyy, HH:mm")}
                       </TableCell>
                       <TableCell className="py-4 font-bold text-[#0D1B2E]">
-                        {patient?.name || "Unknown Patient"}
+                        {patient?.name ?? (patients.loading ? "…" : patients.failed ? "—" : "Unknown Patient")}
                       </TableCell>
                       <TableCell className="py-4">
                         <span className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-600 whitespace-nowrap">
                           {patient?.mrNo || "—"}
                         </span>
                       </TableCell>
-                      <TableCell className="py-4 text-sm font-medium text-slate-600 max-w-[220px] truncate">
+                      <TableCell className="py-4 text-sm font-medium text-slate-600 max-w-[220px] truncate" title={o.tests.map((t) => t.testName).join(", ")}>
                         {testsLabel}
                       </TableCell>
                       <TableCell className="py-4">
@@ -158,18 +189,18 @@ export default function LabOrderListPage() {
                       <TableCell className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-2">
                           {(o.status === "Collected" || o.status === "In Progress") && (
-                            <Button 
-                              variant="ghost" 
-                              className="h-9 px-3 rounded-lg text-[#0891B2] bg-[#1CC0CE]/10 hover:bg-[#1CC0CE]/20 hover:text-[#0891B2] transition-colors text-xs font-bold" 
+                            <Button
+                              variant="ghost"
+                              className="h-9 px-3 rounded-lg text-[#0891B2] bg-[#1CC0CE]/10 hover:bg-[#1CC0CE]/20 hover:text-[#0891B2] transition-colors text-xs font-bold"
                               asChild
                             >
                               <Link href={`/lab/orders/${o.id}/results`}><FileEdit className="h-3.5 w-3.5 mr-1.5" /> Enter Results</Link>
                             </Button>
                           )}
                           {(o.status === "Completed" || o.status === "Delivered") && (
-                            <Button 
-                              variant="ghost" 
-                              className="h-9 px-3 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs font-bold" 
+                            <Button
+                              variant="ghost"
+                              className="h-9 px-3 rounded-lg text-slate-600 bg-slate-100 hover:bg-slate-200 hover:text-slate-900 transition-colors text-xs font-bold"
                               onClick={() => window.print()}
                             >
                               <FileText className="h-3.5 w-3.5 mr-1.5" /> Print Report
@@ -182,6 +213,12 @@ export default function LabOrderListPage() {
                 })}
               </TableBody>
             </Table>
+          </div>
+        )}
+
+        {data && rows.length > 0 && data.total > DEFAULT_PAGE_SIZE && (
+          <div className="border-t border-slate-100 bg-slate-50/50 p-4">
+            <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={data.total} onPageChange={setPage} itemLabel="lab orders" />
           </div>
         )}
       </div>

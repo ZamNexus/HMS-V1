@@ -3,17 +3,19 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
 import { format } from "date-fns"
-import { Pencil, FlaskConical, ScanLine, Pill, Printer, Plus } from "lucide-react"
+import { AlertTriangle, Pencil, FlaskConical, ScanLine, Pill, Printer, Plus } from "lucide-react"
 
-import { getPatient } from "@/data/patients"
-import { getPanel } from "@/data/organisations"
+import { dataSource, errorSummary, formatMoneyString, isPositiveMoney, legacyPatientId, type PatientRecord } from "@/lib/services"
+import { useDoctors, useOrganisations, usePatient } from "@/lib/useReferenceData"
+import { isApiError } from "@/lib/api/client"
+import { Skeleton } from "@/components/ui/skeleton"
 import { encountersForPatient } from "@/data/encounters"
 import { LAB_ORDERS } from "@/data/lab"
 import { IMAGING_ORDERS } from "@/data/imaging"
 import { DISPENSE_RECORDS } from "@/data/pharmacy"
 import { CONSULTATION_INVOICES, SERVICES_INVOICES } from "@/data/billing"
-import { DOCTORS } from "@/data/doctors"
-import { patientBillBreakdown, encounterBillBreakdown } from "@/lib/billingAggregate"
+import { useBillSummary } from "@/lib/useBillSummary"
+import { BillSummaryNotice } from "@/components/shared/BillSummaryNotice"
 import { cn, formatCurrency, initials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -25,31 +27,73 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { FileText } from "lucide-react"
 
-function doctorName(doctorId: number) {
-  return DOCTORS.find((d) => d.userId === doctorId)?.name ?? "—"
+function NotYetConnected({ what }: { what: string }) {
+  return (
+    <EmptyState
+      icon={FileText}
+      title={`${what} not yet connected`}
+      subtitle="This section still depends on modules that are not connected to the backend, so nothing is shown rather than demo data."
+    />
+  )
 }
 
 export default function PatientProfilePage() {
   const params = useParams()
   const id = params?.id as string | undefined
-  const router = useRouter()
-  const patient = id ? getPatient(Number(id)) : undefined
+  const { data, error, loading, reload } = usePatient(id)
 
-  if (!patient) {
-    return <EmptyState icon={FileText} title="Patient not found" subtitle="This patient record does not exist." />
+  if (error && !data) {
+    const notFound = isApiError(error) && error.status === 404
+    return (
+      <div role="alert">
+        <EmptyState
+          icon={notFound ? FileText : AlertTriangle}
+          title={notFound ? "Patient not found" : "Couldn't load this patient"}
+          subtitle={notFound ? "This patient record does not exist." : errorSummary(error)}
+          action={notFound ? undefined : <Button variant="outline" onClick={reload}>Try again</Button>}
+        />
+      </div>
+    )
   }
+  if (loading || !data) {
+    return (
+      <div className="space-y-4" role="status" aria-label="Loading patient">
+        <Skeleton className="h-32 w-full rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
+      </div>
+    )
+  }
+  return <PatientProfile patient={data} />
+}
 
-  const visits = encountersForPatient(patient.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  const labResults = LAB_ORDERS.filter((o) => o.patientId === patient.id)
-  const imagingResults = IMAGING_ORDERS.filter((o) => o.patientId === patient.id)
-  const dispenses = DISPENSE_RECORDS.filter((d) => d.patientId === patient.id)
-  const consultInvoices = CONSULTATION_INVOICES.filter((c) => c.patientId === patient.id)
-  const servicesInvoices = SERVICES_INVOICES.filter((s) => s.patientId === patient.id)
-  const panel = getPanel(patient.panelId)
-
+function PatientProfile({ patient }: { patient: PatientRecord }) {
+  const router = useRouter()
   const [visitFilter, setVisitFilter] = React.useState<string>("all")
+
+  // Visits, lab, imaging, pharmacy and the invoice rows still come from other modules' mock data keyed by the legacy numeric patient
+  // id, and are read ONLY in mock mode (never in API mode, whatever the id looks like). Otherwise those sections get "not yet connected"
+  // notices instead of demo records. The balance panel itself comes from billSummaryService (see below).
+  const legacyId = dataSource === "mock" ? legacyPatientId(patient) : null
+  // Doctor names are only needed for the (mock) visit history; organisations only when the patient has one.
+  const doctors = useDoctors(legacyId !== null)
+  const organisations = useOrganisations(patient.panelId !== null)
+  const doctorName = (doctorId: number) => doctors.lookup.get(doctorId)?.name ?? "—"
+  const visits = legacyId !== null ? encountersForPatient(legacyId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : []
+  const labResults = legacyId !== null ? LAB_ORDERS.filter((o) => o.patientId === legacyId) : []
+  const imagingResults = legacyId !== null ? IMAGING_ORDERS.filter((o) => o.patientId === legacyId) : []
+  const dispenses = legacyId !== null ? DISPENSE_RECORDS.filter((d) => d.patientId === legacyId) : []
+  const consultInvoices = legacyId !== null ? CONSULTATION_INVOICES.filter((c) => c.patientId === legacyId) : []
+  const servicesInvoices = legacyId !== null ? SERVICES_INVOICES.filter((s) => s.patientId === legacyId) : []
+  const panelName =
+    patient.panelId === null
+      ? "Self-Pay"
+      : organisations.lookup.get(patient.panelId)?.name ?? (organisations.loading ? "…" : "Organisation (not yet connected)")
+
   const scopedEncounterId = visitFilter !== "all" ? Number(visitFilter) : null
-  const bill = scopedEncounterId ? encounterBillBreakdown(scopedEncounterId) : patientBillBreakdown(patient.id)
+  // The totals come from billSummaryService (the backend owns every figure; nothing is summed here): this patient, or one of their visits.
+  // API mode shows a "not connected" notice until the contract is confirmed — never demo amounts and never a made-up zero.
+  const billState = useBillSummary(scopedEncounterId !== null ? { kind: "encounter", id: String(scopedEncounterId) } : { kind: "patient", id: patient.id })
+  const bill = billState.data
 
   const lastVisit = visits[0]
   const activePrescriptions = lastVisit?.prescription ?? []
@@ -78,9 +122,9 @@ export default function PatientProfilePage() {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" onClick={() => router.push(`/patients/${patient.id}/edit`)}>
+            <Button asChild variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10"><Link href={`/patients/${patient.id}/edit`}>
               <Pencil className="h-4 w-4" /> Edit Patient
-            </Button>
+            </Link></Button>
             <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
               <Link href={`/encounters/new?patientId=${patient.id}`}><Plus className="h-4 w-4" /> New Encounter</Link>
             </Button>
@@ -116,7 +160,7 @@ export default function PatientProfilePage() {
               {patient.medicalRecordNo && <div className="flex justify-between"><span className="text-muted-foreground">Medical Record No</span><span className="font-mono">{patient.medicalRecordNo}</span></div>}
               {patient.ssEmpNo && <div className="flex justify-between"><span className="text-muted-foreground">SS/Emp No</span><span>{patient.ssEmpNo}</span></div>}
               <div className="flex justify-between"><span className="text-muted-foreground">Referred By</span><span>{patient.referredBy || "—"}</span></div>
-              <div className="flex justify-between"><span className="text-muted-foreground">Panel</span><span>{panel?.name ?? "Self-Pay"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Panel</span><span>{panelName}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Guardian</span><span>{patient.guardianRelation}{patient.guardianName ? ` — ${patient.guardianName}` : ""}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{patient.email || "—"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Address</span><span className="text-right">{patient.address || "—"}, {patient.city}{patient.country && patient.country !== "Pakistan" ? `, ${patient.country}` : ""}</span></div>
@@ -126,7 +170,7 @@ export default function PatientProfilePage() {
           <Card>
             <CardContent className="space-y-2 p-5 text-sm">
               <h3 className="font-semibold text-foreground">Last Visit</h3>
-              {lastVisit ? (
+              {legacyId === null ? <p className="text-muted-foreground">Not yet connected to the backend.</p> : lastVisit ? (
                 <>
                   <div className="flex justify-between"><span className="text-muted-foreground">Date</span><span>{format(new Date(lastVisit.date), "dd MMM yyyy")}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Doctor</span><span>{doctorName(lastVisit.doctorId)}</span></div>
@@ -140,7 +184,9 @@ export default function PatientProfilePage() {
           <Card className="lg:col-span-2">
             <CardContent className="p-5 text-sm">
               <h3 className="mb-2 font-semibold text-foreground">Active Prescriptions</h3>
-              {activePrescriptions.length === 0 ? (
+              {legacyId === null ? (
+                <p className="text-muted-foreground">Not yet connected to the backend.</p>
+              ) : activePrescriptions.length === 0 ? (
                 <p className="text-muted-foreground">No active prescriptions.</p>
               ) : (
                 <ul className="space-y-1">
@@ -157,7 +203,9 @@ export default function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="visits">
-          {visits.length === 0 ? (
+          {legacyId === null ? (
+            <NotYetConnected what="Visit history" />
+          ) : visits.length === 0 ? (
             <EmptyState icon={FileText} title="No visits recorded" />
           ) : (
             <Table>
@@ -172,7 +220,9 @@ export default function PatientProfilePage() {
                 {visits.map((v) => (
                   <TableRow key={v.id} className="cursor-pointer" onClick={() => router.push(`/encounters/${v.id}`)}>
                     <TableCell>{format(new Date(v.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell className="font-mono text-secondary">{v.encId}</TableCell>
+                    <TableCell className="font-mono text-secondary">
+                      <Link href={`/encounters/${v.id}`} onClick={(ev) => ev.stopPropagation()} className="hover:underline focus-visible:underline focus-visible:outline-none">{v.encId}</Link>
+                    </TableCell>
                     <TableCell><StatusBadge status={v.type} /></TableCell>
                     <TableCell>{doctorName(v.doctorId)}</TableCell>
                     <TableCell className="max-w-[180px] truncate">{v.chiefComplaint}</TableCell>
@@ -187,7 +237,9 @@ export default function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="lab">
-          {labResults.length === 0 ? (
+          {legacyId === null ? (
+            <NotYetConnected what="Lab results" />
+          ) : labResults.length === 0 ? (
             <EmptyState icon={FlaskConical} title="No lab results" />
           ) : (
             <Table>
@@ -215,6 +267,8 @@ export default function PatientProfilePage() {
         </TabsContent>
 
         <TabsContent value="billing">
+          {!bill ? <BillSummaryNotice state={billState} awaiting="patient bill summary" testId="patient-billing-pending" /> : (
+          <>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-foreground">
               {scopedEncounterId ? `Scoped to ${visits.find((v) => v.id === scopedEncounterId)?.encId ?? ""}` : "All Visits"}
@@ -231,18 +285,18 @@ export default function PatientProfilePage() {
           </div>
 
           <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total Billed</div><div className="text-xl font-bold">{formatCurrency(bill.total)}</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Paid</div><div className="text-xl font-bold text-success-600">{formatCurrency(bill.received)}</div></CardContent></Card>
-            <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Outstanding</div><div className={cn("text-xl font-bold", bill.balance > 0 ? "text-danger-600" : "text-success-600")}>{formatCurrency(bill.balance)}</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Total Billed</div><div className="text-xl font-bold">{formatMoneyString(bill.total)}</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Paid</div><div className="text-xl font-bold text-success-600">{formatMoneyString(bill.received)}</div></CardContent></Card>
+            <Card><CardContent className="p-4"><div className="text-xs text-muted-foreground">Outstanding</div><div className={cn("text-xl font-bold", isPositiveMoney(bill.balance) ? "text-danger-600" : "text-success-600")}>{formatMoneyString(bill.balance)}</div></CardContent></Card>
           </div>
 
           <Card className="mb-4">
             <CardContent className="grid grid-cols-2 gap-3 p-4 text-sm sm:grid-cols-5">
-              <div><div className="text-xs text-muted-foreground">Consultation</div><div className="font-semibold">{formatCurrency(bill.consultation)}</div></div>
-              <div><div className="text-xs text-muted-foreground">Services</div><div className="font-semibold">{formatCurrency(bill.services)}</div></div>
-              <div><div className="text-xs text-muted-foreground">Laboratory</div><div className="font-semibold">{formatCurrency(bill.lab)}</div></div>
-              <div><div className="text-xs text-muted-foreground">Imaging</div><div className="font-semibold">{formatCurrency(bill.imaging)}</div></div>
-              <div><div className="text-xs text-muted-foreground">Medicines</div><div className="font-semibold">{formatCurrency(bill.medicine)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Consultation</div><div className="font-semibold">{formatMoneyString(bill.consultation)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Services</div><div className="font-semibold">{formatMoneyString(bill.services)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Laboratory</div><div className="font-semibold">{formatMoneyString(bill.laboratory)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Imaging</div><div className="font-semibold">{formatMoneyString(bill.imaging)}</div></div>
+              <div><div className="text-xs text-muted-foreground">Medicines</div><div className="font-semibold">{formatMoneyString(bill.medicines)}</div></div>
             </CardContent>
           </Card>
 
@@ -283,6 +337,8 @@ export default function PatientProfilePage() {
             </Table>
             )
           })()}
+          </>
+          )}
         </TabsContent>
       </Tabs>
     </div>

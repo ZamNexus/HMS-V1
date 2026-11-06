@@ -1,33 +1,35 @@
 "use client"
 import Link from "next/link"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { format, formatDistanceToNow } from "date-fns"
 import {
   Users, Banknote, FlaskConical, BedDouble, ArrowUpRight, AlertTriangle, Pill,
-  Activity, ArrowRight, Stethoscope, ChevronRight, CalendarCheck
+  Activity, ArrowRight, Stethoscope, ChevronRight, CalendarCheck, type LucideIcon
 } from "lucide-react"
-import dynamic from "next/dynamic"
+
+import { useAuth } from "@/lib/auth"
+import { dashboardContractStatus, dashboardService, dataSource, formatMoneyString, patientsService, type DashboardSummaryData } from "@/lib/services"
+import { listAll } from "@/lib/services/reference/listAll"
+import { useMedicines } from "@/lib/useReferenceData"
+import { initials, cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
+import { StatusBadge } from "@/components/shared/StatusBadge"
+import { ReportBody, useReportData } from "@/components/reports/ReportState"
 
 // Recharts must be loaded client-side only — it accesses browser globals on init
 const RechartsBarChart = dynamic(() => import("./DashboardCharts").then(m => m.PatientFlowChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
 const RechartsAreaChart = dynamic(() => import("./DashboardCharts").then(m => m.RevenueChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
 
-import { useAuth } from "@/lib/auth"
-import { PATIENTS } from "@/data/patients"
-import { MEDICINES } from "@/data/medicines"
-import { formatCurrency, initials, cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { StatusBadge } from "@/components/shared/StatusBadge"
+// In API mode a widget is offered only when its endpoint is configured (from the OpenAPI spec). Until then the page says so and every
+// widget shows a contract-pending state: no number, chart or row on this screen is a placeholder any more. Mock mode is always connected.
+const contract = dashboardContractStatus(dataSource)
 
-
-
-const APPOINTMENTS = [
-  { time: "09:00", patient: "Kamran Iqbal", mr: "MR-2024-0091", doctor: "Dr. Sarah Khan", type: "OPD", status: "Completed" },
-  { time: "09:30", patient: "Sana Butt", mr: "MR-2024-0145", doctor: "Dr. Sarah Khan", type: "OPD", status: "In Progress" },
-  { time: "10:00", patient: "Muhammad Ali", mr: "MR-2024-0203", doctor: "Dr. Imran Siddiqui", type: "OPD", status: "Waiting" },
-  { time: "10:30", patient: "Asma Nawaz", mr: "MR-2024-0067", doctor: "Dr. Sarah Khan", type: "OPD", status: "Waiting" },
-  { time: "11:00", patient: "Tariq Mehmood", mr: "MR-2024-0312", doctor: "Dr. Imran Siddiqui", type: "Cardiology", status: "Waiting" },
-]
+const loadSummary = (signal: AbortSignal) => dashboardService.summary({ signal })
+const loadVisits = (signal: AbortSignal) => dashboardService.weeklyVisits({ signal })
+const loadRevenue = (signal: AbortSignal) => dashboardService.revenueTrend({ signal })
+const loadUpNext = (signal: AbortSignal) => dashboardService.upNext({ signal })
+const loadPatients = (signal: AbortSignal) => listAll((o) => patientsService.list(o), { signal })
 
 function greet() {
   const h = new Date().getHours()
@@ -36,72 +38,26 @@ function greet() {
   return "Good evening"
 }
 
-function DashboardCard({ title, subtitle, action, children, className, bodyClass }: any) {
-  return (
-    <div className={cn("rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 flex flex-col overflow-hidden h-full", className)}>
-      {(title || action) && (
-        <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-50 shrink-0">
-          <div>
-            {title && <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">{title}</h2>}
-            {subtitle && <p className="text-[11px] font-black text-slate-400 mt-1 uppercase tracking-wider">{subtitle}</p>}
-          </div>
-          {action && <div>{action}</div>}
-        </div>
-      )}
-      <div className={cn("flex-1 flex flex-col min-h-0", bodyClass)}>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-function RecentPatientsCard({ patients }: { patients: any[] }) {
-  return (
-    <DashboardCard title="Recently Registered" bodyClass="p-0 flex flex-col">
-      <div className="p-4 space-y-2 flex-1 overflow-y-auto">
-        {patients.length === 0 ? (
-           <div className="text-center p-8 text-slate-500 font-semibold text-sm">No recent patients</div>
-        ) : patients.map((p) => (
-          <Link
-            key={p.id}
-            href={`/patients/${p.id}`}
-            className="flex items-center gap-4 rounded-2xl p-3 bg-slate-50 ring-1 ring-slate-100 transition-all duration-300 hover:shadow-md hover:bg-white hover:ring-black/5 group"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-white text-[#0D1B2E] shadow-sm font-black text-sm group-hover:bg-[#0F2A4D] group-hover:text-white transition-colors">
-              {initials(p.name)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-sm font-black text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors">{p.name}</div>
-              <div className="font-mono text-[11px] font-bold text-slate-400 mt-0.5">{p.mrNo}</div>
-            </div>
-            <div className="shrink-0 text-right text-[11px] font-bold text-slate-400">
-              <div>{formatDistanceToNow(new Date(p.registrationDate), { addSuffix: true })}</div>
-            </div>
-          </Link>
-        ))}
-      </div>
-      <div className="p-4 bg-white border-t border-slate-100 shrink-0">
-        <Button variant="ghost" className="w-full rounded-xl font-black text-[#0F2A4D] hover:bg-slate-50 h-11" asChild>
-          <Link href="/patients">View All Patients</Link>
-        </Button>
-      </div>
-    </DashboardCard>
-  )
-}
-
 // ─── PREMIUM KPI TILE ────────────────────────────────────────────
 function KpiTile({
-  label, value, icon: Icon, iconColor, bgStyle, trend, onClick,
+  label, value, icon: Icon, iconColor, bgStyle, trend, pending, onClick,
 }: {
-  label: string; value: string; icon: any; iconColor: string; bgStyle: string; trend?: string; onClick?: () => void
+  label: string; value: string; icon: LucideIcon; iconColor: string; bgStyle: string; trend?: string; pending?: boolean; onClick?: () => void
 }) {
   return (
-    <div 
+    <div
       className={cn(
         "relative overflow-hidden rounded-[1.5rem] bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 transition-all duration-300 group",
-        onClick ? "cursor-pointer hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1" : ""
+        onClick ? "cursor-pointer hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1CC0CE]" : ""
       )}
       onClick={onClick}
+      {...(onClick && {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick() }
+        },
+      })}
     >
       <div className={cn("absolute -right-6 -top-6 rounded-full p-10 transition-transform group-hover:scale-110", bgStyle)}>
         <Icon className={cn("h-10 w-10 opacity-20", iconColor)} strokeWidth={1.5} />
@@ -113,8 +69,9 @@ function KpiTile({
           </div>
         </div>
         <div className="text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">{label}</div>
-        <div className="text-3xl font-black text-[#0D1B2E] tracking-tight">{value}</div>
-        {trend && (
+        <div data-testid="kpi-value" className="text-3xl font-black text-[#0D1B2E] tracking-tight">{value}</div>
+        {pending && <div className="mt-2 text-[11px] font-bold text-amber-700">Not connected — awaiting the backend contract</div>}
+        {!pending && trend && (
           <div className="mt-2 flex items-center gap-1.5 text-[11px] font-bold text-emerald-600">
             <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-emerald-100">
               <ArrowUpRight className="h-2.5 w-2.5" />
@@ -130,20 +87,43 @@ function KpiTile({
 export default function DashboardPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const summary = useReportData(loadSummary)
+  const visits = useReportData(loadVisits)
+  const revenue = useReportData(loadRevenue)
+  const upNext = useReportData(loadUpNext)
+  const patients = useReportData(loadPatients)
+  const medicines = useMedicines()
   if (!user) return null
 
-  const lowStock = MEDICINES.filter((m) => m.stock < m.reorderLevel)
-  const criticalStock = MEDICINES.filter((m) => m.stock === 0)
-  const recentPatients = [...PATIENTS]
-    .sort((a, b) => new Date(b.registrationDate).getTime() - new Date(a.registrationDate).getTime())
-    .slice(0, 5)
+  // Stock alert: from the pharmacy service's medicine list (the same list the inventory screen uses). Nothing is shown while that list is
+  // unavailable — the banner and the tiles say why; an absent alert is never a claim that stock is fine.
+  const lowStock = medicines.error ? [] : medicines.items.filter((m) => m.stock < m.reorderLevel)
+  const criticalStock = lowStock.filter((m) => m.stock === 0)
+  const recentPatients = patients.data
+    ? [...patients.data.items].sort((a, b) => new Date(b.registrationDate).getTime() - new Date(a.registrationDate).getTime()).slice(0, 5)
+    : []
 
   const showRevenue = user.role === "admin" || user.role === "billing"
   const canAddPatient = user.role === "admin" || user.role === "receptionist"
 
+  // A tile's value comes from the summary service; while it is not connected it reads "—" (never 0), while loading "…".
+  const tile = (pick: (s: DashboardSummaryData) => string) => (summary.data ? pick(summary.data) : summary.pending || summary.error ? "—" : "…")
+  const note = (key: keyof NonNullable<DashboardSummaryData["notes"]>) => summary.data?.notes?.[key]
+  const pending = summary.pending
+
   return (
     <div className="space-y-8 pb-10 max-w-[90rem] mx-auto animate-in fade-in duration-500">
-      
+
+      {contract.pending && (
+        <div role="status" data-testid="dashboard-not-connected" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-500/30">
+          <p className="font-bold">The Dashboard is not connected to the backend</p>
+          <p className="mt-1">
+            The API contract for the dashboard (the summary tiles, charts and schedule — routes, parameters and response schemas) has not been provided to the
+            frontend. In API mode no dashboard request is sent and no demo figure is shown: each tile reads “—” and each widget says what it is awaiting.
+          </p>
+        </div>
+      )}
+
       {/* ─── PREMIUM HERO BANNER ───────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-[1.5rem] bg-[#0A1B33] p-6 sm:p-8 shadow-2xl">
         <div className="absolute top-0 right-0 h-full w-full opacity-10 pointer-events-none">
@@ -157,7 +137,7 @@ export default function DashboardPage() {
           </svg>
         </div>
         <div className="absolute -top-[50%] -right-[10%] h-[200%] w-[60%] rounded-full bg-gradient-to-bl from-[#1CC0CE]/20 to-transparent blur-3xl pointer-events-none" />
-        
+
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
             <div className="mb-3 flex items-center gap-2">
@@ -169,21 +149,24 @@ export default function DashboardPage() {
             <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight leading-tight">
               {greet()}, <span className="text-[#1CC0CE]">{user.name.replace(/^Dr\.\s|^Nurse\s/, "").split(" ")[0]}</span>
             </h1>
-            <p className="mt-2 text-slate-300 text-sm font-medium max-w-2xl">
-              Here is what's happening at Citi Clinic today. You have <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">24</strong> OPD patients and <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">7</strong> pending lab reports.
+            <p data-testid="hero-text" className="mt-2 text-slate-300 text-sm font-medium max-w-2xl">
+              Here is what&apos;s happening at Citi Clinic today.
+              {summary.data && (
+                <> You have <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">{summary.data.todaysPatients}</strong> OPD patients and <strong className="text-white bg-white/10 px-2 py-0.5 rounded-md mx-1">{summary.data.pendingLabReports}</strong> pending lab reports.</>
+              )}
             </p>
           </div>
-          
+
           <div className="flex flex-wrap shrink-0 gap-3 mt-2 lg:mt-0">
             {showRevenue && (
-              <Button variant="outline" className="rounded-xl h-11 px-5 font-bold bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm" onClick={() => router.push("/dashboard/stats")}>
+              <Button asChild variant="outline" className="rounded-xl h-11 px-5 font-bold bg-white/5 border-white/10 text-white hover:bg-white/10 backdrop-blur-sm"><Link href={"/dashboard/stats"}>
                 <Activity className="h-4 w-4 mr-2" /> Financial Stats
-              </Button>
+              </Link></Button>
             )}
             {canAddPatient && (
-              <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-black shadow-lg shadow-[#0F2A4D]/30 ring-1 ring-white/10" onClick={() => router.push("/patients/new")}>
+              <Button asChild className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-black shadow-lg shadow-[#0F2A4D]/30 ring-1 ring-white/10"><Link href={"/patients/new"}>
                 Register Patient <ArrowRight className="h-4 w-4 ml-2 text-white/70" />
-              </Button>
+              </Link></Button>
             )}
           </div>
         </div>
@@ -204,9 +187,9 @@ export default function DashboardPage() {
               </p>
             </div>
           </div>
-          <Button className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0 shadow-sm h-11 px-6" onClick={() => router.push("/pharmacy/inventory")}>
+          <Button asChild className="rounded-xl font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0 shadow-sm h-11 px-6"><Link href={"/pharmacy/inventory"}>
             Restock Inventory
-          </Button>
+          </Link></Button>
         </div>
       )}
 
@@ -214,138 +197,165 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {user.role === "pharmacist" ? (
           <>
-            <KpiTile label="Dispensed Today" value="18" icon={Pill} bgStyle="bg-emerald-50" iconColor="text-emerald-600" trend="+4 from yesterday" />
-            <KpiTile label="Low Stock Items" value={String(lowStock.length)} icon={AlertTriangle} bgStyle="bg-rose-50" iconColor="text-rose-600" onClick={() => router.push("/pharmacy/inventory")} />
+            <KpiTile label="Dispensed Today" value={tile((s) => String(s.dispensedToday))} pending={pending} icon={Pill} bgStyle="bg-emerald-50" iconColor="text-emerald-600" trend={note("dispensedToday")} />
+            <KpiTile label="Low Stock Items" value={tile((s) => String(s.lowStockItems))} pending={pending} icon={AlertTriangle} bgStyle="bg-rose-50" iconColor="text-rose-600" onClick={() => router.push("/pharmacy/inventory")} />
           </>
         ) : user.role === "lab_tech" ? (
           <>
-            <KpiTile label="Pending Orders" value="7" icon={FlaskConical} bgStyle="bg-amber-50" iconColor="text-amber-600" />
-            <KpiTile label="Completed Today" value="12" icon={Users} bgStyle="bg-emerald-50" iconColor="text-emerald-600" />
+            <KpiTile label="Pending Orders" value={tile((s) => String(s.pendingOrders))} pending={pending} icon={FlaskConical} bgStyle="bg-amber-50" iconColor="text-amber-600" />
+            <KpiTile label="Completed Today" value={tile((s) => String(s.completedToday))} pending={pending} icon={Users} bgStyle="bg-emerald-50" iconColor="text-emerald-600" />
           </>
         ) : (
           <>
             <KpiTile
               label="Today's Patients"
-              value="24"
+              value={tile((s) => String(s.todaysPatients))}
+              pending={pending}
               icon={Users}
               bgStyle="bg-[#1CC0CE]/10"
               iconColor="text-[#0891B2]"
-              trend="+3 from yesterday"
+              trend={note("todaysPatients")}
             />
             {user.role === "doctor" ? (
-              <KpiTile label="My Patients" value="11" icon={Stethoscope} bgStyle="bg-[#1CC0CE]/10" iconColor="text-[#0891B2]" />
+              <KpiTile label="My Patients" value={tile((s) => String(s.myPatients))} pending={pending} icon={Stethoscope} bgStyle="bg-[#1CC0CE]/10" iconColor="text-[#0891B2]" />
             ) : showRevenue ? (
-              <KpiTile label="Revenue Today" value={formatCurrency(42500)} icon={Banknote} bgStyle="bg-emerald-50" iconColor="text-emerald-600" trend="+12% vs yesterday" />
+              <KpiTile label="Revenue Today" value={tile((s) => formatMoneyString(s.revenueToday))} pending={pending} icon={Banknote} bgStyle="bg-emerald-50" iconColor="text-emerald-600" trend={note("revenueToday")} />
             ) : null}
-            <KpiTile label="Pending Lab Reports" value="7" icon={FlaskConical} bgStyle="bg-amber-50" iconColor="text-amber-600" />
-            <KpiTile label="Admitted (IPD)" value="3" icon={BedDouble} bgStyle="bg-indigo-50" iconColor="text-indigo-600" trend="2 male · 1 female" />
+            <KpiTile label="Pending Lab Reports" value={tile((s) => String(s.pendingLabReports))} pending={pending} icon={FlaskConical} bgStyle="bg-amber-50" iconColor="text-amber-600" />
+            <KpiTile label="Admitted (IPD)" value={tile((s) => String(s.admittedIpd))} pending={pending} icon={BedDouble} bgStyle="bg-indigo-50" iconColor="text-indigo-600" trend={note("admittedIpd")} />
           </>
         )}
       </div>
 
-      {/* ─── GRID LAYOUT ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
-        
-        {/* ROW 2: CHART + COMPANION */}
-        <div className="lg:col-span-8 flex flex-col">
-          <DashboardCard title="Patient Flow This Week" subtitle="Total 141 visits over the last 7 days">
-            <div className="h-[280px] w-full">
-              <RechartsBarChart />
+      {/* ─── CHARTS ROW ────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 flex flex-col">
+          <div className="mb-6">
+            <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Patient Flow This Week</h2>
+            {visits.data && <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-wider">Total {visits.data.total} visits over the last 7 days</p>}
+          </div>
+          <ReportBody state={visits} label="Weekly patient visits" testId="dashboard-visits-pending" noun="chart">{(v) => <RechartsBarChart points={v.points} />}</ReportBody>
+        </div>
+
+        {showRevenue ? (
+          <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6 flex flex-col">
+            <div className="mb-6">
+              <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Revenue Trajectory</h2>
+              <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-wider">Cash flow across all departments</p>
             </div>
-          </DashboardCard>
-        </div>
+            <ReportBody state={revenue} label="Revenue trend" testId="dashboard-revenue-pending" noun="chart">{(r) => <RechartsAreaChart points={r} />}</ReportBody>
+          </div>
+        ) : null}
+      </div>
 
-        <div className="lg:col-span-4 flex flex-col">
-          {showRevenue ? (
-            <DashboardCard title="Revenue Trajectory" subtitle="Cash flow across all departments">
-              <div className="h-[280px] w-full">
-                <RechartsAreaChart />
+      {/* ─── BOTTOM ROW ────────────────────────────────────────────────── */}
+      {user.role !== "lab_tech" && user.role !== "pharmacist" && (
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+
+          {/* APPOINTMENTS TABLE */}
+          <div className="lg:col-span-2 rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Up Next</h2>
+                <p className="text-sm font-bold text-slate-400 mt-0.5 uppercase tracking-wider">Today&apos;s scheduled appointments</p>
               </div>
-            </DashboardCard>
-          ) : (
-            <RecentPatientsCard patients={recentPatients} />
-          )}
-        </div>
+              <Button variant="ghost" className="text-[#0891B2] font-black hover:bg-[#1CC0CE]/10 rounded-xl px-4 hidden sm:flex">
+                View Full Schedule <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
 
-        {/* ROW 3: UP NEXT + COMPANION */}
-        {user.role !== "lab_tech" && user.role !== "pharmacist" && (
-          <>
-            <div className={cn("flex flex-col", showRevenue ? "lg:col-span-8" : "lg:col-span-12")}>
-              <DashboardCard 
-                title="Up Next" 
-                subtitle="Today's scheduled appointments"
-                action={
-                  <Button variant="ghost" className="text-[#0891B2] font-black hover:bg-[#1CC0CE]/10 rounded-xl px-4 hidden sm:flex">
-                    View Full Schedule <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                }
-                bodyClass="p-0 overflow-hidden flex flex-col"
-              >
-                <div className="flex-1 overflow-auto">
-                  {APPOINTMENTS.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center p-12 text-center h-[280px]">
-                      <div className="h-12 w-12 rounded-2xl bg-slate-50 flex items-center justify-center mb-3">
-                        <CalendarCheck className="h-6 w-6 text-slate-300" />
-                      </div>
-                      <h3 className="text-slate-500 font-black">No appointments</h3>
-                      <p className="text-slate-400 text-sm mt-1">There are no scheduled appointments left for today.</p>
-                    </div>
-                  ) : (
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50/80 sticky top-0 z-10 backdrop-blur-sm border-b border-slate-100">
-                        <tr>
-                          <th className="py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 whitespace-nowrap">Time</th>
-                          <th className="py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Patient</th>
-                          {user.role !== "doctor" && (
-                            <th className="hidden py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:table-cell">Doctor</th>
-                          )}
-                          <th className="hidden py-3 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 md:table-cell">Type</th>
-                          <th className="py-3 px-6 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">Status</th>
+            <ReportBody state={upNext} label="Today's schedule" testId="dashboard-upnext-pending" noun="schedule">
+              {(rows) => (
+                <div className="p-0 overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-slate-50/80 border-b border-slate-100">
+                      <tr>
+                        <th className="py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Time</th>
+                        <th className="py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500">Patient</th>
+                        <th className="hidden py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 sm:table-cell">Doctor</th>
+                        <th className="hidden py-4 px-6 text-left text-[11px] font-black uppercase tracking-wider text-slate-500 md:table-cell">Type</th>
+                        <th className="py-4 px-6 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white">
+                      {rows.map((a) => (
+                        <tr
+                          key={a.time + a.patientName}
+                          className="cursor-pointer transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0 group"
+                          onClick={() => a.patientId && router.push(`/patients/${a.patientId}`)}
+                        >
+                          <td className="py-4 px-6 font-mono font-bold text-[#0D1B2E]">{a.time}</td>
+                          <td className="py-4 px-6">
+                            {a.patientId ? (
+                              <Link
+                                href={`/patients/${a.patientId}`}
+                                onClick={(ev) => ev.stopPropagation()}
+                                className="block font-bold text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors focus-visible:outline-none focus-visible:text-[#0891B2] focus-visible:underline"
+                              >
+                                {a.patientName}
+                              </Link>
+                            ) : (
+                              <div className="font-bold text-[#0D1B2E]">{a.patientName}</div>
+                            )}
+                            <div className="font-mono text-[11px] font-semibold text-slate-400 sm:hidden mt-0.5">{a.mrNo}</div>
+                          </td>
+                          <td className="hidden py-4 px-6 font-bold text-slate-600 sm:table-cell">{a.doctorName}</td>
+                          <td className="hidden py-4 px-6 md:table-cell">
+                            <span className="rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-black text-slate-500 tracking-wide uppercase">
+                              {a.type}
+                            </span>
+                          </td>
+                          <td className="py-4 px-6 text-right">
+                            <StatusBadge status={a.status} />
+                          </td>
                         </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-slate-50">
-                        {APPOINTMENTS.map((a) => {
-                          const patient = PATIENTS.find((p) => p.name === a.patient)
-                          return (
-                            <tr
-                              key={a.time + a.patient}
-                              className="cursor-pointer transition-colors hover:bg-slate-50/50 group"
-                              onClick={() => patient && router.push(`/patients/${patient.id}`)}
-                            >
-                              <td className="py-3.5 px-6 font-mono font-bold text-[#0D1B2E] whitespace-nowrap">{a.time}</td>
-                              <td className="py-3.5 px-6">
-                                <div className="font-bold text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors truncate">{a.patient}</div>
-                                <div className="font-mono text-[11px] font-semibold text-slate-400 sm:hidden mt-0.5">{a.mr}</div>
-                              </td>
-                              {user.role !== "doctor" && (
-                                <td className="hidden py-3.5 px-6 font-bold text-slate-600 sm:table-cell truncate">{a.doctor}</td>
-                              )}
-                              <td className="hidden py-3.5 px-6 md:table-cell">
-                                <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-black text-slate-500 tracking-wide uppercase">
-                                  {a.type}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-6 text-right">
-                                <StatusBadge status={a.status} />
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  )}
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </DashboardCard>
-            </div>
+              )}
+            </ReportBody>
+          </div>
 
-            {showRevenue && (
-              <div className="lg:col-span-4 flex flex-col">
-                <RecentPatientsCard patients={recentPatients} />
-              </div>
-            )}
-          </>
-        )}
-      </div>
+          {/* RECENT PATIENTS */}
+          <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 flex flex-col overflow-hidden">
+            <div className="p-6 pb-4 border-b border-slate-100">
+              <h2 className="text-xl font-black text-[#0D1B2E] tracking-tight">Recently Registered</h2>
+            </div>
+            <div className="p-4 space-y-2 flex-1 bg-slate-50/50">
+              <ReportBody state={patients} label="Recently registered patients" testId="dashboard-recent-pending" noun="list">
+                {() => (
+                  <>
+                    {recentPatients.map((p) => (
+                      <Link
+                        key={p.id}
+                        href={`/patients/${p.id}`}
+                        className="flex items-center gap-4 rounded-2xl p-3 bg-white ring-1 ring-slate-100 transition-all duration-300 hover:shadow-md hover:ring-black/5 group"
+                      >
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-slate-100 text-[#0D1B2E] shadow-inner font-black text-sm group-hover:bg-[#0F2A4D] group-hover:text-white transition-colors">
+                          {initials(p.name)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-black text-[#0D1B2E] group-hover:text-[#0891B2] transition-colors">{p.name}</div>
+                          <div className="font-mono text-[11px] font-bold text-slate-400 mt-0.5">{p.mrNo}</div>
+                        </div>
+                        <div className="shrink-0 text-right text-[11px] font-bold text-slate-400">
+                          <div>{formatDistanceToNow(new Date(p.registrationDate), { addSuffix: true })}</div>
+                        </div>
+                      </Link>
+                    ))}
+                  </>
+                )}
+              </ReportBody>
+            </div>
+            <div className="p-4 bg-white border-t border-slate-100">
+              <Button variant="ghost" className="w-full rounded-xl font-black text-[#0F2A4D] hover:bg-slate-50 h-11" asChild>
+                <Link href="/patients">View All Patients</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   )

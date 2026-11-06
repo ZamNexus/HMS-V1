@@ -1,18 +1,19 @@
 "use client"
 import * as React from "react"
 import { useRouter, useParams } from "next/navigation"
-import { FileX } from "lucide-react"
+import { AlertTriangle, FileX } from "lucide-react"
 
-import { getLabOrder, LAB_ORDERS } from "@/data/lab"
-import { getLabTest } from "@/data/labTests"
-import { getPatient } from "@/data/patients"
-import type { LabResultParam } from "@/types"
+import { errorSummary, flagFor, labOrdersService, type LabOrderRecord, type LabResultEntryInput } from "@/lib/services"
+import { isApiError } from "@/lib/api/client"
+import { useLabOrder, useLabTests, usePatient, type ReferenceList } from "@/lib/useReferenceData"
+import type { LabTestRecord } from "@/lib/services"
 import { PageHeader } from "@/components/shared/PageHeader"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -20,83 +21,104 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/auth"
 
-function flagFor(value: number, low: number, high: number): LabResultParam["flag"] {
-  if (Number.isNaN(value)) return ""
-  if (value > high) return "High"
-  if (value < low) return "Low"
-  return "Normal"
-}
-
 export default function LabResultEntryPage() {
   const params = useParams()
   const id = params?.id as string | undefined
+  const orderQuery = useLabOrder(id)
+  const catalog = useLabTests()
+
+  const failure = (orderQuery.error && !orderQuery.data ? orderQuery.error : null) ?? (catalog.error && !catalog.items.length ? catalog.error : null)
+  if (failure) {
+    const notFound = isApiError(failure) && failure.status === 404
+    return (
+      <div role="alert">
+        <EmptyState
+          icon={notFound ? FileX : AlertTriangle}
+          title={notFound ? "Lab order not found" : "Couldn't load the results form"}
+          subtitle={notFound ? undefined : errorSummary(failure)}
+          action={notFound ? undefined : <Button variant="outline" onClick={() => { orderQuery.reload(); catalog.reload() }}>Try again</Button>}
+        />
+      </div>
+    )
+  }
+  if (orderQuery.loading || catalog.loading || !orderQuery.data) {
+    return (
+      <div className="space-y-4" role="status" aria-label="Loading results form">
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <Skeleton className="h-48 w-full rounded-lg" />
+      </div>
+    )
+  }
+  return <ResultEntryForm order={orderQuery.data} catalog={catalog} />
+}
+
+function ResultEntryForm({ order, catalog }: { order: LabOrderRecord; catalog: ReferenceList<LabTestRecord> }) {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const { user } = useAuth()
-  const order = id ? getLabOrder(Number(id)) : undefined
-  const patient = order ? getPatient(order.patientId) : undefined
+  const patientQuery = usePatient(order.patientId)
+  const patient = patientQuery.data
 
   const [paramResults, setParamResults] = React.useState<Record<string, string>>({})
-  const [narratives, setNarratives] = React.useState<Record<number, string>>({})
+  const [narratives, setNarratives] = React.useState<Record<string, string>>({})
   const [remarks, setRemarks] = React.useState("")
   const [verifiedBy, setVerifiedBy] = React.useState("")
+  const [saving, setSaving] = React.useState(false)
+  const [error, setError] = React.useState("")
 
-  if (!order || !patient) return <EmptyState icon={FileX} title="Lab order not found" />
-
-  const setParam = (testId: number, param: string, value: string) => {
+  const setParam = (testId: string, param: string, value: string) => {
     setParamResults((r) => ({ ...r, [`${testId}::${param}`]: value }))
   }
 
-  const applyNormal = (testId: number) => {
+  const applyNormal = (testId: string) => {
     setNarratives((n) => ({ ...n, [testId]: "No significant abnormality detected." }))
   }
 
-  const save = (markComplete: boolean) => {
-    const idx = LAB_ORDERS.findIndex((o) => o.id === order.id)
-    if (idx < 0) return
-    const updatedTests = order.tests.map((t) => {
-      const test = getLabTest(t.testId)
-      if (!test) return t
-      if (test.narrative) {
-        return { ...t, narrativeResult: narratives[t.testId] ?? t.narrativeResult }
-      }
+  const save = async (markComplete: boolean) => {
+    setError("")
+    // Values only: the Task List says the server auto-flags against the normal ranges, so no flag is sent.
+    const tests: LabResultEntryInput["tests"] = order.tests.flatMap((t): LabResultEntryInput["tests"] => {
+      const test = catalog.lookup.get(t.testId)
+      if (!test) return []
+      if (test.narrative) return [{ testId: t.testId, narrativeResult: narratives[t.testId] ?? t.narrativeResult }]
       if (test.parameters) {
-        const results: LabResultParam[] = test.parameters.map((p) => {
-          const raw = paramResults[`${t.testId}::${p.parameter}`]
-          const val = raw !== undefined ? raw : t.results?.find((r) => r.parameter === p.parameter)?.result ?? ""
-          const num = parseFloat(val)
-          return {
-            parameter: p.parameter, result: val, unit: p.unit,
-            normalRange: `${p.normalLow}–${p.normalHigh}`, flag: flagFor(num, p.normalLow, p.normalHigh),
-          }
-        })
-        return { ...t, results }
+        return [{
+          testId: t.testId,
+          results: test.parameters.map((p) => ({
+            parameter: p.parameter,
+            result: paramResults[`${t.testId}::${p.parameter}`] ?? t.results?.find((r) => r.parameter === p.parameter)?.result ?? "",
+          })),
+        }]
       }
-      const raw = paramResults[`${t.testId}::single`] ?? t.results?.[0]?.result ?? ""
-      return {
-        ...t,
-        results: [{ parameter: test.name, result: raw, unit: test.unit, normalRange: test.normalRange, flag: "Normal" as const }],
-      }
+      return [{ testId: t.testId, results: [{ parameter: test.name, result: paramResults[`${t.testId}::single`] ?? t.results?.[0]?.result ?? "" }] }]
     })
-    LAB_ORDERS[idx] = {
-      ...LAB_ORDERS[idx],
-      tests: updatedTests,
-      pathologistRemarks: remarks || LAB_ORDERS[idx].pathologistRemarks,
-      performedBy: user?.name ?? LAB_ORDERS[idx].performedBy,
-      verifiedBy: verifiedBy || LAB_ORDERS[idx].verifiedBy,
-      status: markComplete ? "Completed" : LAB_ORDERS[idx].status,
+    setSaving(true)
+    try {
+      await labOrdersService.enterResults(order.id, {
+        tests,
+        pathologistRemarks: remarks || undefined,
+        performedBy: user?.name,
+        verifiedBy: verifiedBy || undefined,
+        markComplete,
+      })
+      toast({ title: markComplete ? "Results saved and marked complete" : "Results saved" })
+      router.push(`/lab/orders/${order.id}`)
+    } catch (err) {
+      setError(errorSummary(err))
+      toast({ variant: "destructive", title: "Could not save results", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    toast({ title: markComplete ? "Results saved and marked complete" : "Results saved" })
-    router.push(`/lab/orders/${order.id}`)
   }
 
   return (
     <div>
-      <PageHeader title={`Enter Results — ${patient.name}`} subtitle={order.labNo} />
+      <PageHeader title={`Enter Results — ${patient?.name ?? (patientQuery.loading ? "…" : "—")}`} subtitle={order.labNo} />
 
       <div className="space-y-4">
         {order.tests.map((t) => {
-          const test = getLabTest(t.testId)
+          const test = catalog.lookup.get(t.testId)
           if (!test) return null
           return (
             <Card key={t.testId}>
@@ -128,8 +150,8 @@ export default function LabResultEntryPage() {
                         const key = `${t.testId}::${p.parameter}`
                         const existing = t.results?.find((r) => r.parameter === p.parameter)?.result ?? ""
                         const value = paramResults[key] ?? existing
-                        const num = parseFloat(value)
-                        const flag = flagFor(num, p.normalLow, p.normalHigh)
+                        // Live preview only; the saved order carries the flag the service returns.
+                        const flag = flagFor(parseFloat(value), p.normalLow, p.normalHigh)
                         return (
                           <TableRow key={p.parameter}>
                             <TableCell className="font-medium">{p.parameter}</TableCell>
@@ -145,15 +167,16 @@ export default function LabResultEntryPage() {
                 ) : (
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
                     <div className="space-y-1">
-                      <Label className="text-xs font-normal text-muted-foreground">Result</Label>
+                      <Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-result-${t.testId}`}>Result</Label>
                       <Input
+                        id={`${uid}-result-${t.testId}`}
                         value={paramResults[`${t.testId}::single`] ?? t.results?.[0]?.result ?? ""}
                         onChange={(e) => setParam(t.testId, "single", e.target.value)}
                       />
                     </div>
-                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground">Unit</Label><Input readOnly value={test.unit} /></div>
-                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground">Normal Range</Label><Input readOnly value={test.normalRange} /></div>
-                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground">Flag</Label><Input readOnly value="Auto" /></div>
+                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-unit-${t.testId}`}>Unit</Label><Input id={`${uid}-unit-${t.testId}`} readOnly value={test.unit} /></div>
+                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-range-${t.testId}`}>Normal Range</Label><Input id={`${uid}-range-${t.testId}`} readOnly value={test.normalRange} /></div>
+                    <div className="space-y-1"><Label className="text-xs font-normal text-muted-foreground" htmlFor={`${uid}-flag-${t.testId}`}>Flag</Label><Input id={`${uid}-flag-${t.testId}`} readOnly value="Auto" /></div>
                   </div>
                 )}
               </CardContent>
@@ -163,18 +186,20 @@ export default function LabResultEntryPage() {
 
         <Card>
           <CardContent className="space-y-3 p-5">
-            <div className="space-y-1.5"><Label>Pathologist's Remarks</Label><Textarea rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-pathologist-apos-s-remarks`}>Pathologist&apos;s Remarks</Label><Textarea id={`${uid}-pathologist-apos-s-remarks`} rows={2} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>Performed By</Label><Input readOnly value={user?.name ?? ""} /></div>
-              <div className="space-y-1.5"><Label>Verified By</Label><Input value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} placeholder="Pathologist / doctor name" /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-performed-by`}>Performed By</Label><Input id={`${uid}-performed-by`} readOnly value={user?.name ?? ""} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-verified-by`}>Verified By</Label><Input id={`${uid}-verified-by`} value={verifiedBy} onChange={(e) => setVerifiedBy(e.target.value)} placeholder="Pathologist / doctor name" /></div>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {error && <p role="alert" className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600">{error}</p>}
+
       <div className="mt-6 flex justify-end gap-2">
-        <Button variant="outline" onClick={() => save(false)}>Save Results</Button>
-        <Button onClick={() => save(true)}>Save &amp; Mark Complete</Button>
+        <Button variant="outline" disabled={saving} onClick={() => save(false)}>Save Results</Button>
+        <Button disabled={saving} onClick={() => save(true)}>{saving ? "Saving…" : "Save & Mark Complete"}</Button>
       </div>
     </div>
   )

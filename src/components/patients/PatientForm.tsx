@@ -3,15 +3,21 @@ import * as React from "react"
 import { useRouter, useParams } from "next/navigation"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
-import { z } from "zod"
 import { differenceInYears, differenceInMonths } from "date-fns"
-import { Plus, Save, X } from "lucide-react"
+import { AlertTriangle, FileText, Plus, Save, X } from "lucide-react"
 
-import { PATIENTS, getPatient, nextMrNo } from "@/data/patients"
-import { PANELS } from "@/data/organisations"
-import { GUARDIAN_RELATIONS } from "@/data/guardianRelations"
-import { patientBillBreakdown } from "@/lib/billingAggregate"
-import { formatCurrency, cn } from "@/lib/utils"
+import { nextMrNo } from "@/data/patients"
+import {
+  dataSource, errorSummary, findDuplicatePhone, formatMoneyString, guardianRelationsService, isNotConnectedError, isPositiveMoney, organisationsService, patientsService,
+  type PatientInput, type PatientRecord,
+} from "@/lib/services"
+import { useGuardianRelations, useOrganisations, usePatient } from "@/lib/useReferenceData"
+import { isApiError } from "@/lib/api/client"
+import { patientSchema, type PatientFormValues } from "./patientSchema"
+import { Skeleton } from "@/components/ui/skeleton"
+import { EmptyState } from "@/components/shared/EmptyState"
+import { useBillSummary } from "@/lib/useBillSummary"
+import { cn } from "@/lib/utils"
 import type { Gender, BloodGroup, PanelType } from "@/types"
 import { PhotoUpload } from "@/components/shared/PhotoUpload"
 import { Button } from "@/components/ui/button"
@@ -23,6 +29,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/components/ui/use-toast"
+import { failedChecks, validationToast } from "@/lib/validation"
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog"
@@ -38,30 +45,8 @@ function ageBreakdown(dob: string): string {
 
 const BLOOD_GROUPS: BloodGroup[] = ["A+", "A-", "B+", "B-", "O+", "O-", "AB+", "AB-", "Unknown"]
 
-const schema = z.object({
-  medicalRecordNo: z.string().optional(),
-  ssEmpNo: z.string().optional(),
-  name: z.string().min(2, "Full name must be at least 2 characters"),
-  fatherName: z.string().optional(),
-  dob: z.string().min(1, "Date of birth is required"),
-  gender: z.enum(["Male", "Female", "Other"]),
-  cnic: z.string().optional(),
-  bloodGroup: z.string().min(1),
-  phone: z.string().regex(/^03\d{2}-\d{7}$/, "Format: 03XX-XXXXXXX"),
-  emergencyContact: z.string().optional(),
-  email: z.string().email("Enter a valid email address").optional().or(z.literal("")),
-  address: z.string().optional(),
-  area: z.string().optional(),
-  city: z.string().optional(),
-  country: z.string().optional(),
-  guardianRelation: z.string().optional(),
-  guardianName: z.string().optional(),
-  panelId: z.string().optional(),
-  referredBy: z.string().optional(),
-  remarks: z.string().max(500).optional(),
-  active: z.boolean().optional(),
-})
-type FormValues = z.infer<typeof schema>
+type FormValues = PatientFormValues
+
 
 const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
@@ -69,12 +54,60 @@ const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white
 export function PatientForm({ mode }: { mode: "create" | "edit" }) {
   const params = useParams()
   const id = params?.id as string | undefined
+  // Edit mode loads the patient through the shared hook (id passed through untouched); create mode loads nothing.
+  const { data, error, loading, reload } = usePatient(mode === "edit" ? id : undefined)
+
+  if (mode === "edit") {
+    if (error && !data) {
+      const notFound = isApiError(error) && error.status === 404
+      return (
+        <div className="p-10" role="alert">
+          <EmptyState
+            icon={notFound ? FileText : AlertTriangle}
+            title={notFound ? "Patient not found" : "Couldn't load this patient"}
+            subtitle={notFound ? "This patient record does not exist." : errorSummary(error)}
+            action={notFound ? undefined : <Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>}
+          />
+        </div>
+      )
+    }
+    if (loading || !data) {
+      return (
+        <div className="mx-auto max-w-6xl space-y-4 pb-10" role="status" aria-label="Loading patient">
+          <Skeleton className="h-10 w-72 rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-[1.5rem]" />
+          <Skeleton className="h-40 w-full rounded-[1.5rem]" />
+        </div>
+      )
+    }
+  }
+  return <PatientFormBody mode={mode} existing={data} />
+}
+
+function PatientFormBody({ mode, existing }: { mode: "create" | "edit"; existing: PatientRecord | null }) {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
-  const existing = mode === "edit" && id ? getPatient(Number(id)) : undefined
   const [duplicateWarning, setDuplicateWarning] = React.useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = React.useState(false)
+  const [saving, setSaving] = React.useState(false)
+  const [submitError, setSubmitError] = React.useState("")
   const [photoUrl, setPhotoUrl] = React.useState<string | undefined>(existing?.photoUrl)
+
+  // Organisations and guardian relations come from the shared reference-data services. When they can't be
+  // loaded (API mode: contract not confirmed) their pickers are disabled and the record's current value is kept.
+  const organisations = useOrganisations()
+  const relations = useGuardianRelations()
+  const orgsReady = !organisations.loading && !organisations.error
+  const relationsReady = !relations.loading && !relations.error
+  const currentPanel = existing?.panelId ?? null
+  const orgOptions = [
+    ...organisations.items.map((o) => ({ id: o.id, name: o.name })),
+    ...(currentPanel && !organisations.lookup.get(currentPanel) ? [{ id: currentPanel, name: "Current organisation (details unavailable)" }] : []),
+  ]
+  const relationNames = relations.active.map((r) => r.name)
+  const currentRelation = existing?.guardianRelation
+  const relationOptions = currentRelation && !relationNames.includes(currentRelation) ? [...relationNames, currentRelation] : relationNames.length ? relationNames : ["Self"]
 
   const {
     register,
@@ -83,7 +116,7 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
     setValue,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(patientSchema),
     defaultValues: existing
       ? {
           medicalRecordNo: existing.medicalRecordNo, ssEmpNo: existing.ssEmpNo,
@@ -92,7 +125,7 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
           emergencyContact: existing.emergencyContact, email: existing.email, address: existing.address, area: existing.area,
           city: existing.city, country: existing.country ?? "Pakistan", guardianRelation: existing.guardianRelation,
           guardianName: existing.guardianName,
-          panelId: existing.panelId ? String(existing.panelId) : "none",
+          panelId: existing.panelId ?? "none",
           referredBy: existing.referredBy, remarks: existing.remarks,
           active: existing.status !== "inactive",
         }
@@ -105,26 +138,35 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
   const dob = watch("dob")
   const age = dob ? Math.max(0, differenceInYears(new Date(), new Date(dob))) : undefined
   const guardianRelation = watch("guardianRelation")
-  const mrNo = existing?.mrNo ?? nextMrNo()
-  const existingBalance = existing ? patientBillBreakdown(existing.id).balance : undefined
+  // MR number: shown for the mock only. Whether the real backend assigns it is CONTRACT REQUIRED, so API mode never invents one.
+  const mrNo = existing?.mrNo ?? (dataSource === "mock" ? nextMrNo() : "Assigned on registration")
+  // Outstanding balance comes from billSummaryService (the backend owns the figure). Until its contract is confirmed, API mode says
+  // "Not connected" — a real patient is never displayed with demo amounts or a made-up Rs 0. Balance contract: see the handoff doc.
+  const billState = useBillSummary(mode === "edit" && existing ? { kind: "patient", id: existing.id } : null)
+  const existingBalance = billState.data?.balance
+  const balanceText = existingBalance !== undefined ? formatMoneyString(existingBalance) : billState.loading ? "…" : billState.pending ? "Not connected" : "Unavailable"
 
-  const checkDuplicate = (phone: string) => {
-    const dup = PATIENTS.find((p) => p.phone === phone && p.id !== existing?.id)
-    setDuplicateWarning(dup ? `A patient with this phone number already exists: ${dup.name} (${dup.mrNo})` : null)
+  const checkDuplicate = async (phone: string) => {
+    if (!phone) { setDuplicateWarning(null); return }
+    try {
+      const { items } = await patientsService.list({ search: phone, pageSize: 5 })
+      const dup = findDuplicatePhone(items, phone, existing?.id)
+      setDuplicateWarning(dup ? `A patient with this phone number already exists: ${dup.name} (${dup.mrNo})` : null)
+    } catch (err) {
+      // Advisory check only: a failed lookup must not block registration. Genuine failures surface on save.
+      if (!isNotConnectedError(err)) setDuplicateWarning(null)
+    }
   }
 
-  const onSubmit = (values: FormValues, ticketType?: "OPD" | "IPD") => {
-    const targetId = existing?.id ?? Math.max(...PATIENTS.map((p) => p.id)) + 1
+  const onSubmit = async (values: FormValues, ticketType?: "OPD" | "IPD") => {
+    setSubmitError("")
     const status = values.active === false ? "inactive" : existing?.status === "ipd" ? "ipd" : "active"
-    const record = {
-      id: targetId,
-      mrNo,
+    const input: PatientInput = {
       medicalRecordNo: values.medicalRecordNo,
       ssEmpNo: values.ssEmpNo,
       name: values.name,
       fatherName: values.fatherName ?? "",
       dob: values.dob,
-      age: age ?? 0,
       gender: values.gender as Gender,
       phone: values.phone,
       emergencyContact: values.emergencyContact,
@@ -137,33 +179,47 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
       cnic: values.cnic ?? "",
       guardianRelation: values.guardianRelation ?? "Self",
       guardianName: values.guardianRelation && values.guardianRelation !== "Self" ? values.guardianName : undefined,
-      panelId: values.panelId && values.panelId !== "none" ? Number(values.panelId) : null,
+      // Organisations unavailable (not connected): leave an existing value untouched, never send a made-up id.
+      panelId: orgsReady ? (values.panelId && values.panelId !== "none" ? values.panelId : null) : (existing?.panelId ?? null),
       referredBy: values.referredBy,
       remarks: values.remarks,
       status: status as "active" | "ipd" | "inactive",
-      registrationDate: existing?.registrationDate ?? new Date().toISOString().slice(0, 10),
       photoUrl,
     }
 
-    if (existing) {
-      const idx = PATIENTS.findIndex((p) => p.id === existing.id)
-      PATIENTS[idx] = record
-      toast({ title: "Patient record updated" })
-      router.push(`/patients/${targetId}`)
-    } else {
-      PATIENTS.push(record)
-      toast({ title: `Patient ${mrNo} registered` })
-      if (ticketType) router.push(`/encounters/new?patientId=${targetId}&type=${ticketType}`)
-      else router.push(`/patients/${targetId}`)
+    setSaving(true)
+    try {
+      if (existing) {
+        const saved = await patientsService.update(existing.id, input)
+        toast({ title: "Patient record updated" })
+        router.push(`/patients/${saved.id}`)
+      } else {
+        const saved = await patientsService.create(input)
+        toast({ title: `Patient ${saved.mrNo} registered` })
+        if (ticketType) router.push(`/encounters/new?patientId=${saved.id}&type=${ticketType}`)
+        else router.push(`/patients/${saved.id}`)
+      }
+    } catch (err) {
+      setSubmitError(errorSummary(err))
+      toast({ variant: "destructive", title: existing ? "Could not update patient" : "Could not register patient", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
   }
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!existing) return
-    const idx = PATIENTS.findIndex((p) => p.id === existing.id)
-    if (idx >= 0) PATIENTS.splice(idx, 1)
-    toast({ title: "Patient record deleted" })
-    router.push("/patients")
+    setSaving(true)
+    try {
+      await patientsService.remove(existing.id)
+      toast({ title: "Patient record deleted" })
+      router.push("/patients")
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not delete patient", description: errorSummary(err) })
+      setConfirmDelete(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -181,11 +237,15 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
         {mode === "edit" && existing && (
           <div className="flex flex-col items-end rounded-2xl border-none bg-white p-3 shadow-sm ring-1 ring-black/5">
             <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Outstanding Balance</div>
-            <div className={cn(
-              "text-lg font-black leading-none", 
-              existingBalance && existingBalance > 0 ? "text-danger-600" : "text-success-600"
-            )}>
-              {formatCurrency(existingBalance ?? 0)}
+            <div
+              data-testid="outstanding-balance"
+              title={billState.error && !billState.pending ? errorSummary(billState.error) : billState.pending ? "The balance contract is not connected yet — no figure is shown." : undefined}
+              className={cn(
+                "text-lg font-black leading-none",
+                existingBalance === undefined ? "text-slate-400" : isPositiveMoney(existingBalance) ? "text-danger-600" : "text-success-600"
+              )}
+            >
+              {balanceText}
             </div>
           </div>
         )}
@@ -214,8 +274,8 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
               <Input id="medicalRecordNo" placeholder="Manual reference (optional)" className={inputClass} {...register("medicalRecordNo")} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Registration Date</Label>
-              <Input type="date" defaultValue={existing?.registrationDate ?? new Date().toISOString().slice(0, 10)} readOnly className={inputClass} />
+              <Label htmlFor={`${uid}-registration-date`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Registration Date</Label>
+              <Input id={`${uid}-registration-date`} type="date" defaultValue={existing?.registrationDate ?? new Date().toISOString().slice(0, 10)} readOnly className={inputClass} />
             </div>
             
             <div className="space-y-1.5 md:col-span-2 lg:col-span-3">
@@ -254,8 +314,8 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Gender *</Label>
-              <RadioGroup
+              <Label id={`${uid}-gender-label`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Gender *</Label>
+              <RadioGroup aria-labelledby={`${uid}-gender-label`}
                 className="flex h-11 items-center gap-6 rounded-xl border border-slate-200 bg-white px-4"
                 defaultValue={existing?.gender ?? "Male"}
                 onValueChange={(v) => setValue("gender", v as Gender)}
@@ -274,9 +334,9 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
               <Input id="cnic" placeholder="12345-1234567-1" className={inputClass} {...register("cnic")} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Blood Group</Label>
+              <Label htmlFor={`${uid}-blood-group`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Blood Group</Label>
               <Select defaultValue={existing?.bloodGroup ?? "Unknown"} onValueChange={(v) => setValue("bloodGroup", v)}>
-                <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-blood-group`} className={selectClass}><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {BLOOD_GROUPS.map((bg) => <SelectItem key={bg} value={bg}>{bg}</SelectItem>)}
                 </SelectContent>
@@ -340,18 +400,19 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
           </CardHeader>
           <CardContent className="p-6 grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Guardian/Relation</Label>
+              <Label htmlFor={`${uid}-guardian-relation`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Guardian/Relation</Label>
               <div className="flex gap-2">
-                <Select defaultValue={existing?.guardianRelation ?? "Self"} onValueChange={(v) => setValue("guardianRelation", v)}>
-                  <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                <Select key={relationsReady ? "ready" : "pending"} disabled={!relationsReady} value={guardianRelation ?? existing?.guardianRelation ?? "Self"} onValueChange={(v) => setValue("guardianRelation", v)}>
+                  <SelectTrigger id={`${uid}-guardian-relation`} className={selectClass}><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {GUARDIAN_RELATIONS.filter((r) => r.active).map((r) => <SelectItem key={r.id} value={r.name}>{r.name}</SelectItem>)}
+                    {relationOptions.map((n) => <SelectItem key={n} value={n}>{n}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button type="button" variant="outline" className="h-11 w-11 shrink-0 rounded-xl bg-slate-50 hover:bg-slate-100 border-slate-200" title="Add new relation" onClick={() => setRelationDialogOpen(true)}>
+                <Button type="button" variant="outline" disabled={!relationsReady} className="h-11 w-11 shrink-0 rounded-xl bg-slate-50 hover:bg-slate-100 border-slate-200" title="Add new relation" onClick={() => setRelationDialogOpen(true)}>
                   <Plus className="h-4 w-4 text-slate-500" />
                 </Button>
               </div>
+              {Boolean(relations.error) && <p role="alert" className="text-xs font-medium text-slate-500">Guardian relations unavailable: {errorSummary(relations.error)} The current value is kept.</p>}
             </div>
             
             {guardianRelation && guardianRelation !== "Self" ? (
@@ -362,19 +423,20 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
             ) : <div className="hidden md:block" />}
             
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel/Organisation</Label>
+              <Label htmlFor={`${uid}-panel-organisation`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel/Organisation</Label>
               <div className="flex gap-2">
-                <Select defaultValue={existing?.panelId ? String(existing.panelId) : "none"} onValueChange={(v) => setValue("panelId", v)}>
-                  <SelectTrigger className={selectClass}><SelectValue /></SelectTrigger>
+                <Select key={orgsReady ? "ready" : "pending"} disabled={!orgsReady} value={watch("panelId") ?? existing?.panelId ?? "none"} onValueChange={(v) => setValue("panelId", v)}>
+                  <SelectTrigger id={`${uid}-panel-organisation`} className={selectClass}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None (Self-Pay)</SelectItem>
-                    {PANELS.map((p) => <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>)}
+                    {orgOptions.map((o) => <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                <Button type="button" variant="outline" className="h-11 w-11 shrink-0 rounded-xl bg-slate-50 hover:bg-slate-100 border-slate-200" title="Add new organisation" onClick={() => setPanelDialogOpen(true)}>
+                <Button type="button" variant="outline" disabled={!orgsReady} className="h-11 w-11 shrink-0 rounded-xl bg-slate-50 hover:bg-slate-100 border-slate-200" title="Add new organisation" onClick={() => setPanelDialogOpen(true)}>
                   <Plus className="h-4 w-4 text-slate-500" />
                 </Button>
               </div>
+              {Boolean(organisations.error) && <p role="alert" className="text-xs font-medium text-slate-500">Organisations unavailable: {errorSummary(organisations.error)} The current value is kept.</p>}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="referredBy" className="text-xs font-bold uppercase tracking-wider text-slate-500">Referred By</Label>
@@ -387,6 +449,8 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
             </div>
           </CardContent>
         </Card>
+
+        {submitError && <p role="alert" className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-bold text-red-600">{submitError}</p>}
 
         {/* ─── ACTION BAR ──────────────────────────────────────────────── */}
         <div className="sticky bottom-6 z-10 flex flex-col-reverse sm:flex-row items-center justify-between gap-4 rounded-2xl bg-white/80 p-4 shadow-xl backdrop-blur-md ring-1 ring-black/5">
@@ -402,15 +466,15 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
             </Button>
             {mode === "create" && (
               <>
-                <Button type="button" className="rounded-xl h-11 px-6 bg-slate-800 hover:bg-slate-900 text-white font-bold" onClick={handleSubmit((v) => onSubmit(v, "OPD"))}>
+                <Button type="button" className="rounded-xl h-11 px-6 bg-slate-800 hover:bg-slate-900 text-white font-bold" disabled={saving} onClick={handleSubmit((v) => onSubmit(v, "OPD"))}>
                   Save & OPD Ticket
                 </Button>
-                <Button type="button" className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold" onClick={handleSubmit((v) => onSubmit(v, "IPD"))}>
+                <Button type="button" className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold" disabled={saving} onClick={handleSubmit((v) => onSubmit(v, "IPD"))}>
                   Save & IPD Ticket
                 </Button>
               </>
             )}
-            <Button type="submit" className="rounded-xl h-11 px-8 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0">
+            <Button type="submit" disabled={saving} className="rounded-xl h-11 px-8 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0">
               <Save className="mr-2 h-4 w-4" /> {mode === "create" ? "Register Patient" : "Update Profile"}
             </Button>
           </div>
@@ -425,7 +489,7 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setConfirmDelete(false)}>Cancel</Button>
-            <Button variant="destructive" className="rounded-xl font-bold" onClick={handleDelete}>Delete Permanently</Button>
+            <Button variant="destructive" disabled={saving} className="rounded-xl font-bold" onClick={handleDelete}>Delete Permanently</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -433,19 +497,21 @@ export function PatientForm({ mode }: { mode: "create" | "edit" }) {
       <QuickAddPanelDialog
         open={panelDialogOpen}
         onClose={() => setPanelDialogOpen(false)}
-        onCreated={(id) => setValue("panelId", String(id))}
+        onCreated={(id) => { organisations.reload(); setValue("panelId", id) }}
       />
       <QuickAddRelationDialog
         open={relationDialogOpen}
         onClose={() => setRelationDialogOpen(false)}
-        onCreated={(name) => setValue("guardianRelation", name)}
+        onCreated={(name) => { relations.reload(); setValue("guardianRelation", name) }}
       />
     </div>
   )
 }
 
-function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: number) => void }) {
+function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (id: string) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
+  const [saving, setSaving] = React.useState(false)
   const [name, setName] = React.useState("")
   const [type, setType] = React.useState<PanelType>("Insurance")
   const [contactPerson, setContactPerson] = React.useState("")
@@ -455,13 +521,20 @@ function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onCl
     if (open) { setName(""); setType("Insurance"); setContactPerson(""); setPhone("") }
   }, [open])
 
-  const save = () => {
-    if (!name.trim()) return
-    const id = Math.max(0, ...PANELS.map((p) => p.id)) + 1
-    PANELS.push({ id, name: name.trim(), type, contactPerson, phone, commissionPct: 0, active: true })
-    toast({ title: `${name} registered` })
-    onCreated(id)
-    onClose()
+  const save = async () => {
+    const problems = failedChecks([[name.trim(), "Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
+    setSaving(true)
+    try {
+      const saved = await organisationsService.create({ name: name.trim(), type, contactPerson, phone, commissionPct: 0, active: true })
+      toast({ title: `${name} registered` })
+      onCreated(saved.id)
+      onClose()
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not register organisation", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -470,22 +543,22 @@ function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onCl
         <DialogHeader><DialogTitle>Register New Organisation</DialogTitle></DialogHeader>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-1.5 sm:col-span-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label>
-            <Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+            <Label htmlFor={`${uid}-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Name *</Label>
+            <Input id={`${uid}-name`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
+            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
             <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
+              <SelectTrigger id={`${uid}-type`} className="h-11 rounded-xl bg-slate-50 border-slate-200"><SelectValue /></SelectTrigger>
               <SelectContent>{PANEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-contact-person`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input id={`${uid}-contact-person`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
+          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" className="rounded-xl font-bold" onClick={onClose}>Cancel</Button>
-          <Button className="rounded-xl bg-[#1CC0CE] hover:bg-[#0891B2] font-bold" onClick={save}>Save Organisation</Button>
+          <Button disabled={saving} className="rounded-xl bg-[#1CC0CE] hover:bg-[#0891B2] font-bold" onClick={save}>Save Organisation</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -493,18 +566,27 @@ function QuickAddPanelDialog({ open, onClose, onCreated }: { open: boolean; onCl
 }
 
 function QuickAddRelationDialog({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: (name: string) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
+  const [saving, setSaving] = React.useState(false)
   const [name, setName] = React.useState("")
 
   React.useEffect(() => { if (open) setName("") }, [open])
 
-  const save = () => {
-    if (!name.trim()) return
-    const id = Math.max(0, ...GUARDIAN_RELATIONS.map((r) => r.id)) + 1
-    GUARDIAN_RELATIONS.push({ id, name: name.trim(), active: true })
-    toast({ title: `${name} added` })
-    onCreated(name.trim())
-    onClose()
+  const save = async () => {
+    const problems = failedChecks([[name.trim(), "Relation Name is required"]])
+    if (problems.length) { toast(validationToast(problems)); return }
+    setSaving(true)
+    try {
+      const saved = await guardianRelationsService.create({ name: name.trim(), active: true })
+      toast({ title: `${name} added` })
+      onCreated(saved.name)
+      onClose()
+    } catch (err) {
+      toast({ variant: "destructive", title: "Could not add relation", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -512,12 +594,12 @@ function QuickAddRelationDialog({ open, onClose, onCreated }: { open: boolean; o
       <DialogContent className="sm:max-w-[425px] rounded-[1.5rem]">
         <DialogHeader><DialogTitle>Register New Relation</DialogTitle></DialogHeader>
         <div className="space-y-1.5 pt-2">
-          <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label>
-          <Input className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="e.g. Uncle, Guardian" />
+          <Label htmlFor={`${uid}-relation-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label>
+          <Input id={`${uid}-relation-name`} className="h-11 rounded-xl bg-slate-50 border-slate-200" value={name} onChange={(e) => setName(e.target.value)} autoFocus placeholder="e.g. Uncle, Guardian" />
         </div>
         <DialogFooter className="gap-2 sm:gap-0">
           <Button variant="ghost" className="rounded-xl font-bold" onClick={onClose}>Cancel</Button>
-          <Button className="rounded-xl bg-[#1CC0CE] hover:bg-[#0891B2] font-bold" onClick={save}>Save Relation</Button>
+          <Button disabled={saving} className="rounded-xl bg-[#1CC0CE] hover:bg-[#0891B2] font-bold" onClick={save}>Save Relation</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

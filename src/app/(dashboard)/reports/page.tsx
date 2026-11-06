@@ -1,23 +1,35 @@
 "use client"
 import * as React from "react"
+import dynamic from "next/dynamic"
 import { Download, Printer, ChevronRight, FileText, BarChart3, ListOrdered } from "lucide-react"
 
-import { EXPENSES } from "@/data/billing"
+import { dataSource, errorSummary, expensesService, reportsContractStatus } from "@/lib/services"
+import { listAll } from "@/lib/services/reference/listAll"
 import { cn } from "@/lib/utils"
 import { buildCSV } from "@/lib/csv"
-import { DailySummaryReport } from "@/components/reports/DailySummaryReport"
-import { DailyTransactionsReport } from "@/components/reports/DailyTransactionsReport"
-import { OpdStatisticsReport } from "@/components/reports/OpdStatisticsReport"
-import { RevenueReport } from "@/components/reports/RevenueReport"
-import { LabReport } from "@/components/reports/LabReport"
-import { PharmacyReport } from "@/components/reports/PharmacyReport"
-import { ExpenseReport } from "@/components/reports/ExpenseReport"
-import { PatientDemographicsReport } from "@/components/reports/PatientDemographicsReport"
-import { ListsReport } from "@/components/reports/ListsReport"
-import { AccountsReport } from "@/components/reports/AccountsReport"
-import { PatientBalancesReport } from "@/components/reports/PatientBalancesReport"
-import { PrescriptionHistoryReport } from "@/components/reports/PrescriptionHistoryReport"
 import { Button } from "@/components/ui/button"
+import { useToast } from "@/components/ui/use-toast"
+
+// In API mode a report is offered only when its endpoint is configured (from the OpenAPI spec). Until then the page says so and the
+// controls that would suggest a query ran are disabled. Mock mode is always connected to its demo data.
+const contract = reportsContractStatus(dataSource)
+const PENDING_HINT = "Awaiting the backend API contract"
+
+// Each report is loaded only when selected, so /reports doesn't download all
+// twelve (and recharts, used by six of them) up front.
+const reportLoading = () => <div className="h-[400px] animate-pulse rounded-[1.5rem] bg-slate-50" />
+const DailySummaryReport = dynamic(() => import("@/components/reports/DailySummaryReport").then((m) => m.DailySummaryReport), { loading: reportLoading })
+const DailyTransactionsReport = dynamic(() => import("@/components/reports/DailyTransactionsReport").then((m) => m.DailyTransactionsReport), { loading: reportLoading })
+const OpdStatisticsReport = dynamic(() => import("@/components/reports/OpdStatisticsReport").then((m) => m.OpdStatisticsReport), { loading: reportLoading })
+const RevenueReport = dynamic(() => import("@/components/reports/RevenueReport").then((m) => m.RevenueReport), { loading: reportLoading })
+const LabReport = dynamic(() => import("@/components/reports/LabReport").then((m) => m.LabReport), { loading: reportLoading })
+const PharmacyReport = dynamic(() => import("@/components/reports/PharmacyReport").then((m) => m.PharmacyReport), { loading: reportLoading })
+const ExpenseReport = dynamic(() => import("@/components/reports/ExpenseReport").then((m) => m.ExpenseReport), { loading: reportLoading })
+const PatientDemographicsReport = dynamic(() => import("@/components/reports/PatientDemographicsReport").then((m) => m.PatientDemographicsReport), { loading: reportLoading })
+const ListsReport = dynamic(() => import("@/components/reports/ListsReport").then((m) => m.ListsReport), { loading: reportLoading })
+const AccountsReport = dynamic(() => import("@/components/reports/AccountsReport").then((m) => m.AccountsReport), { loading: reportLoading })
+const PatientBalancesReport = dynamic(() => import("@/components/reports/PatientBalancesReport").then((m) => m.PatientBalancesReport), { loading: reportLoading })
+const PrescriptionHistoryReport = dynamic(() => import("@/components/reports/PrescriptionHistoryReport").then((m) => m.PrescriptionHistoryReport), { loading: reportLoading })
 
 const REPORTS = [
   { key: "daily", label: "Daily Summary", group: "Analytics", Component: DailySummaryReport, icon: BarChart3 },
@@ -42,13 +54,20 @@ export default function ReportsPage() {
   const [active, setActive] = React.useState<(typeof REPORTS)[number]["key"]>("daily")
   const [dateRange, setDateRange] = React.useState<(typeof DATE_RANGES)[number]>("This Month")
   const current = REPORTS.find((r) => r.key === active)!
+  const { toast } = useToast()
 
-  const exportCsv = () => {
+  const exportCsv = async () => {
     if (active === "expense") {
-      buildCSV(
-        ["Date", "Category", "Description", "Amount", "Mode", "Entered By"],
-        EXPENSES.map((e) => [e.date, e.category, e.description, String(e.amount), e.mode, e.enteredBy])
-      )
+      // Through the expense service (never a demo array): in API mode this button is disabled until that contract is connected.
+      try {
+        const all = await listAll((o) => expensesService.list(o))
+        buildCSV(
+          ["Date", "Category", "Description", "Amount", "Mode", "Entered By"],
+          all.items.map((e) => [e.date, e.categoryName, e.description, e.amount, e.mode, e.enteredBy])
+        )
+      } catch (err) {
+        toast({ variant: "destructive", title: "Could not export the expenses", description: errorSummary(err) })
+      }
       return
     }
     buildCSV(["Report"], [[current.label]])
@@ -64,6 +83,17 @@ export default function ReportsPage() {
         </div>
       </div>
 
+      {contract.pending && (
+        <div role="status" data-testid="reports-not-connected" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-500/30 no-print">
+          <p className="font-bold">Reports are not connected to the backend</p>
+          <p className="mt-1">
+            The API contract for the reports (routes, parameters and response schemas) has not been provided to the frontend, so no report can be
+            run here. In API mode no report request is sent and no demo figures are shown; each report says what it is awaiting. The date range
+            and export controls are disabled because there is nothing for them to act on.
+          </p>
+        </div>
+      )}
+
       {/* ─── TOP ACTION BAR ────────────────────────────────────────────── */}
       <div className="rounded-[1.25rem] bg-white p-3 shadow-sm ring-1 ring-black/5 flex flex-col xl:flex-row xl:items-center justify-between gap-4 no-print">
         <div className="flex flex-wrap items-center gap-2 p-1 bg-slate-50/80 rounded-xl ring-1 ring-slate-100">
@@ -71,8 +101,10 @@ export default function ReportsPage() {
             <button
               key={r}
               onClick={() => setDateRange(r)}
+              disabled={contract.pending}
+              title={contract.pending ? PENDING_HINT : undefined}
               className={cn(
-                "rounded-lg px-4 py-2 text-xs font-bold transition-all whitespace-nowrap",
+                "rounded-lg px-4 py-2 text-xs font-bold transition-all whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-50",
                 dateRange === r
                   ? "bg-white text-[#0891B2] shadow-sm ring-1 ring-black/5"
                   : "text-slate-500 hover:text-slate-700 hover:bg-slate-100/50"
@@ -83,7 +115,7 @@ export default function ReportsPage() {
           ))}
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-xl h-11 px-5 font-bold text-slate-600 border-slate-200 bg-white hover:bg-slate-50 transition-colors" onClick={exportCsv}>
+          <Button variant="outline" className="rounded-xl h-11 px-5 font-bold text-slate-600 border-slate-200 bg-white hover:bg-slate-50 transition-colors" disabled={contract.pending} title={contract.pending ? PENDING_HINT : undefined} onClick={() => { void exportCsv() }}>
             <Download className="h-4 w-4 mr-2" /> Export CSV
           </Button>
           <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0" onClick={() => window.print()}>

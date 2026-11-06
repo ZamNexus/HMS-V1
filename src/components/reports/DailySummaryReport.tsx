@@ -1,13 +1,12 @@
-import { ArrowUp, Users, Stethoscope, BedDouble, LogOut, Wallet, Activity, Pill, IndianRupee } from "lucide-react"
+"use client"
+import { ArrowUp, Users, Stethoscope, BedDouble, LogOut, Wallet, Activity, Pill, IndianRupee, type LucideIcon } from "lucide-react"
 
-import { ENCOUNTERS } from "@/data/encounters"
-import { CONSULTATION_INVOICES } from "@/data/billing"
-import { LAB_ORDERS } from "@/data/lab"
-import { DISPENSE_RECORDS } from "@/data/pharmacy"
-import { DOCTORS } from "@/data/doctors"
-import { cn, formatCurrency } from "@/lib/utils"
+import { formatMoneyString, reportsService, type DailySummaryReportData } from "@/lib/services"
+import { useDoctors } from "@/lib/useReferenceData"
+import { cn } from "@/lib/utils"
+import { ReportBody, useReportData } from "./ReportState"
 
-function Tile({ label, value, icon: Icon, trendUp = true }: { label: string; value: string; icon: any; trendUp?: boolean }) {
+function Tile({ label, value, icon: Icon, trendUp = true }: { label: string; value: string; icon: LucideIcon; trendUp?: boolean }) {
   return (
     <div className="rounded-[1.5rem] bg-white p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 relative overflow-hidden group">
       <div className="absolute -right-4 -top-4 rounded-full bg-slate-50 p-8 transition-transform group-hover:scale-110">
@@ -29,35 +28,28 @@ function Tile({ label, value, icon: Icon, trendUp = true }: { label: string; val
   )
 }
 
+const loadDailySummary = (signal: AbortSignal) => reportsService.dailySummary({ signal })
+
 export function DailySummaryReport() {
-  const newPatients = 5
-  const opdCount = ENCOUNTERS.filter((e) => e.type === "OPD").length
-  const ipdCount = ENCOUNTERS.filter((e) => e.type === "IPD").length
-  const discharges = ENCOUNTERS.filter((e) => e.status === "discharged").length
+  const state = useReportData(loadDailySummary)
+  return <ReportBody state={state} label="Daily Summary report" testId="report-daily-pending">{(r) => <DailySummaryView r={r} />}</ReportBody>
+}
 
-  const consultRevenue = CONSULTATION_INVOICES.reduce((s, c) => s + c.netTotal, 0)
-  const labRevenue = LAB_ORDERS.reduce((s, o) => s + o.total, 0)
-  const pharmacyRevenue = DISPENSE_RECORDS.reduce((s, d) => s + d.netPayable, 0)
-  const totalRevenue = consultRevenue + labRevenue + pharmacyRevenue
-
-  const doctorWise = DOCTORS.map((d) => {
-    const enc = ENCOUNTERS.filter((e) => e.doctorId === d.userId)
-    return { name: d.name, patients: enc.length, revenue: enc.reduce((s, e) => s + e.netTotal, 0) }
-  }).filter((d) => d.patients > 0).sort((a, b) => b.patients - a.patients)
-
-  const cash = 68, card = 18, insurance = 14
+function DailySummaryView({ r }: { r: DailySummaryReportData }) {
+  const doctors = useDoctors()
+  const { cash, card, insurance } = r.paymentModeShare
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-        <Tile label="New Patients" value={String(newPatients)} icon={Users} />
-        <Tile label="OPD Encounters" value={String(opdCount)} icon={Stethoscope} />
-        <Tile label="IPD Admissions" value={String(ipdCount)} icon={BedDouble} />
-        <Tile label="Discharges" value={String(discharges)} icon={LogOut} />
-        <Tile label="Consultation Rev." value={formatCurrency(consultRevenue)} icon={Wallet} />
-        <Tile label="Lab Revenue" value={formatCurrency(labRevenue)} icon={Activity} />
-        <Tile label="Pharmacy Rev." value={formatCurrency(pharmacyRevenue)} icon={Pill} />
-        <Tile label="Total Revenue" value={formatCurrency(totalRevenue)} icon={IndianRupee} />
+        <Tile label="New Patients" value={String(r.newPatients)} icon={Users} />
+        <Tile label="OPD Encounters" value={String(r.opdEncounters)} icon={Stethoscope} />
+        <Tile label="IPD Admissions" value={String(r.ipdAdmissions)} icon={BedDouble} />
+        <Tile label="Discharges" value={String(r.discharges)} icon={LogOut} />
+        <Tile label="Consultation Rev." value={formatMoneyString(r.consultationRevenue)} icon={Wallet} />
+        <Tile label="Lab Revenue" value={formatMoneyString(r.labRevenue)} icon={Activity} />
+        <Tile label="Pharmacy Rev." value={formatMoneyString(r.pharmacyRevenue)} icon={Pill} />
+        <Tile label="Total Revenue" value={formatMoneyString(r.totalRevenue)} icon={IndianRupee} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -75,19 +67,19 @@ export function DailySummaryReport() {
                 </tr>
               </thead>
               <tbody className="bg-white">
-                {doctorWise.map((d) => (
-                  <tr key={d.name} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
-                    <td className="py-4 px-6 font-bold text-[#0D1B2E]">{d.name}</td>
+                {r.doctorWise.map((d) => (
+                  <tr key={d.doctorId} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
+                    <td className="py-4 px-6 font-bold text-[#0D1B2E]">{doctors.lookup.get(d.doctorId)?.name ?? "—"}</td>
                     <td className="py-4 px-6 text-right font-semibold text-slate-600">{d.patients}</td>
-                    <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatCurrency(d.revenue)}</td>
+                    <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatMoneyString(d.revenue)}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot className="bg-slate-50 border-t border-slate-200">
                 <tr>
                   <td className="py-4 px-6 font-black text-[#0D1B2E] uppercase text-[11px] tracking-wider">Total</td>
-                  <td className="py-4 px-6 text-right font-black text-[#0D1B2E]">{doctorWise.reduce((s, d) => s + d.patients, 0)}</td>
-                  <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatCurrency(doctorWise.reduce((s, d) => s + d.revenue, 0))}</td>
+                  <td className="py-4 px-6 text-right font-black text-[#0D1B2E]">{r.doctorWiseTotals.patients}</td>
+                  <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatMoneyString(r.doctorWiseTotals.revenue)}</td>
                 </tr>
               </tfoot>
             </table>
@@ -102,8 +94,8 @@ export function DailySummaryReport() {
               <div className="bg-[#1CC0CE] transition-all duration-1000 ease-in-out border-l border-white/20" style={{ width: `${card}%` }} title={`Card ${card}%`} />
               <div className="bg-slate-200 transition-all duration-1000 ease-in-out border-l border-white/20" style={{ width: `${insurance}%` }} title={`Insurance ${insurance}%`} />
             </div>
-            
-            <div className="mt-8 grid grid-cols-3 gap-4">
+
+            <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
               <div className="flex flex-col items-center p-4 rounded-xl bg-slate-50">
                 <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-wider text-slate-500 mb-1">
                   <span className="h-2.5 w-2.5 rounded-full bg-[#0F2A4D] shadow-sm" /> Cash

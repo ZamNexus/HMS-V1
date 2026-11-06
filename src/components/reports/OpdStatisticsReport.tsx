@@ -1,37 +1,29 @@
+"use client"
 import { format } from "date-fns"
 import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
-import { ENCOUNTERS } from "@/data/encounters"
-import { DOCTORS } from "@/data/doctors"
-import { formatCurrency } from "@/lib/utils"
+import { formatMoneyString, reportsService, type OpdStatisticsReportData } from "@/lib/services"
+import { useDoctors } from "@/lib/useReferenceData"
+import { ReportBody, useReportData } from "./ReportState"
+
+const loadOpdStatistics = (signal: AbortSignal) => reportsService.opdStatistics({ signal })
 
 export function OpdStatisticsReport() {
-  const byDate = new Map<string, number>()
-  ENCOUNTERS.forEach((e) => {
-    const key = format(new Date(e.date), "dd MMM")
-    byDate.set(key, (byDate.get(key) ?? 0) + 1)
-  })
-  const dailyData = [...byDate.entries()].map(([date, count]) => ({ date, count }))
+  const state = useReportData(loadOpdStatistics)
+  return <ReportBody state={state} label="OPD Statistics report" testId="report-opd-pending">{(r) => <OpdStatisticsView r={r} />}</ReportBody>
+}
 
-  const diagnosisCounts = new Map<string, number>()
-  ENCOUNTERS.forEach((e) => diagnosisCounts.set(e.diagnosis, (diagnosisCounts.get(e.diagnosis) ?? 0) + 1))
-  const topDx = [...diagnosisCounts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10)
-  const maxDx = topDx[0]?.[1] ?? 1
-
-  const doctorPerf = DOCTORS.map((d) => {
-    const enc = ENCOUNTERS.filter((e) => e.doctorId === d.userId)
-    const total = enc.reduce((s, e) => s + e.netTotal, 0)
-    return { name: d.name, patients: enc.length, avgFee: enc.length ? Math.round(total / enc.length) : 0, total }
-  }).filter((d) => d.patients > 0)
-
-  const newCount = Math.round(ENCOUNTERS.length * 0.65)
-  const returningCount = ENCOUNTERS.length - newCount
+function OpdStatisticsView({ r }: { r: OpdStatisticsReportData }) {
+  const doctors = useDoctors()
+  const dailyData = r.dailyCounts.map((d) => ({ date: format(new Date(d.date), "dd MMM"), count: d.count }))
+  const maxDx = r.topDiagnoses[0]?.count ?? 1
+  const { newPatients: newCount, returning: returningCount } = r.newVsReturning
   const pieData = [{ name: "New", value: newCount }, { name: "Returning", value: returningCount }]
   const COLORS = ["#1CC0CE", "#0F2A4D"]
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      
+
       {/* ─── MAIN BAR CHART ─────────────────────────────────────── */}
       <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6">
         <h3 className="text-base font-black text-[#0D1B2E] tracking-tight mb-6">Daily Patient Count</h3>
@@ -40,10 +32,10 @@ export function OpdStatisticsReport() {
             <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
             <XAxis dataKey="date" fontSize={11} tickLine={false} axisLine={false} tick={{ fill: "#94A3B8", fontWeight: 700 }} dy={10} />
             <YAxis fontSize={11} tickLine={false} axisLine={false} tick={{ fill: "#94A3B8", fontWeight: 700 }} />
-            <Tooltip 
+            <Tooltip
               cursor={{ fill: "#F8FAFC" }}
               contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontWeight: 700, color: "#0D1B2E" }}
-              formatter={(v) => [`${v} patients`, "Volume"]} 
+              formatter={(v) => [`${v} patients`, "Volume"]}
             />
             <Bar dataKey="count" fill="#1CC0CE" radius={[6, 6, 0, 0]} barSize={40} />
           </BarChart>
@@ -55,7 +47,7 @@ export function OpdStatisticsReport() {
         <div className="rounded-[1.5rem] bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-6">
           <h3 className="text-base font-black text-[#0D1B2E] tracking-tight mb-6">Top Diagnoses</h3>
           <div className="space-y-4">
-            {topDx.map(([dx, count], i) => (
+            {r.topDiagnoses.map(({ diagnosis: dx, count }, i) => (
               <div key={dx} className="flex items-center gap-3">
                 <span className="w-5 text-center text-xs font-black text-slate-300">{i + 1}</span>
                 <span className="w-32 truncate text-sm font-bold text-slate-700">{dx}</span>
@@ -77,14 +69,14 @@ export function OpdStatisticsReport() {
                 <Pie data={pieData} dataKey="value" innerRadius={70} outerRadius={100} paddingAngle={4} stroke="none">
                   {pieData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   contentStyle={{ borderRadius: "12px", border: "none", boxShadow: "0 10px 15px -3px rgb(0 0 0 / 0.1)", fontWeight: 700, color: "#0D1B2E" }}
                 />
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div className="text-center mt-2">
-                <div className="text-3xl font-black text-[#0D1B2E] leading-none">{ENCOUNTERS.length}</div>
+                <div className="text-3xl font-black text-[#0D1B2E] leading-none">{r.totalEncounters}</div>
                 <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mt-1">Total</div>
               </div>
             </div>
@@ -118,12 +110,12 @@ export function OpdStatisticsReport() {
               </tr>
             </thead>
             <tbody className="bg-white">
-              {doctorPerf.map((d) => (
-                <tr key={d.name} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
-                  <td className="py-4 px-6 font-bold text-[#0D1B2E]">{d.name}</td>
+              {r.doctorPerformance.map((d) => (
+                <tr key={d.doctorId} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/80 transition-colors">
+                  <td className="py-4 px-6 font-bold text-[#0D1B2E]">{doctors.lookup.get(d.doctorId)?.name ?? "—"}</td>
                   <td className="py-4 px-6 text-right font-semibold text-slate-600">{d.patients}</td>
-                  <td className="py-4 px-6 text-right font-medium text-slate-500">{formatCurrency(d.avgFee)}</td>
-                  <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatCurrency(d.total)}</td>
+                  <td className="py-4 px-6 text-right font-medium text-slate-500">{formatMoneyString(d.averageFee)}</td>
+                  <td className="py-4 px-6 text-right font-black text-[#0891B2]">{formatMoneyString(d.total)}</td>
                 </tr>
               ))}
             </tbody>

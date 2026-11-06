@@ -1,9 +1,11 @@
 "use client"
 import * as React from "react"
-import { Phone, Plus, Search, Stethoscope, Pencil, Clock, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, Phone, Plus, Search, Stethoscope, Pencil, Clock, CheckCircle2 } from "lucide-react"
 
-import { DOCTORS } from "@/data/doctors"
-import type { Doctor } from "@/types"
+import { DEFAULT_PAGE_SIZE, activeSuffix, doctorsService, errorSummary, validateDoctorForm, viewState, type DoctorRecord } from "@/lib/services"
+import { Pagination } from "@/components/shared/Pagination"
+import { useResource } from "@/lib/useResource"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn, formatCurrency, initials } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,28 +18,31 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { useToast } from "@/components/ui/use-toast"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { validationToast } from "@/lib/validation"
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 
 export default function DoctorsPage() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-  const [modalTarget, setModalTarget] = React.useState<Doctor | "new" | null>(null)
+  const [modalTarget, setModalTarget] = React.useState<DoctorRecord | "new" | null>(null)
   const [search, setSearch] = React.useState("")
+  const [query, setQuery] = React.useState("")
+  const [page, setPage] = React.useState(1)
 
-  const filteredDoctors = React.useMemo(() => {
-    const q = search.trim().toLowerCase()
-    if (!q) return DOCTORS
-    return DOCTORS.filter((d) => 
-      d.name.toLowerCase().includes(q) || 
-      d.specialization.toLowerCase().includes(q) ||
-      (d.phone && d.phone.includes(q)) ||
-      (d.pmcRegNo && d.pmcRegNo.toLowerCase().includes(q))
-    )
-  }, [search, DOCTORS]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Debounce so a server-side search isn't fired on every keystroke; a new search restarts at page 1.
+  React.useEffect(() => {
+    const t = setTimeout(() => { setQuery(search.trim()); setPage(1) }, 250)
+    return () => clearTimeout(t)
+  }, [search])
 
-  const activeCount = DOCTORS.filter(d => d.active !== false).length
+  const loadDoctors = React.useCallback(
+    (signal: AbortSignal) => doctorsService.list({ search: query, page, pageSize: DEFAULT_PAGE_SIZE, signal }),
+    [query, page]
+  )
+  const { data, error, loading, reload } = useResource(loadDoctors)
+  const filteredDoctors = data?.items ?? []
+  const view = viewState({ data, error, loading, rowCount: filteredDoctors.length })
 
   return (
     <div className="space-y-6 pb-10 max-w-7xl mx-auto">
@@ -46,7 +51,7 @@ export default function DoctorsPage() {
         <div>
           <h1 className="text-3xl font-black text-[#0D1B2E] tracking-tight">Medical Staff</h1>
           <p className="mt-1 text-sm font-medium text-slate-500">
-            {DOCTORS.length} registered doctors ({activeCount} active)
+            {view === "error" ? "Doctors unavailable" : data ? `${data.total} ${query ? "matching" : "registered"} doctors${activeSuffix(filteredDoctors, data.total)}` : "Loading doctors…"}
           </p>
         </div>
         <Button className="rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0" onClick={() => setModalTarget("new")}>
@@ -70,9 +75,22 @@ export default function DoctorsPage() {
 
       {/* ─── ELEVATED DATA TABLE ──────────────────────────────────────── */}
       <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
-        {filteredDoctors.length === 0 ? (
+        {view === "error" ? (
+          <div className="p-10" role="alert">
+            <EmptyState
+              icon={AlertTriangle}
+              title="Couldn't load doctors"
+              subtitle={errorSummary(error)}
+              action={<Button variant="outline" className="rounded-xl font-bold" onClick={reload}>Try again</Button>}
+            />
+          </div>
+        ) : view === "loading" ? (
+          <div className="space-y-3 p-6" role="status" aria-label="Loading doctors">
+            {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+          </div>
+        ) : view === "empty" ? (
           <div className="p-10">
-            <EmptyState icon={Stethoscope} title="No doctors found" subtitle="Try adjusting your search criteria." />
+            <EmptyState icon={Stethoscope} title="No doctors found" subtitle={query ? "Try adjusting your search criteria." : "No doctors have been registered yet."} />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -89,7 +107,7 @@ export default function DoctorsPage() {
               </TableHeader>
               <TableBody>
                 {filteredDoctors.map((d) => (
-                  <TableRow key={d.userId} className={cn("transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0", d.active === false && "opacity-75 bg-slate-50/30")}>
+                  <TableRow key={d.id} className={cn("transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0", !d.active && "opacity-75 bg-slate-50/30")}>
                     <TableCell className="px-6 py-4">
                       <div className="flex items-center gap-4">
                         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[#1CC0CE]/10 text-lg font-black text-[#0891B2] ring-1 ring-[#1CC0CE]/20 shadow-sm">
@@ -145,11 +163,11 @@ export default function DoctorsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="py-4">
-                      <StatusBadge status={d.active === false ? "Inactive" : "Active"} />
+                      <StatusBadge status={d.active ? "Active" : "Inactive"} />
                     </TableCell>
                     <TableCell className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}>
+                        <Button aria-label={`Edit ${d.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(d)}>
                           <Pencil className="h-4 w-4" />
                         </Button>
                       </div>
@@ -160,17 +178,23 @@ export default function DoctorsPage() {
             </Table>
           </div>
         )}
+        {data && data.total > DEFAULT_PAGE_SIZE && (
+          <div className="px-6"><Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={data.total} onPageChange={setPage} itemLabel="doctors" /></div>
+        )}
       </div>
 
-      <DoctorModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
+      <DoctorModal target={modalTarget} onClose={(saved) => { setModalTarget(null); if (saved) reload() }} />
     </div>
   )
 }
 
-function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClose: () => void }) {
+function DoctorModal({ target, onClose }: { target: DoctorRecord | "new" | null; onClose: (saved?: boolean) => void }) {
+  const uid = React.useId()
   const { toast } = useToast()
   const isNew = target === "new"
   const doc = isNew ? null : target
+  const [saving, setSaving] = React.useState(false)
+  const [error, setError] = React.useState("")
 
   const [name, setName] = React.useState(doc?.name ?? "")
   const [specialization, setSpecialization] = React.useState(doc?.specialization ?? "")
@@ -197,28 +221,37 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
     setCnic(doc?.cnic ?? ""); setCity(doc?.city ?? "Rawalpindi"); setAddress(doc?.address ?? ""); setCountry(doc?.country ?? "Pakistan");
     setActive(doc?.active ?? true);
     setDays(new Set(doc?.availableDays ?? [])); setHoursFrom(doc?.hoursFrom ?? "09:00"); setHoursTo(doc?.hoursTo ?? "17:00");
-    setNotes(doc?.notes ?? ""); setPhotoUrl(doc?.photoUrl)
+    setNotes(doc?.notes ?? ""); setPhotoUrl(doc?.photoUrl); setError("")
   }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleDay = (day: string) => {
     setDays((s) => { const next = new Set(s); if (next.has(day)) next.delete(day); else next.add(day); return next })
   }
 
-  const save = () => {
-    if (!name || !fee) return
-    const record: Doctor = {
-      userId: doc?.userId ?? Math.max(0, ...DOCTORS.map((d) => d.userId)) + 1000,
+  const save = async () => {
+    setError("")
+    const problems = validateDoctorForm({ name, fee })
+    if (problems.length) { toast(validationToast(problems)); return }
+    const input = {
       name, specialization, qualifications, pmcRegNo, sharePct, fee, phone, email,
       cnic, city, address, country, active,
       availableDays: [...days], hoursFrom, hoursTo, notes, photoUrl,
     }
-    if (isNew) { DOCTORS.push(record); toast({ title: `${name} added` }) }
-    else {
-      const idx = DOCTORS.findIndex((d) => d.userId === doc!.userId)
-      if (idx >= 0) DOCTORS[idx] = record
-      toast({ title: `${name} updated` })
+    setSaving(true)
+    try {
+      if (isNew) {
+        await doctorsService.create(input)
+        toast({ title: `${name} added` })
+      } else if (doc) {
+        await doctorsService.update(doc.id, input)
+        toast({ title: `${name} updated` })
+      }
+      onClose(true)
+    } catch (err) {
+      setError(errorSummary(err))
+    } finally {
+      setSaving(false)
     }
-    onClose()
   }
 
   return (
@@ -236,35 +269,35 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
             
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 bg-white p-6 rounded-2xl ring-1 ring-slate-200/60 shadow-sm">
               <div className="md:col-span-2"><h4 className="text-sm font-black text-[#0D1B2E] uppercase tracking-wider mb-2 border-b border-slate-100 pb-2">Professional Info</h4></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name *</Label><Input className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Specialization</Label><Input className={inputClass} value={specialization} onChange={(e) => setSpecialization(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Degrees</Label><Input className={inputClass} value={qualifications} onChange={(e) => setQualifications(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">PMC Reg. No.</Label><Input className={inputClass} value={pmcRegNo} onChange={(e) => setPmcRegNo(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Consultation Fee (Rs.) *</Label><Input type="number" className={inputClass} value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Rev. Share (%)</Label><Input type="number" min={0} max={100} className={inputClass} value={sharePct || ""} onChange={(e) => setSharePct(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-full-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name *</Label><Input id={`${uid}-full-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-specialization`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Specialization</Label><Input id={`${uid}-specialization`} className={inputClass} value={specialization} onChange={(e) => setSpecialization(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-degrees`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Degrees</Label><Input id={`${uid}-degrees`} className={inputClass} value={qualifications} onChange={(e) => setQualifications(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-pmc-reg-no`} className="text-xs font-bold uppercase tracking-wider text-slate-500">PMC Reg. No.</Label><Input id={`${uid}-pmc-reg-no`} className={inputClass} value={pmcRegNo} onChange={(e) => setPmcRegNo(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-consultation-fee-rs`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Consultation Fee (Rs.) *</Label><Input id={`${uid}-consultation-fee-rs`} type="number" className={inputClass} value={fee || ""} onChange={(e) => setFee(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-rev-share`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Rev. Share (%)</Label><Input id={`${uid}-rev-share`} type="number" min={0} max={100} className={inputClass} value={sharePct || ""} onChange={(e) => setSharePct(Number(e.target.value))} /></div>
             </div>
 
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 bg-white p-6 rounded-2xl ring-1 ring-slate-200/60 shadow-sm">
               <div className="md:col-span-2 flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
                 <h4 className="text-sm font-black text-[#0D1B2E] uppercase tracking-wider">Availability & Status</h4>
                 <div className="flex items-center gap-3">
-                  <Label className="cursor-pointer font-bold text-sm text-slate-600">{active ? "Active" : "Inactive"}</Label>
-                  <Switch checked={active} onCheckedChange={setActive} />
+                  <Label htmlFor={`${uid}-field`} className="cursor-pointer font-bold text-sm text-slate-600">{active ? "Active" : "Inactive"}</Label>
+                  <Switch id={`${uid}-field`} checked={active} onCheckedChange={setActive} />
                 </div>
               </div>
               
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Working Hours</Label>
+                <Label htmlFor={`${uid}-working-hours`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Working Hours</Label>
                 <div className="flex gap-2 items-center">
-                  <Input type="time" className={inputClass} value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} />
+                  <Input id={`${uid}-working-hours`} type="time" className={inputClass} value={hoursFrom} onChange={(e) => setHoursFrom(e.target.value)} />
                   <span className="text-slate-400 font-bold">to</span>
                   <Input type="time" className={inputClass} value={hoursTo} onChange={(e) => setHoursTo(e.target.value)} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Days</Label>
-                <div className="flex flex-wrap gap-2">
+                <Label id={`${uid}-available-days-label`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Days</Label>
+                <div role="group" aria-labelledby={`${uid}-available-days-label`} className="flex flex-wrap gap-2">
                   {DAYS.map((day) => {
                     const isSelected = days.has(day)
                     return (
@@ -288,20 +321,21 @@ function DoctorModal({ target, onClose }: { target: Doctor | "new" | null; onClo
 
             <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-5 bg-white p-6 rounded-2xl ring-1 ring-slate-200/60 shadow-sm">
               <div className="md:col-span-2"><h4 className="text-sm font-black text-[#0D1B2E] uppercase tracking-wider mb-2 border-b border-slate-100 pb-2">Contact & Personal</h4></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">CNIC</Label><Input className={inputClass} placeholder="12345-1234567-1" value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">City</Label><Input className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
-              <div className="space-y-1.5 md:col-span-2"><Label className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label><Textarea rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none bg-slate-50" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-email`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Email</Label><Input id={`${uid}-email`} className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-cnic`} className="text-xs font-bold uppercase tracking-wider text-slate-500">CNIC</Label><Input id={`${uid}-cnic`} className={inputClass} placeholder="12345-1234567-1" value={cnic} onChange={(e) => setCnic(e.target.value)} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-city`} className="text-xs font-bold uppercase tracking-wider text-slate-500">City</Label><Input id={`${uid}-city`} className={inputClass} value={city} onChange={(e) => setCity(e.target.value)} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label htmlFor={`${uid}-address`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Address</Label><Input id={`${uid}-address`} className={inputClass} value={address} onChange={(e) => setAddress(e.target.value)} /></div>
+              <div className="space-y-1.5 md:col-span-2"><Label htmlFor={`${uid}-notes`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</Label><Textarea id={`${uid}-notes`} rows={2} className="rounded-xl border-slate-200 focus:border-[#1CC0CE] resize-none bg-slate-50" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             </div>
           </div>
         </div>
         
         <DialogFooter className="p-5 bg-white border-t border-slate-100 flex items-center gap-2 sm:gap-0 mt-auto">
-          <Button variant="ghost" className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:text-slate-900" onClick={onClose}>Cancel</Button>
-          <Button className="rounded-xl h-12 px-8 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 text-base" onClick={save}>
-            <CheckCircle2 className="h-5 w-5 mr-2" /> Save Doctor
+          {error && <p role="alert" className="mr-auto text-sm font-bold text-red-600">{error}</p>}
+          <Button variant="ghost" className="rounded-xl h-12 px-6 font-bold text-slate-600 hover:text-slate-900" onClick={() => onClose()}>Cancel</Button>
+          <Button disabled={saving} className="rounded-xl h-12 px-8 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 text-base" onClick={save}>
+            <CheckCircle2 className="h-5 w-5 mr-2" /> {saving ? "Saving…" : "Save Doctor"}
           </Button>
         </DialogFooter>
       </DialogContent>

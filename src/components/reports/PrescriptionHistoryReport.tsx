@@ -1,73 +1,70 @@
+"use client"
 import * as React from "react"
 import { format } from "date-fns"
 
-import { ENCOUNTERS } from "@/data/encounters"
-import { PATIENTS } from "@/data/patients"
-import { DOCTORS } from "@/data/doctors"
+import { reportsService, type PrescriptionHistoryReportData } from "@/lib/services"
+import { useDoctors, usePatients } from "@/lib/useReferenceData"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Pagination } from "@/components/shared/Pagination"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { FileText } from "lucide-react"
+import { ReportBody, useReportData } from "./ReportState"
 
-function patientName(id: number) {
-  return PATIENTS.find((p) => p.id === id)?.name ?? "—"
-}
-function doctorName(id: number) {
-  return DOCTORS.find((d) => d.userId === id)?.name ?? "—"
-}
+const PAGE_SIZE = 15
 
 export function PrescriptionHistoryReport() {
   const [search, setSearch] = React.useState("")
+  const [query, setQuery] = React.useState("")
   const [page, setPage] = React.useState(1)
-  const pageSize = 15
 
-  const rows = React.useMemo(() => {
-    const flat = ENCOUNTERS.flatMap((e) =>
-      e.prescription.map((rx, i) => ({
-        key: `${e.id}-${i}`, encId: e.encId, date: e.date, patientId: e.patientId, doctorId: e.doctorId, ...rx,
-      }))
-    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-
-    const q = search.trim().toLowerCase()
-    if (!q) return flat
-    return flat.filter((r) => patientName(r.patientId).toLowerCase().includes(q) || r.medicine.toLowerCase().includes(q) || doctorName(r.doctorId).toLowerCase().includes(q))
+  // Debounce the search; a new search restarts at page 1.
+  React.useEffect(() => {
+    const t = setTimeout(() => { setQuery(search.trim()); setPage(1) }, 250)
+    return () => clearTimeout(t)
   }, [search])
 
-  React.useEffect(() => setPage(1), [search])
-  const paged = rows.slice((page - 1) * pageSize, page * pageSize)
+  const load = React.useCallback((signal: AbortSignal) => reportsService.prescriptionHistory({ search: query, page, pageSize: PAGE_SIZE, signal }), [query, page])
+  const state = useReportData(load)
 
   return (
     <div>
-      <Input placeholder="Search by patient, doctor or medicine..." value={search} onChange={(e) => setSearch(e.target.value)} className="mb-4 max-w-sm no-print" />
-      {rows.length === 0 ? (
-        <EmptyState icon={FileText} title="No prescriptions found" />
-      ) : (
-        <Card><CardContent className="p-0">
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Date</TableHead><TableHead>Encounter</TableHead><TableHead>Patient</TableHead><TableHead>Doctor</TableHead>
-              <TableHead>Medicine</TableHead><TableHead>Dose</TableHead><TableHead>Frequency</TableHead><TableHead>Duration</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {paged.map((r) => (
-                <TableRow key={r.key}>
-                  <TableCell>{format(new Date(r.date), "dd MMM yyyy")}</TableCell>
-                  <TableCell className="font-mono text-secondary">{r.encId}</TableCell>
-                  <TableCell className="font-medium">{patientName(r.patientId)}</TableCell>
-                  <TableCell>{doctorName(r.doctorId)}</TableCell>
-                  <TableCell className="font-medium">{r.medicine}</TableCell>
-                  <TableCell>{r.dose}</TableCell>
-                  <TableCell>{r.frequency}</TableCell>
-                  <TableCell>{r.duration}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <Pagination page={page} pageSize={pageSize} total={rows.length} onPageChange={setPage} itemLabel="prescriptions" />
-        </CardContent></Card>
-      )}
+      <Input placeholder="Search by patient, doctor or medicine..." value={search} disabled={state.pending} onChange={(e) => setSearch(e.target.value)} className="mb-4 max-w-sm no-print" />
+      <ReportBody state={state} label="Prescription History report" testId="report-prescriptions-pending">
+        {(r) => <PrescriptionTable r={r} page={page} onPage={setPage} />}
+      </ReportBody>
     </div>
+  )
+}
+
+function PrescriptionTable({ r, page, onPage }: { r: PrescriptionHistoryReportData; page: number; onPage: (p: number) => void }) {
+  const patients = usePatients(r.rows.map((x) => x.patientId))
+  const doctors = useDoctors()
+  if (r.total === 0) return <EmptyState icon={FileText} title="No prescriptions found" />
+  return (
+    <Card><CardContent className="p-0">
+      <Table>
+        <TableHeader><TableRow>
+          <TableHead>Date</TableHead><TableHead>Encounter</TableHead><TableHead>Patient</TableHead><TableHead>Doctor</TableHead>
+          <TableHead>Medicine</TableHead><TableHead>Dose</TableHead><TableHead>Frequency</TableHead><TableHead>Duration</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {r.rows.map((row) => (
+            <TableRow key={row.key}>
+              <TableCell>{format(new Date(row.date), "dd MMM yyyy")}</TableCell>
+              <TableCell className="font-mono text-secondary">{row.encId}</TableCell>
+              <TableCell className="font-medium">{patients.lookup.get(row.patientId)?.name ?? (patients.loading ? "…" : "—")}</TableCell>
+              <TableCell>{doctors.lookup.get(row.doctorId)?.name ?? "—"}</TableCell>
+              <TableCell className="font-medium">{row.medicine}</TableCell>
+              <TableCell>{row.dose}</TableCell>
+              <TableCell>{row.frequency}</TableCell>
+              <TableCell>{row.duration}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+      <Pagination page={page} pageSize={PAGE_SIZE} total={r.total} onPageChange={onPage} itemLabel="prescriptions" />
+    </CardContent></Card>
   )
 }

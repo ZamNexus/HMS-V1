@@ -8,8 +8,7 @@ import {
 } from "lucide-react"
 
 import { cn, initials } from "@/lib/utils"
-import { useAuth, canSee } from "@/lib/auth"
-import { ROLE_LABELS } from "@/data/users"
+import { useAuth, canSeeNav, roleLabel } from "@/lib/auth"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface NavItem {
@@ -82,8 +81,8 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
       {/* Main Sidebar Container */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-[#0A1B33] via-[#0F2A4D] to-[#0A1B33] border-r border-white/10 text-white shadow-2xl transition-transform duration-300 ease-in-out lg:translate-x-0",
-          open ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-gradient-to-b from-[#0A1B33] via-[#0F2A4D] to-[#0A1B33] border-r border-white/10 text-white transition-transform lg:shadow-2xl duration-300 ease-in-out lg:translate-x-0",
+          open ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         )}
       >
         {/* Brand Header */}
@@ -115,7 +114,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         {/* Nav Links List */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {SECTIONS.map((section) => {
-            const items = section.items.filter((item) => canSee(user.role, item.key))
+            const items = section.items.filter((item) => canSeeNav(user, item.key))
             if (items.length === 0) return null
 
             return (
@@ -167,7 +166,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
                 <div className="truncate text-xs font-bold text-white leading-none mb-1.5">{user.name}</div>
                 <div className="flex items-center gap-1 text-[10px] font-medium text-[#7FA3C8] leading-none">
                   <ShieldCheck className="h-3 w-3 text-[#1CC0CE]" />
-                  <span className="truncate leading-none mt-[1px]">{ROLE_LABELS[user.role]}</span>
+                  <span className="truncate leading-none mt-[1px]">{roleLabel(user.role)}</span>
                 </div>
               </div>
             </div>

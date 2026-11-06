@@ -4,14 +4,15 @@ import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, X } from "lucide-react"
 
-import { IMAGING_ORDERS, nextXrNo } from "@/data/imaging"
-import { LAB_TESTS } from "@/data/labTests"
-import { activeDoctors } from "@/data/doctors"
-import { getPatient } from "@/data/patients"
-import { ENCOUNTERS } from "@/data/encounters"
-import type { ImagingOrder, LabOrderTest, Patient, PaymentMode } from "@/types"
+import { nextXrNo } from "@/data/imaging"
+import {
+  DEFAULT_PAGE_SIZE, dataSource, encountersService, errorSummary, imagingOrdersService, isImagingTest, labLineTotal, labOrderTotals, type PatientRecord,
+} from "@/lib/services"
+import { useDoctors, useLabTests, usePatient } from "@/lib/useReferenceData"
+import { useResource } from "@/lib/useResource"
+import type { PaymentMode } from "@/types"
 import { formatCurrency } from "@/lib/utils"
-import { PatientPicker } from "@/components/shared/PatientPicker"
+import { PatientRecordPicker } from "@/components/shared/PatientPicker"
 import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
 import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
 import { QuickAddLabTestDialog } from "@/components/shared/QuickAddLabTestDialog"
@@ -27,7 +28,6 @@ import { useToast } from "@/components/ui/use-toast"
 
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Insurance", "On Account"]
 const MODE_LABELS: Partial<Record<PaymentMode, string>> = { "On Account": "Credit" }
-const IMAGING_TESTS = LAB_TESTS.filter((t) => t.category === "Radiology" || t.category === "Cardiology")
 
 interface TestSettings {
   discountPct: number
@@ -36,39 +36,53 @@ interface TestSettings {
 }
 
 function ImagingOrderFormContent() {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const params = useSearchParams()
 
-  const [patient, setPatient] = React.useState<Patient | null>(() => {
-    const pid = params?.get("patientId")
-    return pid ? getPatient(Number(pid)) ?? null : null
-  })
+  // ?patientId= / ?encounterId= are opaque string ids (never Number()-ed). `picked` overrides the preselected patient once the
+  // user chooses/clears one.
+  const preselected = usePatient(params?.get("patientId") ?? undefined)
+  const [picked, setPicked] = React.useState<PatientRecord | null | undefined>(undefined)
+  const patient = picked !== undefined ? picked : preselected.data
   const initialEncounterId = params?.get("encounterId")
   const [encounterChoice, setEncounterChoice] = React.useState<string>(initialEncounterId ?? "none")
-  const [doctorId, setDoctorId] = React.useState<number | undefined>(activeDoctors()[0]?.userId)
+  // Doctors come from the shared reference data; the first active doctor is the default until one is chosen.
+  const doctors = useDoctors()
+  const [chosenDoctorId, setChosenDoctorId] = React.useState<string | undefined>(undefined)
+  const doctorId = chosenDoctorId ?? doctors.active[0]?.id
   const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
   const [testDialogOpen, setTestDialogOpen] = React.useState(false)
   const [mode, setMode] = React.useState<PaymentMode>("Cash")
-  const [selected, setSelected] = React.useState<Set<number>>(new Set())
-  const [testSettings, setTestSettings] = React.useState<Record<number, TestSettings>>({})
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [testSettings, setTestSettings] = React.useState<Record<string, TestSettings>>({})
   const [flatDiscount, setFlatDiscount] = React.useState(0)
   const [notes, setNotes] = React.useState("")
+  const [saving, setSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState("")
 
-  const patientEncounters = patient ? ENCOUNTERS.filter((e) => e.patientId === patient.id) : []
-  const chosenEncounter = encounterChoice !== "none" ? ENCOUNTERS.find((e) => e.id === Number(encounterChoice)) : undefined
-  const selectedTests = IMAGING_TESTS.filter((t) => selected.has(t.id))
+  // The patient's encounters (optional link) and the test catalogue come from the services / shared hooks.
+  const loadEncounters = React.useCallback(
+    (signal: AbortSignal) =>
+      patient ? encountersService.list({ patientId: patient.id, pageSize: DEFAULT_PAGE_SIZE, signal }) : Promise.resolve({ items: [], total: 0 }),
+    [patient]
+  )
+  const encountersQuery = useResource(loadEncounters)
+  const patientEncounters = patient ? (encountersQuery.data?.items ?? []).filter((e) => e.patientId === patient.id) : []
+  // A linked encounter that isn't one of this patient's is dropped, as before.
+  const chosenEncounter = encounterChoice !== "none" ? patientEncounters.find((e) => e.id === encounterChoice) : undefined
 
-  const lineTotal = (t: (typeof IMAGING_TESTS)[number]) => {
-    const s = testSettings[t.id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
-    const charge = s.includedInPackage ? 0 : t.rate
-    const afterDisc = charge - (charge * s.discountPct) / 100
-    return afterDisc + (afterDisc * s.gstPct) / 100
-  }
-  const grossTotal = selectedTests.reduce((sum, t) => sum + lineTotal(t), 0)
-  const total = Math.max(0, grossTotal - flatDiscount)
+  // Imaging orders pick from the lab catalogue's Radiology/Cardiology tests (the UI's existing rule; whether imaging has
+  // its own catalogue is CONTRACT REQUIRED).
+  const catalog = useLabTests()
+  const imagingTests = catalog.items.filter(isImagingTest)
+  const selectedTests = imagingTests.filter((t) => selected.has(t.id))
+  const settingsOf = (id: string): TestSettings => testSettings[id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
+  const lineTotal = (t: (typeof imagingTests)[number]) => labLineTotal(t.rate, settingsOf(t.id))
+  const { grossTotal, total } = labOrderTotals(selectedTests.map((t) => ({ rate: t.rate, ...settingsOf(t.id) })), flatDiscount)
 
-  const toggleTest = (id: number) => {
+  const toggleTest = (id: string) => {
     setSelected((s) => {
       const next = new Set(s)
       if (next.has(id)) {
@@ -82,33 +96,32 @@ function ImagingOrderFormContent() {
     })
   }
 
-  const updateSetting = (id: number, patch: Partial<TestSettings>) => {
+  const updateSetting = (id: string, patch: Partial<TestSettings>) => {
     setTestSettings((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }), ...patch } }))
   }
 
-  const save = () => {
-    if (!patient || selected.size === 0 || !doctorId) return
-    const xrNo = nextXrNo()
-    const tests: LabOrderTest[] = selectedTests.map((t) => {
-      const s = testSettings[t.id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
-      return { testId: t.id, testName: t.name, charges: t.rate, discountPct: s.discountPct, gstPct: s.gstPct, includedInPackage: s.includedInPackage, remarks: notes || undefined }
-    })
-    const record: ImagingOrder = {
-      id: Math.max(0, ...IMAGING_ORDERS.map((o) => o.id)) + 1,
-      xrNo,
-      patientId: patient.id,
-      encounterId: chosenEncounter?.id ?? null,
-      doctorId,
-      date: new Date().toISOString(),
-      tests,
-      discount: flatDiscount,
-      total,
-      paymentMode: mode,
-      status: "Pending",
+  const save = async () => {
+    if (!patient || selectedTests.length === 0 || !doctorId) return
+    setSaveError("")
+    setSaving(true)
+    try {
+      const record = await imagingOrdersService.create({
+        patientId: patient.id,
+        encounterId: chosenEncounter?.id,
+        doctorId,
+        tests: selectedTests.map((t) => ({ testId: t.id, ...settingsOf(t.id) })),
+        flatDiscount,
+        paymentMode: mode,
+        notes: notes || undefined,
+      })
+      toast({ title: `Imaging Order ${record.xrNo} saved` })
+      router.push(`/imaging/orders/${record.id}`)
+    } catch (err) {
+      setSaveError(errorSummary(err))
+      toast({ variant: "destructive", title: "Could not save the imaging order", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    IMAGING_ORDERS.push(record)
-    toast({ title: `Imaging Order ${xrNo} saved` })
-    router.push(`/imaging/orders/${record.id}`)
   }
 
   return (
@@ -116,20 +129,20 @@ function ImagingOrderFormContent() {
       <Card>
         <CardContent className="space-y-5 p-6">
           <div className="space-y-1.5">
-            <Label>Patient *</Label>
-            <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+            <Label htmlFor={`${uid}-patient`}>Patient *</Label>
+            <PatientRecordPicker id={`${uid}-patient`} value={patient ?? null} onChange={(p) => { setPicked(p); setEncounterChoice("none") }} />
           </div>
 
           <PatientInfoPanel patient={patient} />
 
           {patient && (
             <div className="space-y-1.5">
-              <Label>OPD/IPD Encounter</Label>
+              <Label htmlFor={`${uid}-opd-ipd-encounter`}>OPD/IPD Encounter</Label>
               <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                <SelectTrigger><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
+                <SelectTrigger id={`${uid}-opd-ipd-encounter`}><SelectValue placeholder="Link to a visit (optional)" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Not linked to a visit</SelectItem>
-                  {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
+                  {patientEncounters.map((e) => <SelectItem key={e.id} value={e.id}>{e.encId} — {e.type} · {e.diagnosis}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -137,25 +150,26 @@ function ImagingOrderFormContent() {
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
-              <Label>Ordering Doctor</Label>
+              <Label htmlFor={`${uid}-ordering-doctor`}>Ordering Doctor</Label>
               <div className="flex gap-2">
-                <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                  <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
+                <Select value={doctorId} onValueChange={setChosenDoctorId} disabled={doctors.loading}>
+                  <SelectTrigger id={`${uid}-ordering-doctor`}><SelectValue placeholder={doctors.loading ? "Loading doctors…" : "Select doctor"} /></SelectTrigger>
+                  <SelectContent>{doctors.active.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
+              {Boolean(doctors.error) && <p role="alert" className="text-xs text-red-600">Doctors unavailable: {errorSummary(doctors.error)}</p>}
             </div>
             <div className="space-y-1.5">
-              <Label>Date/Time</Label>
-              <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+              <Label htmlFor={`${uid}-date-time`}>Date/Time</Label>
+              <Input id={`${uid}-date-time`} type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
             </div>
             <div className="space-y-1.5">
-              <Label>Payment Mode</Label>
+              <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
               <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                 <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -168,8 +182,18 @@ function ImagingOrderFormContent() {
                 <Plus className="mr-1 h-3.5 w-3.5" /> New Test
               </Button>
             </div>
+            {catalog.loading && <div role="status" className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">Loading tests…</div>}
+            {Boolean(catalog.error) && !catalog.loading && (
+              <div role="alert" className="space-y-2 rounded-md border border-dashed border-red-200 p-3 text-xs text-red-600">
+                <p>Couldn&apos;t load the test catalogue: {errorSummary(catalog.error)}</p>
+                <Button type="button" variant="outline" size="sm" onClick={catalog.reload}>Try again</Button>
+              </div>
+            )}
+            {!catalog.loading && !catalog.error && imagingTests.length === 0 && (
+              <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">No imaging tests in the catalogue yet.</div>
+            )}
             <div className="space-y-1.5">
-              {IMAGING_TESTS.map((t) => (
+              {imagingTests.map((t) => (
                 <label key={t.id} className="flex cursor-pointer items-center gap-2 rounded-md border border-border p-2.5 text-sm hover:bg-muted/40">
                   <Checkbox checked={selected.has(t.id)} onCheckedChange={() => toggleTest(t.id)} />
                   <span className="flex-1">{t.name}</span>
@@ -180,10 +204,10 @@ function ImagingOrderFormContent() {
             </div>
           </div>
 
-          {selected.size > 0 && (
+          {selectedTests.length > 0 && (
             <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
               {selectedTests.map((t) => {
-                const s = testSettings[t.id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
+                const s = settingsOf(t.id)
                 return (
                   <div key={t.id} className="space-y-1 border-b border-border/60 pb-2 text-xs last:border-0">
                     <div className="flex items-center justify-between">
@@ -216,8 +240,8 @@ function ImagingOrderFormContent() {
           )}
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label>Flat Discount (Rs.)</Label>
-              <Input type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} />
+            <div className="space-y-1.5"><Label htmlFor={`${uid}-flat-discount-rs`}>Flat Discount (Rs.)</Label>
+              <Input id={`${uid}-flat-discount-rs`} type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} />
             </div>
             <div className="flex flex-col items-end justify-end gap-0.5">
               {grossTotal !== total && <span className="text-xs text-muted-foreground">Gross: {formatCurrency(grossTotal)}</span>}
@@ -229,19 +253,30 @@ function ImagingOrderFormContent() {
           </div>
 
           <div className="space-y-1.5">
-            <Label>Remarks / Notes</Label>
-            <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <Label htmlFor={`${uid}-remarks-notes`}>Remarks / Notes</Label>
+            <Textarea id={`${uid}-remarks-notes`} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </CardContent>
       </Card>
 
+      {saveError && <p role="alert" className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600">{saveError}</p>}
+
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="ghost" onClick={() => router.back()}>Cancel</Button>
-        <Button disabled={!patient || selected.size === 0 || !doctorId} onClick={save}>Save Order</Button>
+        <Button disabled={!patient || selectedTests.length === 0 || !doctorId || saving} onClick={save}>{saving ? "Saving…" : "Save Order"}</Button>
       </div>
 
-      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreated={(id) => setDoctorId(id)} />
-      <QuickAddLabTestDialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} onCreated={(id) => toggleTest(id)} defaultCategory="Radiology" />
+      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreatedRecord={(d) => { doctors.reload(); setChosenDoctorId(d.id) }} />
+      <QuickAddLabTestDialog
+        open={testDialogOpen}
+        onClose={() => setTestDialogOpen(false)}
+        defaultCategory="Radiology"
+        onCreatedRecord={(t) => {
+          catalog.reload()
+          if (isImagingTest(t)) toggleTest(t.id)
+          else toast({ title: `${t.name} was added under ${t.category}`, description: "Imaging orders list Radiology and Cardiology tests only." })
+        }}
+      />
     </div>
   )
 }
@@ -249,7 +284,7 @@ function ImagingOrderFormContent() {
 export default function ImagingOrderFormPage() {
   return (
     <div>
-      <PageHeader title="New Imaging Order" subtitle={nextXrNo()} />
+      <PageHeader title="New Imaging Order" subtitle={dataSource === "mock" ? nextXrNo() : "Order number assigned on save"} />
       <Suspense fallback={<div className="p-10 text-center">Loading form...</div>}>
         <ImagingOrderFormContent />
       </Suspense>

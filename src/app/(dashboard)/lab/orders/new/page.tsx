@@ -4,14 +4,16 @@ import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, X } from "lucide-react"
 
-import { LAB_ORDERS, nextLabNo } from "@/data/lab"
-import { LAB_TESTS, LAB_TEST_CATEGORIES } from "@/data/labTests"
-import { activeDoctors } from "@/data/doctors"
-import { getPatient } from "@/data/patients"
-import { ENCOUNTERS } from "@/data/encounters"
-import type { LabOrder, LabOrderTest, Patient, PaymentMode } from "@/types"
+import { nextLabNo } from "@/data/lab"
+import { LAB_TEST_CATEGORIES } from "@/data/labTests"
+import {
+  DEFAULT_PAGE_SIZE, dataSource, encountersService, errorSummary, labLineTotal, labOrderTotals, labOrdersService, type PatientRecord,
+} from "@/lib/services"
+import { useDoctors, useLabTests, usePatient } from "@/lib/useReferenceData"
+import { useResource } from "@/lib/useResource"
+import type { PaymentMode } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
-import { PatientPicker } from "@/components/shared/PatientPicker"
+import { PatientRecordPicker } from "@/components/shared/PatientPicker"
 import { PatientInfoPanel } from "@/components/shared/PatientInfoPanel"
 import { QuickAddDoctorDialog } from "@/components/shared/QuickAddDoctorDialog"
 import { QuickAddLabTestDialog } from "@/components/shared/QuickAddLabTestDialog"
@@ -37,41 +39,52 @@ interface TestSettings {
 }
 
 function LabOrderFormContent() {
+  const uid = React.useId()
   const router = useRouter()
   const { toast } = useToast()
   const params = useSearchParams()
 
-  const [patient, setPatient] = React.useState<Patient | null>(() => {
-    const pid = params?.get("patientId")
-    return pid ? getPatient(Number(pid)) ?? null : null
-  })
+  // ?patientId= / ?encounterId= are opaque string ids (never Number()-ed). `picked` overrides the preselected patient once the
+  // user chooses/clears one.
+  const preselected = usePatient(params?.get("patientId") ?? undefined)
+  const [picked, setPicked] = React.useState<PatientRecord | null | undefined>(undefined)
+  const patient = picked !== undefined ? picked : preselected.data
   const initialEncounterId = params?.get("encounterId")
   const [encounterChoice, setEncounterChoice] = React.useState<string>(initialEncounterId ?? "none")
-  const [doctorId, setDoctorId] = React.useState<number | undefined>(activeDoctors()[0]?.userId)
+  // Doctors come from the shared reference data; the first active doctor is the default until one is chosen.
+  const doctors = useDoctors()
+  const [chosenDoctorId, setChosenDoctorId] = React.useState<string | undefined>(undefined)
+  const doctorId = chosenDoctorId ?? doctors.active[0]?.id
   const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
   const [testDialogOpen, setTestDialogOpen] = React.useState(false)
   const [priority, setPriority] = React.useState<"Normal" | "Urgent">("Normal")
   const [clinicalNotes, setClinicalNotes] = React.useState("")
   const [sampleType, setSampleType] = React.useState("Blood")
-  const [selected, setSelected] = React.useState<Set<number>>(new Set())
-  const [testSettings, setTestSettings] = React.useState<Record<number, TestSettings>>({})
+  const [selected, setSelected] = React.useState<Set<string>>(new Set())
+  const [testSettings, setTestSettings] = React.useState<Record<string, TestSettings>>({})
   const [flatDiscount, setFlatDiscount] = React.useState(0)
   const [mode, setMode] = React.useState<PaymentMode>("Cash")
+  const [saving, setSaving] = React.useState(false)
+  const [saveError, setSaveError] = React.useState("")
 
-  const patientEncounters = patient ? ENCOUNTERS.filter((e) => e.patientId === patient.id) : []
-  const chosenEncounter = encounterChoice !== "none" ? ENCOUNTERS.find((e) => e.id === Number(encounterChoice)) : undefined
-  const selectedTests = LAB_TESTS.filter((t) => selected.has(t.id))
+  // The patient's encounters (optional link) and the test catalog come from the services / shared hooks.
+  const loadEncounters = React.useCallback(
+    (signal: AbortSignal) =>
+      patient ? encountersService.list({ patientId: patient.id, pageSize: DEFAULT_PAGE_SIZE, signal }) : Promise.resolve({ items: [], total: 0 }),
+    [patient]
+  )
+  const encountersQuery = useResource(loadEncounters)
+  const patientEncounters = patient ? (encountersQuery.data?.items ?? []).filter((e) => e.patientId === patient.id) : []
+  // A linked encounter that isn't one of this patient's is dropped, as before.
+  const chosenEncounter = encounterChoice !== "none" ? patientEncounters.find((e) => e.id === encounterChoice) : undefined
 
-  const lineTotal = (t: (typeof LAB_TESTS)[number]) => {
-    const s = testSettings[t.id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
-    const charge = s.includedInPackage ? 0 : t.rate
-    const afterDisc = charge - (charge * s.discountPct) / 100
-    return afterDisc + (afterDisc * s.gstPct) / 100
-  }
-  const grossTotal = selectedTests.reduce((sum, t) => sum + lineTotal(t), 0)
-  const total = Math.max(0, grossTotal - flatDiscount)
+  const catalog = useLabTests()
+  const selectedTests = catalog.items.filter((t) => selected.has(t.id))
+  const settingsOf = (id: string): TestSettings => testSettings[id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
+  const lineTotal = (t: (typeof selectedTests)[number]) => labLineTotal(t.rate, settingsOf(t.id))
+  const { grossTotal, total } = labOrderTotals(selectedTests.map((t) => ({ rate: t.rate, ...settingsOf(t.id) })), flatDiscount)
 
-  const toggleTest = (id: number) => {
+  const toggleTest = (id: string) => {
     setSelected((s) => {
       const next = new Set(s)
       if (next.has(id)) {
@@ -85,38 +98,34 @@ function LabOrderFormContent() {
     })
   }
 
-  const updateSetting = (id: number, patch: Partial<TestSettings>) => {
+  const updateSetting = (id: string, patch: Partial<TestSettings>) => {
     setTestSettings((prev) => ({ ...prev, [id]: { ...(prev[id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }), ...patch } }))
   }
 
-  const save = () => {
+  const save = async () => {
     if (!patient || selected.size === 0 || !doctorId) return
-    const labNo = nextLabNo()
-    const tests: LabOrderTest[] = selectedTests.map((t) => {
-      const s = testSettings[t.id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
-      return { testId: t.id, testName: t.name, charges: t.rate, discountPct: s.discountPct, gstPct: s.gstPct, includedInPackage: s.includedInPackage }
-    })
-    const record: LabOrder = {
-      id: Math.max(0, ...LAB_ORDERS.map((o) => o.id)) + 1,
-      labNo,
-      patientId: patient.id,
-      encounterId: chosenEncounter?.id ?? null,
-      doctorId,
-      date: new Date().toISOString(),
-      priority,
-      sampleType,
-      sampleId: `SMP-2024-${Math.floor(1000 + Math.random() * 8999)}`,
-      clinicalNotes,
-      tests,
-      discount: flatDiscount,
-      total,
-      paymentStatus: mode === "On Account" ? "unpaid" : "paid",
-      paymentMode: mode,
-      status: "Pending",
+    setSaveError("")
+    setSaving(true)
+    try {
+      const record = await labOrdersService.create({
+        patientId: patient.id,
+        encounterId: chosenEncounter?.id,
+        doctorId,
+        priority,
+        sampleType,
+        clinicalNotes,
+        tests: selectedTests.map((t) => ({ testId: t.id, ...settingsOf(t.id) })),
+        flatDiscount,
+        paymentMode: mode,
+      })
+      toast({ title: `Lab Order ${record.labNo} saved` })
+      router.push(`/lab/orders/${record.id}`)
+    } catch (err) {
+      setSaveError(errorSummary(err))
+      toast({ variant: "destructive", title: "Could not save the lab order", description: errorSummary(err) })
+    } finally {
+      setSaving(false)
     }
-    LAB_ORDERS.push(record)
-    toast({ title: `Lab Order ${labNo} saved` })
-    router.push(`/lab/orders/${record.id}`)
   }
 
   return (
@@ -125,46 +134,47 @@ function LabOrderFormContent() {
         <Card className="lg:col-span-3">
           <CardContent className="space-y-4 p-6">
             <div className="space-y-1.5">
-              <Label>Patient *</Label>
-              <PatientPicker value={patient} onChange={(p) => { setPatient(p); setEncounterChoice("none") }} />
+              <Label htmlFor={`${uid}-patient`}>Patient *</Label>
+              <PatientRecordPicker id={`${uid}-patient`} value={patient ?? null} onChange={(p) => { setPicked(p); setEncounterChoice("none") }} />
             </div>
 
             <PatientInfoPanel patient={patient} />
 
             {patient && (
               <div className="space-y-1.5">
-                <Label>Link to Encounter (optional)</Label>
+                <Label htmlFor={`${uid}-link-to-encounter-optional`}>Link to Encounter (optional)</Label>
                 <Select value={encounterChoice} onValueChange={setEncounterChoice}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-link-to-encounter-optional`}><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None</SelectItem>
-                    {patientEncounters.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.encId} — {e.diagnosis}</SelectItem>)}
+                    {patientEncounters.map((e) => <SelectItem key={e.id} value={e.id}>{e.encId} — {e.diagnosis}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label>Ordering Doctor</Label>
+              <Label htmlFor={`${uid}-ordering-doctor`}>Ordering Doctor</Label>
               <div className="flex gap-2">
-                <Select value={doctorId ? String(doctorId) : undefined} onValueChange={(v) => setDoctorId(Number(v))}>
-                  <SelectTrigger><SelectValue placeholder="Select doctor" /></SelectTrigger>
-                  <SelectContent>{activeDoctors().map((d) => <SelectItem key={d.userId} value={String(d.userId)}>{d.name}</SelectItem>)}</SelectContent>
+                <Select value={doctorId} onValueChange={setChosenDoctorId} disabled={doctors.loading}>
+                  <SelectTrigger id={`${uid}-ordering-doctor`}><SelectValue placeholder={doctors.loading ? "Loading doctors…" : "Select doctor"} /></SelectTrigger>
+                  <SelectContent>{doctors.active.map((d) => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}</SelectContent>
                 </Select>
                 <Button type="button" variant="outline" size="icon" title="Register new doctor" onClick={() => setDoctorDialogOpen(true)}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
+              {Boolean(doctors.error) && <p role="alert" className="text-xs text-red-600">Doctors unavailable: {errorSummary(doctors.error)}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <Label>Collection Date/Time</Label>
-              <Input type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
+              <Label htmlFor={`${uid}-collection-date-time`}>Collection Date/Time</Label>
+              <Input id={`${uid}-collection-date-time`} type="datetime-local" defaultValue={new Date().toISOString().slice(0, 16)} />
             </div>
 
             <div className="space-y-1.5">
-              <Label>Priority</Label>
-              <RadioGroup className="flex gap-4 pt-1" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
+              <Label id={`${uid}-priority-label`}>Priority</Label>
+              <RadioGroup aria-labelledby={`${uid}-priority-label`} className="flex gap-4 pt-1" value={priority} onValueChange={(v) => setPriority(v as "Normal" | "Urgent")}>
                 {(["Normal", "Urgent"] as const).map((p) => (
                   <div key={p} className="flex items-center gap-1.5"><RadioGroupItem value={p} id={`p-${p}`} /><Label htmlFor={`p-${p}`} className="cursor-pointer font-normal">{p}</Label></div>
                 ))}
@@ -172,29 +182,29 @@ function LabOrderFormContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Clinical Notes</Label>
-              <Textarea rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
+              <Label htmlFor={`${uid}-clinical-notes`}>Clinical Notes</Label>
+              <Textarea id={`${uid}-clinical-notes`} rows={2} value={clinicalNotes} onChange={(e) => setClinicalNotes(e.target.value)} />
             </div>
 
             {selected.size > 0 && (
               <div className="grid grid-cols-1 gap-4 rounded-md border border-border bg-muted/30 p-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
-                  <Label>Sample Type</Label>
+                  <Label htmlFor={`${uid}-sample-type`}>Sample Type</Label>
                   <Select value={sampleType} onValueChange={setSampleType}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger id={`${uid}-sample-type`}><SelectValue /></SelectTrigger>
                     <SelectContent>{["Blood", "Urine", "Stool", "Swab", "Sputum", "Other"].map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5"><Label>Sample ID</Label><Input readOnly value="Auto-generated on save" className="font-mono text-xs" /></div>
+                <div className="space-y-1.5"><Label htmlFor={`${uid}-sample-id`}>Sample ID</Label><Input id={`${uid}-sample-id`} readOnly value="Auto-generated on save" className="font-mono text-xs" /></div>
               </div>
             )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5"><Label>Flat Discount (Rs.)</Label><Input type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} /></div>
+              <div className="space-y-1.5"><Label htmlFor={`${uid}-flat-discount-rs`}>Flat Discount (Rs.)</Label><Input id={`${uid}-flat-discount-rs`} type="number" value={flatDiscount} onChange={(e) => setFlatDiscount(Number(e.target.value))} /></div>
               <div className="space-y-1.5">
-                <Label>Payment Mode</Label>
+                <Label htmlFor={`${uid}-payment-mode`}>Payment Mode</Label>
                 <Select value={mode} onValueChange={(v) => setMode(v as PaymentMode)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id={`${uid}-payment-mode`}><SelectValue /></SelectTrigger>
                   <SelectContent>{MODES.map((m) => <SelectItem key={m} value={m}>{MODE_LABELS[m] ?? m}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
@@ -210,9 +220,19 @@ function LabOrderFormContent() {
                 <Plus className="mr-1 h-3.5 w-3.5" /> New Test
               </Button>
             </div>
+            {catalog.loading && <div role="status" className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">Loading tests…</div>}
+            {Boolean(catalog.error) && !catalog.loading && (
+              <div role="alert" className="space-y-2 rounded-md border border-dashed border-red-200 p-3 text-xs text-red-600">
+                <p>Couldn&apos;t load the test catalogue: {errorSummary(catalog.error)}</p>
+                <Button type="button" variant="outline" size="sm" onClick={catalog.reload}>Try again</Button>
+              </div>
+            )}
+            {!catalog.loading && !catalog.error && catalog.items.length === 0 && (
+              <div className="rounded-md border border-dashed border-border p-3 text-xs text-muted-foreground">No tests in the catalogue yet.</div>
+            )}
             <Accordion type="multiple" defaultValue={[...LAB_TEST_CATEGORIES]}>
               {LAB_TEST_CATEGORIES.map((cat) => {
-                const tests = LAB_TESTS.filter((t) => t.category === cat)
+                const tests = catalog.items.filter((t) => t.category === cat)
                 const selectedInCat = tests.filter((t) => selected.has(t.id)).length
                 return (
                   <AccordionItem key={cat} value={cat}>
@@ -239,7 +259,7 @@ function LabOrderFormContent() {
               <div className="sticky bottom-0 space-y-2 rounded-md border border-border bg-white p-3 shadow-sm">
                 <p className="text-xs font-semibold text-muted-foreground">Selected ({selected.size})</p>
                 {selectedTests.map((t) => {
-                  const s = testSettings[t.id] ?? { discountPct: 0, gstPct: 0, includedInPackage: false }
+                  const s = settingsOf(t.id)
                   return (
                     <div key={t.id} className="space-y-1 border-b border-border/60 pb-2 text-xs last:border-0">
                       <div className="flex items-center justify-between">
@@ -281,13 +301,15 @@ function LabOrderFormContent() {
         </Card>
       </div>
 
+      {saveError && <p role="alert" className="mt-4 rounded-md border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600">{saveError}</p>}
+
       <div className="mt-6 flex justify-end gap-2">
         <Button variant="ghost" onClick={() => router.back()}>Cancel</Button>
-        <Button disabled={!patient || selected.size === 0 || !doctorId} onClick={save}>Save Order</Button>
+        <Button disabled={!patient || selected.size === 0 || !doctorId || saving} onClick={save}>{saving ? "Saving…" : "Save Order"}</Button>
       </div>
 
-      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreated={(id) => setDoctorId(id)} />
-      <QuickAddLabTestDialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} onCreated={(id) => toggleTest(id)} />
+      <QuickAddDoctorDialog open={doctorDialogOpen} onClose={() => setDoctorDialogOpen(false)} onCreatedRecord={(d) => { doctors.reload(); setChosenDoctorId(d.id) }} />
+      <QuickAddLabTestDialog open={testDialogOpen} onClose={() => setTestDialogOpen(false)} onCreatedRecord={(t) => { catalog.reload(); toggleTest(t.id) }} />
     </>
   )
 }
@@ -297,7 +319,7 @@ export default function LabOrderFormPage() {
     <div>
       <PageHeader
         title="New Lab Order"
-        subtitle={nextLabNo()}
+        subtitle={dataSource === "mock" ? nextLabNo() : "Order number assigned on save"}
       />
       <Suspense fallback={<div className="p-10 text-center">Loading form...</div>}>
         <LabOrderFormContent />

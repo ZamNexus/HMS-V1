@@ -1,19 +1,19 @@
+"use client"
 import * as React from "react"
 import { format } from "date-fns"
 
-import { PATIENTS } from "@/data/patients"
-import { DOCTORS } from "@/data/doctors"
-import { SERVICE_CATALOG } from "@/data/services"
-import { PANELS } from "@/data/organisations"
-import { EXPENSE_CATEGORIES } from "@/data/billing"
-import { LAB_TESTS } from "@/data/labTests"
-import { ENCOUNTERS } from "@/data/encounters"
+import {
+  doctorsService, encountersService, expenseCategoriesService, labTestsService, organisationsService, patientsService, serviceCatalogService,
+} from "@/lib/services"
+import { listAll } from "@/lib/services/reference/listAll"
+import { useDoctors, usePatients } from "@/lib/useReferenceData"
 import { formatCurrency, cn } from "@/lib/utils"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { ClipboardList } from "lucide-react"
+import { ReportBody, useReportData } from "./ReportState"
 
 const LISTS = [
   "Patient List", "Doctor List", "Services/Items", "Organizations List",
@@ -21,12 +21,16 @@ const LISTS = [
 ] as const
 type ListKey = (typeof LISTS)[number]
 
-function patientName(id: number) {
-  return PATIENTS.find((p) => p.id === id)?.name ?? "—"
-}
-function doctorName(id: number) {
-  return DOCTORS.find((d) => d.userId === id)?.name ?? "—"
-}
+// The Task List says these lists "already come from existing list endpoints" (patients, admitted patients, doctors, organizations,
+// services) or "come with T1 and T6" (the lab test list, expense heads) — so each is read through the EXISTING service for that
+// resource, not through a report endpoint. Each list is as connected as its own service is; none is simulated.
+const loadPatients = () => listAll((o) => patientsService.list(o))
+const loadDoctors = () => listAll((o) => doctorsService.list(o))
+const loadServices = () => listAll((o) => serviceCatalogService.list(o))
+const loadOrganisations = () => listAll((o) => organisationsService.list(o))
+const loadExpenseHeads = () => listAll((o) => expenseCategoriesService.list(o))
+const loadLabTests = () => listAll((o) => labTestsService.list(o))
+const loadAdmitted = () => listAll((o) => encountersService.list({ ...o, type: "IPD" }))
 
 export function ListsReport() {
   const [active, setActive] = React.useState<ListKey>("Patient List")
@@ -47,7 +51,22 @@ export function ListsReport() {
 
       <p className="mb-3 hidden text-sm font-semibold print:block">{active}</p>
 
-      {active === "Patient List" && (
+      {active === "Patient List" && <PatientList />}
+      {active === "Doctor List" && <DoctorList />}
+      {active === "Services/Items" && <ServiceList />}
+      {active === "Organizations List" && <OrganisationList />}
+      {active === "Expense Head List" && <ExpenseHeadList />}
+      {active === "XRay/Lab Test List" && <LabTestList />}
+      {active === "Admitted Patients List" && <AdmittedList />}
+    </div>
+  )
+}
+
+function PatientList() {
+  const state = useReportData(loadPatients)
+  return (
+    <ReportBody state={state} label="Patient list" testId="list-patients-pending">
+      {(all) => (
         <Card><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -55,7 +74,7 @@ export function ListsReport() {
               <TableHead>Phone</TableHead><TableHead>City</TableHead><TableHead>Registered</TableHead><TableHead>Status</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {PATIENTS.map((p) => (
+              {all.items.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-mono text-secondary">{p.mrNo}</TableCell>
                   <TableCell className="font-medium">{p.name}</TableCell>
@@ -70,8 +89,15 @@ export function ListsReport() {
           </Table>
         </CardContent></Card>
       )}
+    </ReportBody>
+  )
+}
 
-      {active === "Doctor List" && (
+function DoctorList() {
+  const state = useReportData(loadDoctors)
+  return (
+    <ReportBody state={state} label="Doctor list" testId="list-doctors-pending">
+      {(all) => (
         <Card><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -79,8 +105,8 @@ export function ListsReport() {
               <TableHead>Fee</TableHead><TableHead>Phone</TableHead><TableHead>Available Days</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {DOCTORS.map((d) => (
-                <TableRow key={d.userId}>
+              {all.items.map((d) => (
+                <TableRow key={d.id}>
                   <TableCell className="font-medium">{d.name}</TableCell>
                   <TableCell>{d.specialization}</TableCell>
                   <TableCell className="text-muted-foreground">{d.qualifications}</TableCell>
@@ -93,8 +119,15 @@ export function ListsReport() {
           </Table>
         </CardContent></Card>
       )}
+    </ReportBody>
+  )
+}
 
-      {active === "Services/Items" && (
+function ServiceList() {
+  const state = useReportData(loadServices)
+  return (
+    <ReportBody state={state} label="Services/Items list" testId="list-services-pending">
+      {(all) => (
         <Card><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -102,7 +135,7 @@ export function ListsReport() {
               <TableHead>Rate</TableHead><TableHead>Active</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {SERVICE_CATALOG.map((s) => (
+              {all.items.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-mono text-secondary">{s.code}</TableCell>
                   <TableCell className="font-medium">{s.name}</TableCell>
@@ -115,8 +148,15 @@ export function ListsReport() {
           </Table>
         </CardContent></Card>
       )}
+    </ReportBody>
+  )
+}
 
-      {active === "Organizations List" && (
+function OrganisationList() {
+  const state = useReportData(loadOrganisations)
+  return (
+    <ReportBody state={state} label="Organizations list" testId="list-organisations-pending">
+      {(all) => (
         <Card><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
@@ -124,7 +164,7 @@ export function ListsReport() {
               <TableHead>Phone</TableHead><TableHead>Commission %</TableHead><TableHead>Active</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {PANELS.map((p) => (
+              {all.items.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">{p.name}</TableCell>
                   <TableCell>{p.type}</TableCell>
@@ -138,28 +178,42 @@ export function ListsReport() {
           </Table>
         </CardContent></Card>
       )}
+    </ReportBody>
+  )
+}
 
-      {active === "Expense Head List" && (
+function ExpenseHeadList() {
+  const state = useReportData(loadExpenseHeads)
+  return (
+    <ReportBody state={state} label="Expense head list" testId="list-expense-heads-pending">
+      {(all) => (
         <Card><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow><TableHead>#</TableHead><TableHead>Expense Head</TableHead></TableRow></TableHeader>
             <TableBody>
-              {EXPENSE_CATEGORIES.map((c, i) => (
-                <TableRow key={c}><TableCell className="font-mono text-secondary">{i + 1}</TableCell><TableCell className="font-medium">{c}</TableCell></TableRow>
+              {all.items.map((c, i) => (
+                <TableRow key={c.id}><TableCell className="font-mono text-secondary">{i + 1}</TableCell><TableCell className="font-medium">{c.name}</TableCell></TableRow>
               ))}
             </TableBody>
           </Table>
         </CardContent></Card>
       )}
+    </ReportBody>
+  )
+}
 
-      {active === "XRay/Lab Test List" && (
+function LabTestList() {
+  const state = useReportData(loadLabTests)
+  return (
+    <ReportBody state={state} label="XRay/Lab test list" testId="list-lab-tests-pending">
+      {(all) => (
         <Card><CardContent className="p-0">
           <Table>
             <TableHeader><TableRow>
               <TableHead>Code</TableHead><TableHead>Test Name</TableHead><TableHead>Category</TableHead><TableHead>Fee</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {LAB_TESTS.map((t) => (
+              {all.items.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-mono text-secondary">{t.code}</TableCell>
                   <TableCell className="font-medium">{t.name}</TableCell>
@@ -171,35 +225,44 @@ export function ListsReport() {
           </Table>
         </CardContent></Card>
       )}
+    </ReportBody>
+  )
+}
 
-      {active === "Admitted Patients List" && (() => {
-        const admitted = ENCOUNTERS.filter((e) => e.type === "IPD" && e.status === "open")
-        return admitted.length === 0 ? (
-          <EmptyState icon={ClipboardList} title="No patients currently admitted" />
-        ) : (
-          <Card><CardContent className="p-0">
-            <Table>
-              <TableHeader><TableRow>
-                <TableHead>Encounter</TableHead><TableHead>Patient</TableHead><TableHead>Ward</TableHead>
-                <TableHead>Bed</TableHead><TableHead>Doctor</TableHead><TableHead>Admitted</TableHead><TableHead>Admission Type</TableHead>
-              </TableRow></TableHeader>
-              <TableBody>
-                {admitted.map((e) => (
-                  <TableRow key={e.id}>
-                    <TableCell className="font-mono text-secondary">{e.encId}</TableCell>
-                    <TableCell className="font-medium">{patientName(e.patientId)}</TableCell>
-                    <TableCell>{e.ward ?? "—"}</TableCell>
-                    <TableCell className="font-mono">{e.bedNo ?? "—"}</TableCell>
-                    <TableCell>{doctorName(e.doctorId)}</TableCell>
-                    <TableCell>{format(new Date(e.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell><StatusBadge status={e.admissionType ?? "Planned"} /></TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent></Card>
-        )
-      })()}
-    </div>
+function AdmittedList() {
+  const state = useReportData(loadAdmitted)
+  return (
+    <ReportBody state={state} label="Admitted patients list" testId="list-admitted-pending">
+      {(all) => <AdmittedTable encounters={all.items.filter((e) => e.type === "IPD" && e.status === "open")} />}
+    </ReportBody>
+  )
+}
+
+function AdmittedTable({ encounters }: { encounters: Awaited<ReturnType<typeof loadAdmitted>>["items"] }) {
+  const patients = usePatients(encounters.map((e) => e.patientId))
+  const doctors = useDoctors()
+  if (encounters.length === 0) return <EmptyState icon={ClipboardList} title="No patients currently admitted" />
+  return (
+    <Card><CardContent className="p-0">
+      <Table>
+        <TableHeader><TableRow>
+          <TableHead>Encounter</TableHead><TableHead>Patient</TableHead><TableHead>Ward</TableHead>
+          <TableHead>Bed</TableHead><TableHead>Doctor</TableHead><TableHead>Admitted</TableHead><TableHead>Admission Type</TableHead>
+        </TableRow></TableHeader>
+        <TableBody>
+          {encounters.map((e) => (
+            <TableRow key={e.id}>
+              <TableCell className="font-mono text-secondary">{e.encId}</TableCell>
+              <TableCell className="font-medium">{patients.lookup.get(e.patientId)?.name ?? (patients.loading ? "…" : "—")}</TableCell>
+              <TableCell>{e.ward ?? "—"}</TableCell>
+              <TableCell className="font-mono">{e.bedNo ?? "—"}</TableCell>
+              <TableCell>{doctors.lookup.get(e.doctorId)?.name ?? "—"}</TableCell>
+              <TableCell>{format(new Date(e.date), "dd MMM yyyy")}</TableCell>
+              <TableCell><StatusBadge status={e.admissionType ?? "Planned"} /></TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </CardContent></Card>
   )
 }

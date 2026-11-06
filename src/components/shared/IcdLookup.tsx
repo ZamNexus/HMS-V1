@@ -1,17 +1,37 @@
+"use client"
 import * as React from "react"
 import { Search } from "lucide-react"
 
 import { DISEASES } from "@/data/diseases"
+import { dataSource } from "@/lib/services"
+import type { DataSource } from "@/lib/services/dataSource"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Input } from "@/components/ui/input"
 
-export function IcdLookup({ onSelect }: { onSelect: (name: string, icdCode: string) => void }) {
+/**
+ * ICD-10 diagnosis lookup. The list is the demo diagnosis array (the Master Data "Diagnoses" tab), which has no service and no confirmed
+ * API contract. In API mode the lookup is therefore replaced by a disabled, explicitly "not connected" control: no demo diagnosis can be
+ * offered or inserted into a real record. The diagnosis text field itself stays free-text and is unaffected.
+ */
+export function IcdLookup({ onSelect, source = dataSource }: { onSelect: (name: string, icdCode: string) => void; source?: DataSource }) {
   const [open, setOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
 
   const results = query.trim()
     ? DISEASES.filter((d) => d.name.toLowerCase().includes(query.toLowerCase()) || d.icdCode.toLowerCase().includes(query.toLowerCase()))
     : DISEASES
+
+  if (source !== "mock") {
+    return (
+      <button
+        type="button" disabled data-testid="icd-lookup-pending"
+        title="Not connected: no diagnosis (ICD-10) list contract has been provided to the frontend. Type the diagnosis instead."
+        className="text-xs font-medium text-muted-foreground"
+      >
+        ICD-10 Lookup (not connected)
+      </button>
+    )
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
