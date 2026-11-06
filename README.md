@@ -1,35 +1,54 @@
 # HMS Frontend (Citi Clinic Hospital Management System)
 
-Next.js 16 / React 19 frontend for the HMS. This repository contains the frontend preparation work for backend integration: every module reads its data through a service layer that switches between demo data and the real API.
+Next.js 16 / React 19 frontend for the HMS. This repository holds the frontend preparation for backend integration: every module reads its data through a service layer that switches between demo data and the real API.
 
-## What was done
+## What is done
 
-- **Service layer.** Screens no longer read demo data files directly. Each module has a service with a mock adapter (demo data) and an HTTP adapter (real API), selected by `NEXT_PUBLIC_HMS_DATA_SOURCE`. Connecting an operation to the backend is a matter of filling in its endpoint and mapper, with no screen rewrite.
-- **Safe API mode.** In API mode a screen never shows demo data. Where a backend route is not yet confirmed, the screen shows a clear "Not connected" notice, and no request is sent.
-- **Exact money and IDs.** Money is handled as exact decimal strings (no floating-point errors); legacy numeric ids and ULIDs are converted at the service boundary.
-- **Shared loading, error and empty states**, with backend error codes and request IDs preserved.
-- **Modules moved onto services:**
-  - Patients, doctors, organisations, wards, guardian relations
-  - Encounters
-  - Laboratory (T1, T2) and Imaging (T3)
-  - Pharmacy inventory and dispensing (T4, T5), including refusal of dispensing when stock is short
-  - Billing, Expenses and Bank (T6, T7)
-  - All 12 reports (T8, T9), Dashboard (T10) and Financial Statistics (T11)
-  - Item History (T12) kept separate from invoice usage, bill summary, notifications, services catalogue
-- **Corrections and audit.** The New Encounter medicine picker uses the pharmacy service. Master Data (Panels, Wards, Guardian Relations, Diagnoses, Clinic Settings) and the ICD-10 lookup no longer show demo data in API mode. A test fails if a new direct demo-data import is added without review.
-- **Verification.** 438 automated tests pass; type check and lint are clean of errors; production builds succeed in both modes; browser checks were run in real Edge in both modes.
+### Architecture
+- **Service layer.** Screens no longer read demo data files directly. Each module has a service with a mock adapter (demo data) and an HTTP adapter (real API), chosen by `NEXT_PUBLIC_HMS_DATA_SOURCE`. Connecting an operation means filling in its endpoint and mapper; no screen needs rewriting.
+- **Safe API mode.** In API mode a screen never shows demo data and never falls back to it. Where a backend route is not yet confirmed, the screen shows a clear "Not connected" notice and sends no request.
+- **Exact money and IDs.** Money is handled as exact decimal strings (no floating-point errors). Legacy numeric ids and ULIDs are converted at the service boundary.
+- **Shared states.** One set of loading, error, empty and "not connected" states, keeping backend error codes and request IDs.
+- **Backend plumbing.** Login, the `/api/*` proxy to `BACKEND_URL`, in-memory access token with the refresh cookie handled by the browser, and the documented error envelope.
+
+### Modules moved onto services
+| Module | Covers |
+|---|---|
+| Patients, doctors, organisations, wards, guardian relations | shared reference-data hooks and lookups |
+| Encounters | list, detail, new (4-step wizard), discharge |
+| Laboratory (T1, T2) | tests catalogue, orders, results |
+| Imaging (T3) | orders, reports |
+| Pharmacy (T4, T5) | inventory, dispensing, history; dispensing is refused when stock is short |
+| Billing, Expenses, Bank (T6, T7) | consultation and service invoices, expenses, bank accounts and transactions |
+| Reports (T8, T9) | all 12 reports |
+| Dashboard (T10), Financial Statistics (T11) | tiles, charts, statistics by category |
+| Item History (T12) | audit history kept separate from invoice usage |
+| Bill summary, notifications, services catalogue | patient and encounter balances, top-bar alerts, Master Data catalogue |
+
+### Corrections and audit
+- New Encounter medicines come from the pharmacy service instead of demo data.
+- Item History no longer presents invoice lines as audit entries.
+- Master Data (Panels, Wards, Guardian Relations, Diagnoses, Clinic Settings) and the ICD-10 lookup no longer show demo data in API mode.
+- A test fails if a new direct demo-data import is added without being reviewed.
+
+### Verification
+- 438 automated tests pass; the type check is clean; lint has 0 errors.
+- Production builds succeed in mock and API modes.
+- Browser checks were run in real Edge in both modes.
+
+## What is needed to connect to the backend
+- The full API spec (`docs/openapi.json` or `/api/docs`): routes and request/response shapes for each module.
+- Development login credentials, and the permissions returned by `GET /auth/me`.
+- A few business decisions, such as the low-stock rule; the questions are listed per module in the handoff.
 
 ## Data modes
-
-- **Mock mode** (`NEXT_PUBLIC_HMS_DATA_SOURCE=mock`, the development default): demo data, with all demo workflows working.
-- **API mode** (production default): real backend only, with no fallback to demo data.
+- **Mock mode** (`NEXT_PUBLIC_HMS_DATA_SOURCE=mock`, the development default): demo data, all demo workflows work.
+- **API mode** (production default): real backend only.
 
 ## Documentation
-
 [`docs/FRONTEND_BACKEND_INTEGRATION_HANDOFF.md`](docs/FRONTEND_BACKEND_INTEGRATION_HANDOFF.md) is the per-phase record of what was built and tested, with the contract questions for each module.
 
 ## Tests
-
 ```bash
 npm test          # Vitest
 npx tsc --noEmit  # type check
@@ -38,7 +57,6 @@ npm run build     # needs BACKEND_URL; CI uses the placeholder https://hms-backe
 ```
 
 ## Getting started
-
 ```bash
 cp .env.example .env.local   # set BACKEND_URL (server-side only)
 npm install
