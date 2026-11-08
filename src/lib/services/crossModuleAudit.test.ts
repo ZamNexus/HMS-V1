@@ -32,35 +32,28 @@ function walk(dir: string, out: string[] = []): string[] {
   return out
 }
 
-// ── 1. Every direct demo-data import outside the mock adapters is classified ───────────────────────────────────────
-// Each entry below was audited (handoff "Cross-Module Integration Audit"). A NEW direct import fails this test until it is classified.
+// ── 1. The demo data is reachable through ONE seam ("@hms/demo") ────────────────────────────────────────────────────
+// src/data (sample records) and src/lib/services/mock (in-memory services) are imported by exactly two modules: the seam's registry and (for the mock adapters' own helper) billingAggregate.
+// Every other file reaches the demo through "@hms/demo", and a production build for the real API replaces that module with a stub (next.config.ts), so nothing here ships to a user.
 const ALLOWED_DIRECT_DATA_IMPORTS: Record<string, string[]> = {
-  // Master Data: Panels / Wards / Guardian / Diagnoses / Clinic Settings tabs are wrapped in <MockModeOnly> (API mode = contract pending);
-  // labTests = category constants only.
-  "src/app/(dashboard)/admin/master-data/page.tsx": ["diseases", "guardianRelations", "labTests", "organisations", "settings", "wards"],
-  "src/app/(dashboard)/admin/users/page.tsx": ["users"],                // ROLE_LABELS / badge classes: constants
-  "src/app/(dashboard)/encounters/new/page.tsx": ["encounters"],        // nextTokenNo — mock-only (dataSource === "mock")
-  "src/app/(dashboard)/imaging/orders/new/page.tsx": ["imaging"],       // nextXrNo — mock-only
-  "src/app/(dashboard)/lab/orders/new/page.tsx": ["lab", "labTests"],   // nextLabNo — mock-only; test categories: constants
-  "src/app/(dashboard)/patients/[id]/page.tsx": ["billing", "encounters", "imaging", "lab", "pharmacy"], // read only when dataSource === "mock"
-  "src/app/(dashboard)/patients/page.tsx": ["encounters"],              // "Last Visit" — mock-only
-  "src/app/(dashboard)/pharmacy/[tab]/PharmacyHub.tsx": ["medicines", "pharmacy"], // MEDICINE_CATEGORIES constant; nextDispenseNo mock-only
-  "src/app/(public)/login/page.tsx": ["users"],                         // role labels: constants
-  "src/components/patients/PatientForm.tsx": ["patients"],              // nextMrNo — mock-only
-  "src/components/shared/IcdLookup.tsx": ["diseases"],                  // replaced by a "not connected" control in API mode
-  "src/components/shared/QuickAddLabTestDialog.tsx": ["labTests"],      // category constants
-  "src/lib/auth.tsx": ["users"],                                        // ROLE_LABELS: constants (authentication untouched)
+  "src/lib/demo/registry.ts": ["billing", "diseases", "encounters", "imaging", "lab", "patients", "pharmacy", "settings", "wards"],
   "src/lib/billingAggregate.ts": ["billing", "encounters", "imaging", "lab", "pharmacy"], // read ONLY by the mock adapters (checked below)
 }
+// Files allowed to read the seam, each only on the mock side of a dataSource === "mock" branch (or, for master data and the ICD box, inside a component that API mode does not render).
+const SEAM_READERS = [
+  "src/app/(dashboard)/admin/master-data/page.tsx", "src/app/(dashboard)/encounters/new/page.tsx", "src/app/(dashboard)/imaging/orders/new/page.tsx", "src/app/(dashboard)/lab/orders/new/page.tsx",
+  "src/app/(dashboard)/patients/[id]/page.tsx", "src/app/(dashboard)/patients/page.tsx", "src/app/(dashboard)/pharmacy/[tab]/PharmacyHub.tsx", "src/components/patients/PatientForm.tsx",
+  "src/components/shared/IcdLookup.tsx", "src/lib/services/index.ts",
+]
 
-describe("direct demo-data imports are all classified", () => {
+describe("the demo data is reachable only through the seam", () => {
   const files = [...walk(join(srcRoot, "app")), ...walk(join(srcRoot, "components")), ...walk(join(srcRoot, "lib"))]
     .filter((f) => !f.endsWith(".test.ts"))
     .filter((f) => !f.split(sep).join("/").includes("/lib/services/mock/"))
   const rel = (f: string) => relative(root, f).split(sep).join("/")
   const dataImports = (f: string) => [...readFileSync(f, "utf8").matchAll(/from\s+["']@\/data\/([A-Za-z]+)["']/g)].map((m) => m[1]).sort()
 
-  it("no screen, component or lib file imports demo data that is not in the audited list", () => {
+  it("no screen, component or lib file imports src/data except the seam's registry and billingAggregate", () => {
     const found: Record<string, string[]> = {}
     for (const f of files) {
       const d = dataImports(f)
@@ -69,24 +62,47 @@ describe("direct demo-data imports are all classified", () => {
     expect(found).toEqual(Object.fromEntries(Object.entries(ALLOWED_DIRECT_DATA_IMPORTS).map(([k, v]) => [k, [...v].sort()])))
   })
 
-  it("no HTTP adapter, reference helper or API client imports demo data or a mock adapter", () => {
+  it("no HTTP adapter, reference helper or API client imports demo data, the seam or a mock adapter", () => {
     for (const f of files.filter((x) => /\/lib\/(services\/http|services\/reference|api)\//.test(x.split(sep).join("/")))) {
-      expect(readFileSync(f, "utf8"), rel(f)).not.toMatch(/@\/data\/|\/mock\/|billingAggregate/)
+      expect(readFileSync(f, "utf8"), rel(f)).not.toMatch(/@\/data\/|@hms\/demo|\/mock\/|billingAggregate/)
     }
   })
 
-  it("only the mock adapters read billingAggregate, and only the service index imports a mock adapter", () => {
+  it("only the mock adapters read billingAggregate, and only the seam's registry imports a mock adapter", () => {
     const all = [...walk(join(srcRoot, "app")), ...walk(join(srcRoot, "components")), ...walk(join(srcRoot, "lib"))].filter((f) => !f.endsWith(".test.ts"))
     const readers = all.filter((f) => /from\s+["'][^"']*billingAggregate["']/.test(readFileSync(f, "utf8"))).map(rel).sort()
     expect(readers).toEqual(["src/lib/services/mock/crossModule.ts", "src/lib/services/mock/reports.ts"])
     const mockImporters = files.filter((f) => /from\s+["'][^"']*\/mock\//.test(readFileSync(f, "utf8"))).map(rel)
-    expect(mockImporters).toEqual(["src/lib/services/index.ts"])
+    expect(mockImporters).toEqual(["src/lib/demo/registry.ts"])
+  })
+
+  it("exactly the audited files read the seam", () => {
+    const readers = files.filter((f) => /from\s+["']@hms\/demo["']/.test(readFileSync(f, "utf8"))).map(rel).sort()
+    expect(readers).toEqual([...SEAM_READERS].sort())
+  })
+
+  it("the stub that replaces the seam in a production build throws on every read and carries no sample data", async () => {
+    const stub = readFileSync(join(srcRoot, "lib/demo/registry.stub.ts"), "utf8")
+    expect(stub).not.toMatch(/from\s+["']/) // imports nothing at all
+    const { demo } = await import("@/lib/demo/registry.stub")
+    expect(() => (demo as { services: unknown }).services).toThrow(/not part of this build/)
+    expect(() => (demo as { data: unknown }).data).toThrow(/not part of this build/)
+  })
+
+  it("the config swaps the seam for the stub by the app's own data-source rule, in both bundlers", () => {
+    const config = readFileSync(join(root, "next.config.ts"), "utf8")
+    expect(config).toMatch(/resolveDataSource\(process\.env\.NEXT_PUBLIC_HMS_DATA_SOURCE, process\.env\.NODE_ENV\) === "mock"/)
+    expect(config).toMatch(/turbopack: demoIncluded \? \{\} : \{ resolveAlias: \{ "@hms\/demo": demoStub \} \}/)
+    expect(config).toMatch(/"@hms\/demo": path\.resolve\(__dirname, demoStub\)/)
+    expect(config).toContain('"./src/lib/demo/registry.stub.ts"')
+    const tsconfig = readFileSync(join(root, "tsconfig.json"), "utf8")
+    expect(tsconfig).toContain('"@hms/demo": ["./src/lib/demo/registry.ts"]')
   })
 
   it("the two screens that read the patient's other-module records do so only in mock mode", () => {
     const detail = source("src/app/(dashboard)/patients/[id]/page.tsx")
     expect(detail).toMatch(/const legacyId = dataSource === "mock" \? legacyPatientId\(patient\) : null/)
-    expect(source("src/app/(dashboard)/patients/page.tsx")).toMatch(/dataSource !== "mock"\) return "—"/)
+    expect(source("src/app/(dashboard)/patients/page.tsx")).toMatch(/if \(dataSource === "mock"\) return demoLastVisit\(legacyPatientId\(p\)\)/)
   })
 })
 
@@ -112,23 +128,47 @@ describe("Master Data: demo-only tabs are contract-pending in API mode", () => {
     expect(html).not.toContain("DEMO-CHILD")
   })
 
-  it("the Panels, Wards, Guardian Relations, Diagnoses and Clinic Settings tabs are each wrapped, using the build's dataSource", () => {
-    for (const [tab, id] of [["PanelsTab", "masterdata-panels-pending"], ["WardsTab", "masterdata-wards-pending"], ["GuardianRelationsTab", "masterdata-guardian-pending"],
-      ["DiseasesTab", "masterdata-diseases-pending"], ["ClinicSettingsTab", "masterdata-clinic-pending"]]) {
-      expect(page, tab).toMatch(new RegExp(`<MockModeOnly source=\\{dataSource\\}[^>]*testId="${id}"[^>]*><${tab} /></MockModeOnly>`))
-    }
+  it("the Diagnoses tab is the read-only ICD-10 list in API mode (S11) and the demo list ONLY in mock mode", () => {
+    expect(page).toContain('dataSource === "api" ? <IcdCodesTab /> : <DiseasesTab />')
+    expect(page).not.toMatch(/masterdata-diseases-pending/)
   })
 
-  it("the tabs that already go through a service are NOT wrapped (they keep their own contract-pending states)", () => {
-    for (const tab of ["ServicesTab", "LabTestsTab", "EcgUltrasoundTab", "ExpenseCategoriesTab", "BanksTab"]) {
-      expect(page, tab).toMatch(new RegExp(`<TabsContent value="[a-z]+" className="mt-0 outline-none"><${tab} /></TabsContent>`))
-    }
+  it("Clinic Settings is connected (S1): the API tab in API mode, the demo form ONLY in mock mode, and the tab needs settings.write in API mode", () => {
+    expect(page).toMatch(/dataSource === "api" \? <ClinicSettingsTab \/> : <MockClinicSettingsTab \/>/)
+    expect(page).toMatch(/showClinicSettings = dataSource !== "api" \|\| can\("settings\.write"\)/)
+    expect(page).not.toMatch(/masterdata-clinic-pending/)
   })
 
-  it("the demo arrays those five tabs read are non-empty in the demo data (so the API-mode notice is hiding something real)", () => {
-    expect(PANELS.length).toBeGreaterThan(0)
+  it("Expense Categories (S12) and Banks (S13) are connected: the API tab in API mode, the demo tab ONLY in mock mode; Banks needs accounts.read", () => {
+    expect(page).toContain('dataSource === "api" ? <ExpenseCategoriesTab /> : <MockExpenseCategoriesTab />')
+    expect(page).toContain('dataSource === "api" ? <BankAccountsTab /> : <MockBanksTab />')
+    expect(page).toContain('const showBanks = dataSource !== "api" || can("accounts.read")')
+  })
+
+  it("Wards and beds are connected (S8): the API tab in API mode, the demo tab ONLY in mock mode", () => {
+    expect(page).toContain('dataSource === "api" ? <WardsTab /> : <MockWardsTab />')
+  })
+
+  it("the Imaging Tests catalogue is connected (S7): the API tab in API mode, the demo tab ONLY in mock mode", () => {
+    expect(page).toContain('dataSource === "api" ? <ImagingTestsTab /> : <MockEcgUltrasoundTab />')
+  })
+
+  it("the Lab Tests catalogue is connected (S6): the API tab in API mode, the demo tab ONLY in mock mode", () => {
+    expect(page).toContain('dataSource === "api" ? <LabTestsTab /> : <MockLabTestsTab />')
+  })
+
+  it("the Services Catalog is connected (S5): the API tab in API mode, the demo tab ONLY in mock mode", () => {
+    expect(page).toContain('dataSource === "api" ? <ServicesTab /> : <MockServicesTab />')
+  })
+
+  it("Panels and Guardian Relations are connected tabs (no demo array, no wrapper)", () => {
+    expect(page).toMatch(/<PanelsTab \/>/)
+    expect(page).toMatch(/<GuardianRelationsTab \/>/)
+    expect(page).not.toMatch(/data\/organisations|data\/guardianRelations/)
+  })
+
+  it("the demo arrays the remaining wrapped tabs read are non-empty in the demo data (so the API-mode notice is hiding something real)", () => {
     expect(WARDS.length).toBeGreaterThan(0)
-    expect(GUARDIAN_RELATIONS.length).toBeGreaterThan(0)
     expect(DISEASES.length).toBeGreaterThan(0)
     expect(CLINIC_SETTINGS).toBeTruthy()
   })
@@ -142,12 +182,12 @@ describe("ICD-10 lookup (New Encounter, Discharge)", () => {
   }
   beforeAll(async () => { await render("mock") }, 30_000)
 
-  it("API mode: a disabled 'not connected' control — no demo diagnosis name or code is offered", async () => {
+  it("API mode (S11): the real lookup trigger, closed: no demo diagnosis name or code is offered and nothing is requested until it opens", async () => {
     const html = await render("api")
-    expect(html).toContain('data-testid="icd-lookup-pending"')
-    expect(html).toContain("disabled")
-    expect(html).toMatch(/not connected/i)
+    expect(html).toContain("ICD-10 Lookup")
+    expect(html).not.toContain("icd-lookup-pending")
     for (const d of DISEASES) { expect(html).not.toContain(d.name); expect(html).not.toContain(d.icdCode) }
+    expect(source("src/components/shared/IcdLookup.tsx")).toContain("{open && <IcdApiLookupBody")
   })
 
   it("mock mode: the normal 'ICD-10 Lookup' trigger", async () => {

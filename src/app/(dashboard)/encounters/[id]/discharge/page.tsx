@@ -1,4 +1,6 @@
 "use client"
+import * as ReactNs from "react"
+import { dataSource as visitsDataSource } from "@/lib/services"
 import * as React from "react"
 import { useRouter, useParams } from "next/navigation"
 import { differenceInDays, format } from "date-fns"
@@ -21,7 +23,8 @@ import { useToast } from "@/components/ui/use-toast"
 
 const CONDITIONS = ["Recovered", "Improved", "Stable", "Against Medical Advice", "Expired"]
 
-export default function DischargeSummaryPage() {
+// Demo only (mock mode). Against the real API discharge is a dialog on the encounter page (src/components/visits/VisitDialogs.tsx).
+function MockDischargeSummaryPage() {
   const params = useParams()
   const id = params?.id as string | undefined
   const { data, error, loading, reload } = useEncounter(id)
@@ -175,4 +178,15 @@ function DischargeForm({ encounter }: { encounter: EncounterRecord }) {
       </p>
     </div>
   )
+}
+
+export default function DischargeSummaryPage() {
+  const params = useParams()
+  const router = useRouter()
+  const id = params?.id as string | undefined
+  ReactNs.useEffect(() => {
+    if (visitsDataSource === "api" && id) router.replace(`/encounters/${id}`)
+  }, [id, router])
+  if (visitsDataSource === "api") return <p className="p-10 text-center text-sm text-slate-500" role="status">Opening the encounter…</p>
+  return <MockDischargeSummaryPage />
 }

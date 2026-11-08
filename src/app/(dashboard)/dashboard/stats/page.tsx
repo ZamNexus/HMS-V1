@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { Suspense } from "react"
 import { format } from "date-fns"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 
@@ -17,6 +18,7 @@ import { ReportBody, useReportData } from "@/components/reports/ReportState"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent } from "@/components/ui/card"
 import { Layers } from "lucide-react"
+import { StatsApiHub } from "@/components/reportsApi/StatsApiHub"
 
 const TABS = [
   "Summary", "Services", "Checkups", "Lab Tests", "Medicine", "X-Rays",
@@ -32,7 +34,8 @@ const loadSummary = (signal: AbortSignal) => statisticsService.summary({ signal 
 const loadCashFlow = (signal: AbortSignal) => dashboardService.cashFlow({ signal })
 const loadDailyRevenue = (signal: AbortSignal) => statisticsService.dailyCheckupRevenue({ signal })
 
-export default function DashboardStatsPage() {
+/** The demo's statistics (mock mode only): they compute from the prototype's arrays. API mode uses StatsApiHub. */
+function MockStatsPage() {
   const [tab, setTab] = React.useState<Tab>("Summary")
 
   return (
@@ -346,5 +349,15 @@ function EncounterTable({ items, total, page, onPage }: { items: Awaited<ReturnT
         {total > DEFAULT_PAGE_SIZE && <Pagination page={page} pageSize={DEFAULT_PAGE_SIZE} total={total} onPageChange={onPage} itemLabel="encounters" />}
       </CardContent>
     </Card>
+  )
+}
+
+/** API mode reads the registers tab by tab (Phase 11); the demo keeps its own screen. The hub keeps its period and tab in the address bar, so it sits under a Suspense boundary. */
+export default function DashboardStatsPage() {
+  if (dataSource !== "api") return <MockStatsPage />
+  return (
+    <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading…</div>}>
+      <StatsApiHub />
+    </Suspense>
   )
 }

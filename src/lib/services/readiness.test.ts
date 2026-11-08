@@ -1,18 +1,17 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { canSee, canSeeNav, roleLabel, SIDEBAR_VISIBILITY } from "@/lib/auth"
+import { roleLabel } from "@/lib/auth"
 import { setAccessToken } from "@/lib/api/client"
 import { resolveDataSource } from "./dataSource"
 import { validateDoctorForm, validateUserForm } from "./formValidation"
 import { httpDoctorsService } from "./http/doctors"
 import { parseCurrentUser } from "./http/mappers"
 import { httpUsersService } from "./http/users"
-import { NAV_PERMISSIONS, authService, hasPermission } from "./identity"
+import { authService, hasPermission } from "./identity"
 import { ENDPOINTS } from "./endpoints"
 import { httpRolesService } from "./http/roles"
 import { DEFAULT_PAGE_SIZE, activeSuffix, paginate, viewState } from "./listing"
 import { mockDoctorsService } from "./mock/doctors"
 import { mockUsersService } from "./mock/users"
-import { NotConnectedError } from "./errors"
 
 // All tests here are frontend-only unit tests with controlled inputs. None of
 // them contacts, or says anything about, the real backend.
@@ -74,8 +73,8 @@ describe("paging helpers", () => {
 
 describe("integration contract scope", () => {
   it("contains only operations the existing screens perform (no detail fetches, roles listing, password reset, refresh/logout)", async () => {
-    expect(Object.keys(ENDPOINTS).filter((k) => !["patients.", "encounters.", "wards.", "labTests.", "ecgTests.", "labOrders.", "imagingOrders.", "medicines.", "dispensing.", "consultationInvoices.", "servicesInvoices.", "payments.", "receipts.", "expenseCategories.", "expenses.", "bankAccounts.", "bankTransactions.", "reports.", "serviceCatalog.", "dashboard.", "statistics.", "itemHistory.", "billSummary."].some((p) => k.startsWith(p))).sort()).toEqual(
-      ["auth.me", "doctors.create", "doctors.list", "doctors.update", "users.create", "users.list", "users.setActive", "users.update"]
+    expect(Object.keys(ENDPOINTS).filter((k) => !["patients.", "schedule.", "slots.", "appointments.", "visits.", "beds.", "invoices.", "account.", "charges.", "paymentsRegister.", "advances.", "credit.", "refunds.", "creditNotes.", "labApi.", "imagingApi.", "pharmacyApi.", "reportsApi.", "accountsApi.", "encounters.", "wards.", "labTests.", "ecgTests.", "labOrders.", "imagingOrders.", "medicines.", "dispensing.", "consultationInvoices.", "servicesInvoices.", "payments.", "receipts.", "expenseCategories.", "expenses.", "bankAccounts.", "bankTransactions.", "reports.", "serviceCatalog.", "dashboard.", "statistics.", "itemHistory.", "billSummary.", "organisations.", "guardianRelations.", "settings.", "wardsAdmin.", "usersAdmin.", "doctors.", "icd."].some((p) => k.startsWith(p))).sort()).toEqual(
+      ["auth.me", "users.create", "users.list", "users.setActive", "users.update"]
     )
     expect(Object.keys(httpUsersService).sort()).toEqual(["create", "list", "sendPasswordReset", "setActive", "update"])
     expect(Object.keys(httpDoctorsService).sort()).toEqual(["create", "list", "update"])
@@ -113,11 +112,11 @@ describe("form validation", () => {
 describe("current user (documented GET /auth/me) and permissions", () => {
   const jsonRes = (body: unknown) => new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } })
 
-  it("requests GET /api/v1/auth/me through the shared client but refuses to guess an undocumented schema", async () => {
+  it("requests GET /api/v1/auth/me through the shared client and reads only the documented permission list", async () => {
     const fetchMock = vi.fn(async () => jsonRes({ permissions: ["a.read"], anything: "else" }))
     vi.stubGlobal("fetch", fetchMock)
     setAccessToken("tok")
-    await expect(authService.me()).rejects.toBeInstanceOf(NotConnectedError) // mapper pending: no field names inferred
+    expect(await authService.me()).toEqual({ permissions: ["a.read"] }) // nothing else is read from the response
     const [url, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe("/api/v1/auth/me")
     expect(init.method).toBe("GET")
@@ -130,22 +129,21 @@ describe("current user (documented GET /auth/me) and permissions", () => {
     await expect(authService.me()).rejects.toMatchObject({ status: 401, code: "AUTHENTICATION_REQUIRED" })
   })
 
-  it("parseCurrentUser stays pending: it infers no field names from an undocumented response", () => {
-    for (const raw of [{ permissions: ["x"] }, {}, null, "x"]) expect(() => parseCurrentUser(raw)).toThrow(NotConnectedError)
+  it("parseCurrentUser reads AuthUserDto.permissions and rejects anything else, so permissions stay unknown", () => {
+    expect(parseCurrentUser({ permissions: ["x", "x", "y"] })).toEqual({ permissions: ["x", "y"] })
+    for (const raw of [{}, null, "x", { permissions: "x" }, { permissions: [1] }]) expect(() => parseCurrentUser(raw)).toThrow(TypeError)
   })
 
-  it("navigation: permission mapping decides only when permissions are known and an entry exists", () => {
-    expect(NAV_PERMISSIONS).toEqual({}) // no documented names yet
-    expect(canSeeNav({ role: null, permissions: ["anything"] }, "users")).toBe(false) // unmapped: grants nothing
-    expect(canSeeNav(null, "users")).toBe(false)
+  it("hasPermission grants only what is listed; unknown (null) grants nothing", () => {
     expect(hasPermission(null, "p")).toBe(false)
     expect(hasPermission(["p"], "p")).toBe(true)
     expect(hasPermission([], "p")).toBe(false)
   })
 
-  it("an unset role grants no UI access and shows no label", () => {
-    for (const key of new Set(Object.values(SIDEBAR_VISIBILITY).flat())) expect(canSee(null, key)).toBe(false)
+  it("an unset role shows no label (display only; the role never decides access)", () => {
     expect(roleLabel(null)).toBe("Role not set")
+    expect(roleLabel("lab_tech")).toBe("Lab Technician")
+    expect(roleLabel("radiographer")).toBe("Radiographer")
   })
 })
 
@@ -161,5 +159,5 @@ describe("mapper contract tests (awaiting the OpenAPI spec)", () => {
   it.todo("userListQuery / doctorListQuery build the documented search + pagination parameters")
   it.todo("parseDoctorList / parseDoctor map the documented doctor response (fee via parseMoney, id via isUlid)")
   it.todo("doctorPayload builds the documented doctor request body and does not send photoUrl as base64")
-  it.todo("parseCurrentUser maps the documented /auth/me response; NAV_PERMISSIONS gets real permission names")
+  it.todo("parseCurrentUser is replaced by the full SessionUser reader in chunk H1")
 })

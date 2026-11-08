@@ -1,11 +1,13 @@
 "use client"
+import { CheckInScreen as ApiCheckInScreen } from "@/components/visits/CheckInScreen"
+import { dataSource as visitsDataSource } from "@/lib/services"
 import * as React from "react"
 import { Suspense } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Check, Plus } from "lucide-react"
 
-import { nextTokenNo } from "@/data/encounters"
+import { demo } from "@hms/demo"
 import { dataSource, encounterTotals, encountersService, errorSummary, pharmacyContractStatus, type PatientRecord } from "@/lib/services"
 import { useDoctors, useMedicines, usePatient, useWards } from "@/lib/useReferenceData"
 import { IcdLookup } from "@/components/shared/IcdLookup"
@@ -58,7 +60,7 @@ function EncounterFormContent() {
   const [doctorDialogOpen, setDoctorDialogOpen] = React.useState(false)
   // The daily token is only suggested from the demo data in mock mode. Whether the backend assigns it is CONTRACT REQUIRED,
   // so real-API mode never invents one.
-  const [tokenNo, setTokenNo] = React.useState<number | undefined>(() => (dataSource === "mock" ? nextTokenNo() : undefined))
+  const [tokenNo, setTokenNo] = React.useState<number | undefined>(() => (dataSource === "mock" ? demo.data.nextTokenNo() : undefined))
   const wards = useWards(type === "IPD")
   const medicinesPending = !medicinesContract.can("medicines.list")
   const medicines = useMedicines(!medicinesPending) // not even requested while the contract is missing
@@ -456,7 +458,8 @@ function EncounterFormContent() {
   )
 }
 
-export default function EncounterFormPage() {
+// Demo only (mock mode). Against the real API check-in and admission are src/components/visits/CheckInScreen.tsx.
+function MockEncounterFormPage() {
   return (
     <div>
       <PageHeader title="New Encounter" />
@@ -465,4 +468,9 @@ export default function EncounterFormPage() {
       </Suspense>
     </div>
   )
+}
+
+export default function EncounterFormPage() {
+  if (visitsDataSource === "api") return <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading…</div>}><ApiCheckInScreen /></Suspense>
+  return <MockEncounterFormPage />
 }

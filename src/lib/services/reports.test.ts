@@ -13,7 +13,7 @@ import { SERVICE_CATALOG } from "@/data/services"
 import { patientBillBreakdown } from "@/lib/billingAggregate"
 import { ENDPOINTS } from "./endpoints"
 import { NotConnectedError } from "./errors"
-import { httpReportsService, httpServiceCatalogService } from "./http/reports"
+import { httpReportsService } from "./http/reports"
 import { mockReportsService, mockServiceCatalogService } from "./mock/reports"
 import { moneyFromNumber, ratioPercent, sumMoney } from "./moneyMath"
 import { AGED_BUCKETS, AGE_BANDS, ageBandOf, agedBucketOf, isCreditMode, wholeDaysBetween } from "./reportHelpers"
@@ -24,9 +24,11 @@ import { REPORT_OPERATIONS, reportsContractStatus } from "./reportsContract"
 // None of this says anything about the real backend, whose report contracts are not published.
 
 const ULID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+// "serviceCatalog.list" (the Lists report's source) is connected since chunk S5; every real report is still awaiting its contract.
+const PENDING_REPORTS = REPORT_OPERATIONS.filter((k) => k !== "serviceCatalog.list")
 afterEach(() => {
   vi.unstubAllGlobals()
-  for (const k of REPORT_OPERATIONS) ENDPOINTS[k] = null
+  for (const k of PENDING_REPORTS) ENDPOINTS[k] = null
 })
 const num = (s: string) => Number(s)
 const closeTo = (actual: string, expected: number) => expect(num(actual)).toBeCloseTo(expected, 2)
@@ -66,7 +68,9 @@ describe("report helpers", () => {
 describe("contract-pending behaviour (API mode)", () => {
   it("has no endpoint configured for any report operation", () => {
     expect(REPORT_OPERATIONS).toHaveLength(15)
-    for (const k of REPORT_OPERATIONS) expect(ENDPOINTS[k], k).toBeNull()
+    expect(PENDING_REPORTS).toHaveLength(14)
+    for (const k of PENDING_REPORTS) expect(ENDPOINTS[k], k).toBeNull()
+    expect(ENDPOINTS["serviceCatalog.list"]).toEqual({ method: "GET", path: "/services" })
   })
 
   it("every HTTP report operation sends no request and reports 'awaiting the backend contract' (no fake report)", async () => {
@@ -76,9 +80,8 @@ describe("contract-pending behaviour (API mode)", () => {
     const calls = [
       r.dailySummary(), r.dailyTransactions({ ...ALL_DAYS }), r.opdStatistics(), r.revenue(), r.laboratory(), r.pharmacy(), r.expenseTrend(), r.demographics(),
       r.patientBalances(), r.organisationBalances(), r.patientAccountSummary(), r.accountsPayments({ page: 1 }), r.accountsReceipts({ page: 1 }), r.prescriptionHistory({ search: "x" }),
-      httpServiceCatalogService.list(),
     ]
-    expect(calls).toHaveLength(15)
+    expect(calls).toHaveLength(14)
     for (const c of calls) await expect(c).rejects.toBeInstanceOf(NotConnectedError)
     for (const c of calls) await expect(c).rejects.toThrow(/awaiting the backend contract/)
     expect(fetchMock).not.toHaveBeenCalled()
@@ -87,11 +90,10 @@ describe("contract-pending behaviour (API mode)", () => {
   it("even with paths configured, sends nothing until the request/response mapping is implemented", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({ rows: [] }), { headers: { "content-type": "application/json" } }))
     vi.stubGlobal("fetch", fetchMock)
-    for (const k of REPORT_OPERATIONS) ENDPOINTS[k] = { method: "GET", path: "/hypothetical" } // test-only
+    for (const k of PENDING_REPORTS) ENDPOINTS[k] = { method: "GET", path: "/hypothetical" } // test-only
     await expect(httpReportsService.revenue()).rejects.toThrow(/query parameters/)
     await expect(httpReportsService.dailyTransactions({ ...ALL_DAYS, patientId: ULID })).rejects.toThrow(/query parameters/)
     await expect(httpReportsService.prescriptionHistory({ search: "x", page: 2 })).rejects.toThrow(/query parameters/)
-    await expect(httpServiceCatalogService.list()).rejects.toThrow(/query parameters/)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -109,11 +111,12 @@ describe("contract-pending behaviour (API mode)", () => {
     expect(readFileSync(join(__dirname, "../../app/(dashboard)/reports/page.tsx"), "utf8")).not.toMatch(/from\s+["']@\/data\//)
   })
 
-  it("the contract status: API mode with every key null is pending (15 missing); mock mode never is; one key at a time", () => {
+  it("the contract status: API mode with every key null is pending (14 missing: the services list is connected); mock mode never is; one key at a time", () => {
     const api = reportsContractStatus("api")
     expect(api.pending).toBe(true)
-    expect(api.missing).toHaveLength(15)
-    expect(REPORT_OPERATIONS.some((op) => api.can(op))).toBe(false)
+    expect(api.missing).toHaveLength(14)
+    expect(PENDING_REPORTS.some((op) => api.can(op))).toBe(false)
+    expect(api.can("serviceCatalog.list")).toBe(true)
     expect(reportsContractStatus("mock")).toMatchObject({ pending: false, missing: [] })
     const one = reportsContractStatus("api", { ...ENDPOINTS, "reports.revenue": { method: "GET" as const, path: "/hypothetical" } }) // copy, test-only
     expect(one.can("reports.revenue")).toBe(true)

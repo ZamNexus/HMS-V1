@@ -17,8 +17,11 @@ import { StatusBadge } from "@/components/shared/StatusBadge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Suspense } from "react"
+import { ImagingOrdersScreen } from "@/components/diagnostics/ImagingOrdersScreen"
+import { dataSource as dxDataSource } from "@/lib/services"
 
-export default function ImagingOrderListPage() {
+function MockImagingOrderListPage() {
   const router = useRouter()
   const [search, setSearch] = React.useState("")
   const [query, setQuery] = React.useState("")
@@ -212,4 +215,10 @@ export default function ImagingOrderListPage() {
       </div>
     </div>
   )
+}
+
+// useSearchParams (the filters in the address bar) needs a Suspense boundary
+export default function ImagingOrderListPage() {
+  if (dxDataSource === "api") return <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading…</div>}><ImagingOrdersScreen /></Suspense>
+  return <MockImagingOrderListPage />
 }

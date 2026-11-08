@@ -19,7 +19,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@hms/demo": ["./src/lib/demo/registry.ts"]
     }
   },
   "include": [

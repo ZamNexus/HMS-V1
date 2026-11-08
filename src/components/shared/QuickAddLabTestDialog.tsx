@@ -1,7 +1,7 @@
 "use client"
 import * as React from "react"
 
-import { LAB_TEST_CATEGORIES } from "@/data/labTests"
+import { LAB_TEST_CATEGORIES } from "@/lib/labels"
 import { errorSummary, labTestsService, legacyNumericId, type LabTestRecord } from "@/lib/services"
 import type { LabTestCategory } from "@/types"
 import { Button } from "@/components/ui/button"

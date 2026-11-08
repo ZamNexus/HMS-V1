@@ -4,8 +4,8 @@ import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, X } from "lucide-react"
 
-import { nextLabNo } from "@/data/lab"
-import { LAB_TEST_CATEGORIES } from "@/data/labTests"
+import { LAB_TEST_CATEGORIES } from "@/lib/labels"
+import { demo } from "@hms/demo"
 import {
   DEFAULT_PAGE_SIZE, dataSource, encountersService, errorSummary, labLineTotal, labOrderTotals, labOrdersService, type PatientRecord,
 } from "@/lib/services"
@@ -28,6 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import { OrderForm } from "@/components/diagnostics/OrderForm"
+import { dataSource as dxDataSource } from "@/lib/services"
 
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Insurance", "On Account"]
 const MODE_LABELS: Partial<Record<PaymentMode, string>> = { "On Account": "Credit" }
@@ -314,16 +316,22 @@ function LabOrderFormContent() {
   )
 }
 
-export default function LabOrderFormPage() {
+function MockLabOrderFormPage() {
   return (
     <div>
       <PageHeader
         title="New Lab Order"
-        subtitle={dataSource === "mock" ? nextLabNo() : "Order number assigned on save"}
+        subtitle={dataSource === "mock" ? demo.data.nextLabNo() : "Order number assigned on save"}
       />
       <Suspense fallback={<div className="p-10 text-center">Loading form...</div>}>
         <LabOrderFormContent />
       </Suspense>
     </div>
   )
+}
+
+// useSearchParams (the filters in the address bar) needs a Suspense boundary
+export default function LabOrderFormPage() {
+  if (dxDataSource === "api") return <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading…</div>}><OrderForm kind="lab" /></Suspense>
+  return <MockLabOrderFormPage />
 }

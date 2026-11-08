@@ -37,8 +37,4 @@ export function getMedicine(id: number): Medicine | undefined {
   return MEDICINES.find((m) => m.id === id)
 }
 
-export const MEDICINE_CATEGORIES = [
-  "Antibiotic", "Analgesic", "Antidiabetic", "Antihypertensive", "NSAID", "PPI",
-  "Bronchodilator", "Vitamin/Supplement", "Antiemetic", "Antifungal", "Steroid",
-  "Injection", "Other",
-]
+export { MEDICINE_CATEGORIES } from "@/lib/labels"

@@ -13,22 +13,4 @@ export const USERS: User[] = [
   { id: 10, name: "Nurse Hina Baig", email: "nurse@citiclinic.pk", password: "nurse123", role: "nurse", spec: null, fee: null, avatar: "HB", phone: "0305-5556667", active: true, lastLogin: "2 days ago", joiningDate: "2022-01-19" },
 ]
 
-export const ROLE_LABELS: Record<string, string> = {
-  admin: "Administrator",
-  doctor: "Doctor",
-  receptionist: "Receptionist",
-  billing: "Billing",
-  lab_tech: "Lab Technician",
-  pharmacist: "Pharmacist",
-  nurse: "Nurse",
-}
-
-export const ROLE_BADGE_CLASSES: Record<string, string> = {
-  admin: "bg-navy-700 text-white",
-  doctor: "bg-teal-600 text-white",
-  receptionist: "bg-success-600 text-white",
-  billing: "bg-warning-600 text-white",
-  lab_tech: "bg-purple-600 text-white",
-  pharmacist: "bg-orange-600 text-white",
-  nurse: "bg-pink-600 text-white",
-}
+export { ROLE_LABELS, ROLE_BADGE_CLASSES } from "@/lib/labels"

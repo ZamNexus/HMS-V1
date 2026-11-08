@@ -86,6 +86,8 @@ export interface Patient {
 
 export type PanelType = "Insurance" | "Corporate" | "Government" | "Other"
 
+export type PanelBillingMode = "patient_pays" | "panel_billed"
+
 export interface Panel {
   id: number
   name: string
@@ -93,6 +95,10 @@ export interface Panel {
   contactPerson: string
   phone: string
   commissionPct: number
+  /** Percent discount the panel's benefits give (the API's discountPct). Demo data may leave it out. */
+  discountPct?: number
+  /** Who pays the covered charges (the API's billingMode). Demo data may leave it out. */
+  billingMode?: PanelBillingMode
   active: boolean
 }
 
@@ -232,6 +238,7 @@ export type LabTestCategory =
   | "Biochemistry"
   | "Serology"
   | "Urine Analysis"
+  | "Microbiology"
   | "Cardiology"
   | "Radiology"
 

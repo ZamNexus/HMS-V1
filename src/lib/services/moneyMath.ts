@@ -122,6 +122,11 @@ export function normalizeMoneyInput(text: string): MoneyString | null {
   return fromMinor(toMinor(trimmed))
 }
 
+// The symbol shown before an amount: "Rs." for the Pakistani rupee (the default and the demo), the hospital's three-letter code for any other currency (set once the settings are read).
+let symbol = "Rs."
+export function setMoneyCurrency(code: string | null | undefined): void { symbol = !code || code === "PKR" ? "Rs." : code }
+export function moneySymbol(): string { return symbol }
+
 /** Display text without floating point: "Rs. 1,500" for whole amounts, "Rs. 1,500.50" when there are paisa. */
 export function formatMoneyString(value: MoneyString): string {
   const minor = toMinor(value)
@@ -129,5 +134,5 @@ export function formatMoneyString(value: MoneyString): string {
   const abs = negative ? -minor : minor
   const whole = (abs / HUNDRED).toLocaleString("en-PK")
   const cents = abs % HUNDRED
-  return `Rs. ${negative ? "-" : ""}${whole}${cents === ZERO ? "" : `.${cents.toString().padStart(2, "0")}`}` // sign after the symbol, as formatCurrency always showed it
+  return `${symbol} ${negative ? "-" : ""}${whole}${cents === ZERO ? "" : `.${cents.toString().padStart(2, "0")}`}` // sign after the symbol, as formatCurrency always showed it
 }

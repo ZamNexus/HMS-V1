@@ -11,7 +11,13 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:browser": "node e2e-api/run.mjs",
+    "check:build": "node scripts/check-build-no-mock.mjs",
+    "typecheck": "tsc --noEmit",
+    "types:generate": "openapi-typescript docs/openapi.json -o src/lib/api/schema.d.ts --default-non-nullable false",
+    "types:generate:draft": "openapi-typescript docs/openapi.draft.json -o src/lib/api/schema.draft.d.ts --default-non-nullable false",
+    "types:check": "node scripts/check-types-drift.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "3.10.0",
@@ -31,6 +37,7 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@radix-ui/react-toast": "^1.2.23",
     "@radix-ui/react-tooltip": "^1.2.16",
+    "@tanstack/react-query": "5.107.1",
     "autoprefixer": "^10.6.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -54,6 +61,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
+    "openapi-typescript": "7.13.0",
     "typescript": "^5",
     "vitest": "3.2.7"
   }

@@ -250,6 +250,11 @@ export const mockExpenseCategoriesService: ExpenseCategoriesService = {
     EXPENSE_CATEGORIES.splice(EXPENSE_CATEGORIES.indexOf(head.name), 1)
     headIds.delete(head.name)
   },
+
+  // The demo has no active flag (decision: not invented); the record is returned unchanged.
+  async setActive(id) {
+    return findHead(id)
+  },
 }
 
 // ── Expenses ───────────────────────────────────────────────────────────────────────────
@@ -309,6 +314,20 @@ export const mockBankAccountsService: BankAccountsService = {
     if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Bank account not found")
     check([[input.bankName.trim().length > 0, "bankName", "Bank Name is required"], [input.accountNo.trim().length > 0, "accountNo", "Account No. is required"]])
     BANKS[idx] = { ...BANKS[idx], bankName: input.bankName, accountTitle: input.accountTitle, accountNo: input.accountNo, branch: input.branch, active: input.active ?? BANKS[idx].active }
+    return toBankAccount(BANKS[idx])
+  },
+
+  async patch(id, patch) {
+    const idx = BANKS.findIndex((b) => String(b.id) === id)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Bank account not found")
+    BANKS[idx] = { ...BANKS[idx], ...patch }
+    return toBankAccount(BANKS[idx])
+  },
+
+  async setActive(id, active) {
+    const idx = BANKS.findIndex((b) => String(b.id) === id)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Bank account not found")
+    BANKS[idx] = { ...BANKS[idx], active }
     return toBankAccount(BANKS[idx])
   },
 }

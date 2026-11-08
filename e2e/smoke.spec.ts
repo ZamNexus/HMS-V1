@@ -1,5 +1,4 @@
 import { expect, test, type Page } from "@playwright/test"
-import { SIDEBAR_VISIBILITY } from "../src/lib/auth"
 import type { Role } from "../src/types"
 
 // Smoke tests. Login is now the real backend API (hospital code + identifier +
@@ -8,20 +7,6 @@ import type { Role } from "../src/types"
 // demo accounts. Tests that do not need a session, or that stub the login
 // request, still run.
 
-// Sidebar label for each SIDEBAR_VISIBILITY key (src/components/layout/Sidebar.tsx)
-const NAV_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  patients: "Patients",
-  encounters: "Encounters",
-  billing: "Billing & Invoices",
-  laboratory: "Laboratory",
-  imaging: "Imaging & Radiology",
-  pharmacy: "Pharmacy Inventory",
-  users: "User Access",
-  doctors: "Medical Staff",
-  "master-data": "Master Data",
-  reports: "Analytics & Reports",
-}
 
 // Demo accounts no longer exist and the backend's role mapping is not wired in.
 async function signIn(_page: Page, _role: Role) { // eslint-disable-line @typescript-eslint/no-unused-vars
@@ -30,17 +15,7 @@ async function signIn(_page: Page, _role: Role) { // eslint-disable-line @typesc
 
 const sidebar = (page: Page) => page.locator("aside")
 
-for (const role of Object.keys(SIDEBAR_VISIBILITY) as Role[]) {
-  test(`${role} signs in and sees only their sidebar sections`, async ({ page }) => {
-    await signIn(page, role)
-    const allowed = new Set(SIDEBAR_VISIBILITY[role])
-    for (const [key, label] of Object.entries(NAV_LABELS)) {
-      const link = sidebar(page).getByRole("link", { name: label, exact: true })
-      if (allowed.has(key)) await expect(link, `${role} should see ${label}`).toBeVisible()
-      else await expect(link, `${role} should not see ${label}`).toHaveCount(0)
-    }
-  })
-}
+// Menus per role are checked by src/lib/session/permissions.test.ts against the handoff's role matrix (permissions, not roles).
 
 test("a rejected login shows the backend message and stays on login", async ({ page }) => {
   // Stubbed response: keeps CI off the real backend (and its auth rate limit).

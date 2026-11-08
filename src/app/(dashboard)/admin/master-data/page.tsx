@@ -2,12 +2,8 @@
 import * as React from "react"
 import { AlertTriangle, Pencil, Plus, Trash2, History, Search } from "lucide-react"
 
-import { PANELS } from "@/data/organisations"
-import { WARDS } from "@/data/wards"
-import { CLINIC_SETTINGS } from "@/data/settings"
-import { GUARDIAN_RELATIONS } from "@/data/guardianRelations"
-import { DISEASES } from "@/data/diseases"
-import { LAB_TEST_CATEGORIES } from "@/data/labTests"
+import { LAB_TEST_CATEGORIES } from "@/lib/labels"
+import { demo } from "@hms/demo"
 import {
   CROSS_MODULE_OPERATION_LABELS, FINANCE_OPERATION_LABELS, bankAccountsService, crossModuleContractStatus, dataSource, ecgUltrasoundTestsService, errorSummary, expenseCategoriesService,
   financeContractStatus, isNotConnectedError, itemHistoryService, labTestsService, serviceCatalogService, serviceUsageService, viewState,
@@ -18,11 +14,19 @@ import { useBankAccounts, useExpenseCategories } from "@/lib/useReferenceData"
 import { useResource } from "@/lib/useResource"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ContractPending } from "@/components/shared/ContractPending"
+import { BankAccountsTab } from "@/components/masterdata/BankAccountsTab"
+import { ClinicSettingsTab } from "@/components/masterdata/ClinicSettingsTab"
+import { ExpenseCategoriesTab } from "@/components/masterdata/ExpenseCategoriesTab"
+import { GuardianRelationsTab } from "@/components/masterdata/GuardianRelationsTab"
+import { IcdCodesTab } from "@/components/masterdata/IcdCodesTab"
+import { ImagingTestsTab } from "@/components/masterdata/ImagingTestsTab"
+import { LabTestsTab } from "@/components/masterdata/LabTestsTab"
+import { PanelsTab } from "@/components/masterdata/PanelsTab"
+import { ServicesTab } from "@/components/masterdata/ServicesTab"
+import { WardsTab } from "@/components/masterdata/WardsTab"
 import { MockModeOnly } from "@/components/shared/MockModeOnly"
 import { ItemHistoryView, ServiceUsageView } from "@/components/shared/ItemHistoryView"
-import type {
-  PanelType, Panel, GuardianRelationItem, Disease, LabTestCategory,
-} from "@/types"
+import type { Disease, LabTestCategory } from "@/types"
 import { cn, formatCurrency } from "@/lib/utils"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { EmptyState } from "@/components/shared/EmptyState"
@@ -38,9 +42,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { failedChecks, validationToast } from "@/lib/validation"
+import { useAccess } from "@/lib/session/useAccess"
 
-// Panels, Wards, Guardian Relations, Diagnoses and Clinic Settings have NO service and NO confirmed API contract: they still read and
-// mutate the shared demo arrays directly. They are therefore wrapped in <MockModeOnly> — real demo behaviour in mock mode, an explicit
+// Panels, Guardian Relations, Clinic Settings, the Services Catalog, the Lab Tests, the Imaging Tests, the Wards and the (read-only) ICD-10 list are connected (src/components/masterdata). Nothing in this file is left without a connected service except the finance tabs: they
+// still read and mutate the shared demo arrays directly. They are therefore wrapped in <MockModeOnly> — real demo behaviour in mock mode, an explicit
 // contract-pending notice (children never mounted) in API mode, so demo records are never shown or "saved" as if they were real.
 // Banks and Expense Categories (T7 / T6): in API mode an operation is offered only when its endpoint is configured.
 const financeContract = financeContractStatus(dataSource)
@@ -48,7 +53,6 @@ const financeContract = financeContractStatus(dataSource)
 const catalogContract = crossModuleContractStatus(dataSource)
 
 const SERVICE_CATEGORIES = ["Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology", "Procedure", "Diagnostic", "Emergency"]
-const PANEL_TYPES: PanelType[] = ["Insurance", "Corporate", "Government", "Other"]
 const DISEASE_CATEGORIES = ["Respiratory", "Endocrine", "Cardiovascular", "Gastrointestinal", "Infectious", "Haematology", "Neurology", "Musculoskeletal", "Psychiatric", "Genitourinary", "Dermatology", "Other"]
 
 const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
@@ -56,6 +60,11 @@ const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white
 const primaryBtnClass = "rounded-xl h-11 px-6 bg-[#0F2A4D] hover:bg-[#16375F] text-white font-bold shadow-lg shadow-[#0F2A4D]/20 border-0 shrink-0"
 
 export default function MasterDataPage() {
+  const { can } = useAccess()
+  // Clinic Settings (and the department switches in it) need settings.write; the demo data has no such permission, so mock mode always shows it.
+  const showClinicSettings = dataSource !== "api" || can("settings.write")
+  // Bank accounts are read with accounts.read (handoff 8.2: account numbers are for money handlers only), not catalogs.read: hide the tab from everyone else
+  const showBanks = dataSource !== "api" || can("accounts.read")
   return (
     <div className="space-y-6 pb-10 max-w-7xl mx-auto">
       {/* ─── PREMIUM PAGE HEADER ─────────────────────────────────────── */}
@@ -71,44 +80,59 @@ export default function MasterDataPage() {
       <Tabs defaultValue="services">
         <TabsList className="h-auto p-1.5 bg-slate-100/80 rounded-2xl flex gap-1 overflow-x-auto justify-start border border-slate-200/60 shadow-inner scrollbar-none w-full">
           <TabsTrigger value="services" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Services Catalog</TabsTrigger>
-          <TabsTrigger value="labtests" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Lab &amp; Imaging Tests</TabsTrigger>
+          <TabsTrigger value="labtests" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">{dataSource === "api" ? "Lab Tests" : "Lab & Imaging Tests"}</TabsTrigger>
           <TabsTrigger value="panels" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Panels &amp; Insurance</TabsTrigger>
           <TabsTrigger value="wards" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Wards &amp; Beds</TabsTrigger>
           <TabsTrigger value="guardian" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Guardian Relations</TabsTrigger>
-          <TabsTrigger value="ecg" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">ECG/Ultrasound</TabsTrigger>
+          <TabsTrigger value="ecg" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">{dataSource === "api" ? "Imaging Tests" : "ECG/Ultrasound"}</TabsTrigger>
           <TabsTrigger value="diseases" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Diseases/Diagnosis</TabsTrigger>
           <TabsTrigger value="expenses" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Expense Categories</TabsTrigger>
-          <TabsTrigger value="banks" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Banks</TabsTrigger>
-          <TabsTrigger value="clinic" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Clinic Settings</TabsTrigger>
+          {showBanks && <TabsTrigger value="banks" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Banks</TabsTrigger>}
+          {showClinicSettings && <TabsTrigger value="clinic" className="rounded-xl data-[state=active]:bg-white data-[state=active]:text-[#0891B2] data-[state=active]:shadow-sm px-4 py-2.5 text-sm font-bold text-slate-500 transition-all whitespace-nowrap">Clinic Settings</TabsTrigger>}
         </TabsList>
         <div className="mt-6">
-          <TabsContent value="services" className="mt-0 outline-none"><ServicesTab /></TabsContent>
-          <TabsContent value="labtests" className="mt-0 outline-none"><LabTestsTab /></TabsContent>
+          <TabsContent value="services" className="mt-0 outline-none">
+            {dataSource === "api" ? <ServicesTab /> : <MockServicesTab />}
+          </TabsContent>
+          <TabsContent value="labtests" className="mt-0 outline-none">
+            {dataSource === "api" ? <LabTestsTab /> : <MockLabTestsTab />}
+          </TabsContent>
           <TabsContent value="panels" className="mt-0 outline-none">
-            <MockModeOnly source={dataSource} title="Panels are unavailable" awaiting={["panels / organisations (list, create, edit, activate)"]} testId="masterdata-panels-pending"><PanelsTab /></MockModeOnly>
+            <PanelsTab />
           </TabsContent>
           <TabsContent value="wards" className="mt-0 outline-none">
-            <MockModeOnly source={dataSource} title="Wards and beds are unavailable" awaiting={["wards and beds (list, bed status)"]} testId="masterdata-wards-pending" noun="ward list"><WardsTab /></MockModeOnly>
+            {dataSource === "api" ? <WardsTab /> : <MockWardsTab />}
           </TabsContent>
           <TabsContent value="guardian" className="mt-0 outline-none">
-            <MockModeOnly source={dataSource} title="Guardian relations are unavailable" awaiting={["guardian relations (list, create, edit, activate)"]} testId="masterdata-guardian-pending"><GuardianRelationsTab /></MockModeOnly>
+            <GuardianRelationsTab />
           </TabsContent>
-          <TabsContent value="ecg" className="mt-0 outline-none"><EcgUltrasoundTab /></TabsContent>
+          <TabsContent value="ecg" className="mt-0 outline-none">
+            {dataSource === "api" ? <ImagingTestsTab /> : <MockEcgUltrasoundTab />}
+          </TabsContent>
           <TabsContent value="diseases" className="mt-0 outline-none">
-            <MockModeOnly source={dataSource} title="Diagnoses are unavailable" awaiting={["diagnoses / ICD codes (list, create, edit)"]} testId="masterdata-diseases-pending"><DiseasesTab /></MockModeOnly>
+            {dataSource === "api" ? <IcdCodesTab /> : <DiseasesTab />}
           </TabsContent>
-          <TabsContent value="expenses" className="mt-0 outline-none"><ExpenseCategoriesTab /></TabsContent>
-          <TabsContent value="banks" className="mt-0 outline-none"><BanksTab /></TabsContent>
-          <TabsContent value="clinic" className="mt-0 outline-none">
-            <MockModeOnly source={dataSource} title="Clinic settings are unavailable" awaiting={["clinic settings (read, save)"]} testId="masterdata-clinic-pending" noun="settings form"><ClinicSettingsTab /></MockModeOnly>
+          <TabsContent value="expenses" className="mt-0 outline-none">
+            {dataSource === "api" ? <ExpenseCategoriesTab /> : <MockExpenseCategoriesTab />}
           </TabsContent>
+          {showBanks && (
+            <TabsContent value="banks" className="mt-0 outline-none">
+              {dataSource === "api" ? <BankAccountsTab /> : <MockBanksTab />}
+            </TabsContent>
+          )}
+          {showClinicSettings && (
+            <TabsContent value="clinic" className="mt-0 outline-none">
+              {dataSource === "api" ? <ClinicSettingsTab /> : <MockClinicSettingsTab />}
+            </TabsContent>
+          )}
         </div>
       </Tabs>
     </div>
   )
 }
 
-function ServicesTab() {
+// Demo-only (mock mode): the in-memory catalogue with Item History. API mode uses src/components/masterdata/ServicesTab.tsx.
+function MockServicesTab() {
   const { toast } = useToast()
   const [categoryFilter, setCategoryFilter] = React.useState("All")
   const [modalTarget, setModalTarget] = React.useState<ServiceCatalogRecord | "new" | null>(null)
@@ -350,7 +374,8 @@ function ServiceModal({ target, onClose }: { target: ServiceCatalogRecord | "new
   )
 }
 
-function LabTestsTab() {
+// Demo-only (mock mode): the shared lab + imaging demo catalogue. API mode uses src/components/masterdata/LabTestsTab.tsx.
+function MockLabTestsTab() {
   const [categoryFilter, setCategoryFilter] = React.useState("All")
   const [modalTarget, setModalTarget] = React.useState<LabTestRecord | "new" | null>(null)
   const loadTests = React.useCallback(
@@ -492,7 +517,8 @@ function LabTestModal({ target, onClose }: { target: LabTestRecord | "new" | nul
   )
 }
 
-function BanksTab() {
+// Demo-only (mock mode). API mode uses src/components/masterdata/BankAccountsTab.tsx.
+function MockBanksTab() {
   const { toast } = useToast()
   const accounts = useBankAccounts(financeContract.can("bankAccounts.list"))
   const [modalTarget, setModalTarget] = React.useState<BankAccountRecord | "new" | null>(null)
@@ -615,112 +641,13 @@ function BankModal({ target, onClose }: { target: BankAccountRecord | "new" | nu
   )
 }
 
-function PanelsTab() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-  const [modalTarget, setModalTarget] = React.useState<Panel | "new" | null>(null)
-
-  return (
-    <div className="space-y-4">
-      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Panel</Button></div>
-      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
-                <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Panel Name</TableHead>
-                <TableHead className="font-bold text-slate-500 py-4 h-auto">Type</TableHead>
-                <TableHead className="font-bold text-slate-500 py-4 h-auto">Contact</TableHead>
-                <TableHead className="font-bold text-slate-500 py-4 h-auto">Phone</TableHead>
-                <TableHead className="font-bold text-slate-500 py-4 h-auto">Commission%</TableHead>
-                <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
-                <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {PANELS.map((p) => (
-                <TableRow key={p.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                  <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{p.name}</TableCell>
-                  <TableCell className="py-4 font-medium text-slate-600">{p.type}</TableCell>
-                  <TableCell className="py-4 font-medium text-slate-700">{p.contactPerson}</TableCell>
-                  <TableCell className="py-4 font-medium text-slate-500">{p.phone}</TableCell>
-                  <TableCell className="py-4 font-bold text-emerald-600">{p.commissionPct}%</TableCell>
-                  <TableCell className="py-4"><Switch checked={p.active} onCheckedChange={(v) => { p.active = v; forceUpdate() }} /></TableCell>
-                  <TableCell className="px-6 py-4 text-right">
-                    <Button aria-label={`Edit ${p.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(p)}><Pencil className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-      <PanelModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
-    </div>
-  )
-}
-
-function PanelModal({ target, onClose }: { target: Panel | "new" | null; onClose: () => void }) {
-  const uid = React.useId()
-  const { toast } = useToast()
-  const isNew = target === "new"
-  const panel = isNew ? null : target
-  const [name, setName] = React.useState(panel?.name ?? "")
-  const [type, setType] = React.useState<PanelType>(panel?.type ?? "Insurance")
-  const [contactPerson, setContactPerson] = React.useState(panel?.contactPerson ?? "")
-  const [phone, setPhone] = React.useState(panel?.phone ?? "")
-  const [commissionPct, setCommissionPct] = React.useState(panel?.commissionPct ?? 0)
-
-  React.useEffect(() => {
-    setName(panel?.name ?? ""); setType(panel?.type ?? "Insurance"); setContactPerson(panel?.contactPerson ?? "");
-    setPhone(panel?.phone ?? ""); setCommissionPct(panel?.commissionPct ?? 0)
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const save = () => {
-    const problems = failedChecks([[name, "Panel Name is required"]])
-    if (problems.length) { toast(validationToast(problems)); return }
-    if (isNew) {
-      PANELS.push({ id: Math.max(0, ...PANELS.map((p) => p.id)) + 1, name, type, contactPerson, phone, commissionPct, active: true })
-      toast({ title: `${name} added` })
-    } else if (panel) {
-      const idx = PANELS.findIndex((p) => p.id === panel.id)
-      if (idx >= 0) PANELS[idx] = { ...PANELS[idx], name, type, contactPerson, phone, commissionPct }
-      toast({ title: `${name} updated` })
-    }
-    onClose()
-  }
-
-  return (
-    <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-xl rounded-[1.5rem]">
-        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Panel" : "Edit Panel"}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 pt-4">
-          <div className="space-y-1.5 sm:col-span-2"><Label htmlFor={`${uid}-panel-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Panel Name *</Label><Input id={`${uid}-panel-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`${uid}-type`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as PanelType)}>
-              <SelectTrigger id={`${uid}-type`} className={selectClass}><SelectValue /></SelectTrigger>
-              <SelectContent>{PANEL_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5"><Label htmlFor={`${uid}-commission`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Commission %</Label><Input id={`${uid}-commission`} className={inputClass} type="number" value={commissionPct || ""} onChange={(e) => setCommissionPct(Number(e.target.value))} /></div>
-          <div className="space-y-1.5"><Label htmlFor={`${uid}-contact-person`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Contact Person</Label><Input id={`${uid}-contact-person`} className={inputClass} value={contactPerson} onChange={(e) => setContactPerson(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label htmlFor={`${uid}-phone`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</Label><Input id={`${uid}-phone`} className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-        </div>
-        <DialogFooter className="mt-4 gap-2">
-          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
-          <Button className={primaryBtnClass} onClick={save}>Save Panel</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function WardsTab() {
+// Demo-only (mock mode): wards from the demo arrays, bed status cycled by clicking. API mode uses src/components/masterdata/WardsTab.tsx.
+function MockWardsTab() {
   const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
   const [expanded, setExpanded] = React.useState<number | null>(null)
 
   const cycleBedStatus = (wardId: number, bedNo: string) => {
-    const ward = WARDS.find((w) => w.id === wardId)
+    const ward = demo.data.WARDS.find((w) => w.id === wardId)
     const bed = ward?.beds.find((b) => b.bedNo === bedNo)
     if (!bed) return
     const order = ["available", "occupied", "maintenance"] as const
@@ -732,7 +659,7 @@ function WardsTab() {
 
   return (
     <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {WARDS.map((w) => {
+      {demo.data.WARDS.map((w) => {
         const occupied = w.beds.filter((b) => b.status === "occupied").length
         const pct = (occupied / w.beds.length) * 100
         return (
@@ -781,86 +708,8 @@ function WardsTab() {
   )
 }
 
-function GuardianRelationsTab() {
-  const [, forceUpdate] = React.useReducer((x) => x + 1, 0)
-  const [modalTarget, setModalTarget] = React.useState<GuardianRelationItem | "new" | null>(null)
-
-  return (
-    <div className="space-y-4 max-w-3xl">
-      <div className="flex justify-end"><Button className={primaryBtnClass} onClick={() => setModalTarget("new")}><Plus className="h-5 w-5 mr-2" /> Add Relation</Button></div>
-      <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-slate-50/50 border-b border-slate-100 hover:bg-slate-50/50">
-              <TableHead className="font-bold text-slate-500 py-4 px-6 h-auto">Relation Name</TableHead>
-              <TableHead className="font-bold text-slate-500 py-4 h-auto">Remarks</TableHead>
-              <TableHead className="font-bold text-slate-500 py-4 h-auto">Active</TableHead>
-              <TableHead className="font-bold text-slate-500 py-4 px-6 text-right h-auto">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {GUARDIAN_RELATIONS.map((r) => (
-              <TableRow key={r.id} className="transition-colors hover:bg-slate-50 border-b border-slate-50 last:border-0">
-                <TableCell className="px-6 py-4 font-bold text-[#0D1B2E]">{r.name}</TableCell>
-                <TableCell className="py-4 font-medium text-slate-500">{r.remarks ?? "—"}</TableCell>
-                <TableCell className="py-4"><Switch checked={r.active} onCheckedChange={(v) => { r.active = v; forceUpdate() }} /></TableCell>
-                <TableCell className="px-6 py-4 text-right">
-                  <Button aria-label={`Edit ${r.name}`} variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-slate-400 hover:text-[#0891B2] hover:bg-[#1CC0CE]/10" onClick={() => setModalTarget(r)}><Pencil className="h-4 w-4" /></Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <GuardianRelationModal target={modalTarget} onClose={() => { setModalTarget(null); forceUpdate() }} />
-    </div>
-  )
-}
-
-function GuardianRelationModal({ target, onClose }: { target: GuardianRelationItem | "new" | null; onClose: () => void }) {
-  const uid = React.useId()
-  const { toast } = useToast()
-  const isNew = target === "new"
-  const item = isNew ? null : target
-  const [name, setName] = React.useState(item?.name ?? "")
-  const [remarks, setRemarks] = React.useState(item?.remarks ?? "")
-
-  React.useEffect(() => {
-    setName(item?.name ?? ""); setRemarks(item?.remarks ?? "")
-  }, [target]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const save = () => {
-    const problems = failedChecks([[name.trim(), "Relation Name is required"]])
-    if (problems.length) { toast(validationToast(problems)); return }
-    if (isNew) {
-      GUARDIAN_RELATIONS.push({ id: Math.max(0, ...GUARDIAN_RELATIONS.map((r) => r.id)) + 1, name: name.trim(), remarks, active: true })
-      toast({ title: `${name} added` })
-    } else if (item) {
-      const idx = GUARDIAN_RELATIONS.findIndex((r) => r.id === item.id)
-      if (idx >= 0) GUARDIAN_RELATIONS[idx] = { ...GUARDIAN_RELATIONS[idx], name: name.trim(), remarks }
-      toast({ title: `${name} updated` })
-    }
-    onClose()
-  }
-
-  return (
-    <Dialog open={target !== null} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-md rounded-[1.5rem]">
-        <DialogHeader><DialogTitle className="text-xl">{isNew ? "Add Guardian Relation" : "Edit Guardian Relation"}</DialogTitle></DialogHeader>
-        <div className="space-y-5 pt-4">
-          <div className="space-y-1.5"><Label htmlFor={`${uid}-relation-name`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Relation Name *</Label><Input id={`${uid}-relation-name`} className={inputClass} value={name} onChange={(e) => setName(e.target.value)} /></div>
-          <div className="space-y-1.5"><Label htmlFor={`${uid}-remarks`} className="text-xs font-bold uppercase tracking-wider text-slate-500">Remarks</Label><Input id={`${uid}-remarks`} className={inputClass} value={remarks} onChange={(e) => setRemarks(e.target.value)} /></div>
-        </div>
-        <DialogFooter className="mt-6 gap-2">
-          <Button variant="ghost" className="rounded-xl h-11 font-bold" onClick={onClose}>Cancel</Button>
-          <Button className={primaryBtnClass} onClick={save}>Save</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-function EcgUltrasoundTab() {
+// Demo-only (mock mode): the ECG / ultrasound demo catalogue. API mode uses src/components/masterdata/ImagingTestsTab.tsx.
+function MockEcgUltrasoundTab() {
   const { toast } = useToast()
   const [modalTarget, setModalTarget] = React.useState<EcgUltrasoundTestRecord | "new" | null>(null)
   const loadTests = React.useCallback(() => listAll((o) => ecgUltrasoundTestsService.list(o)), [])
@@ -990,8 +839,8 @@ function DiseasesTab() {
   const [modalTarget, setModalTarget] = React.useState<Disease | "new" | null>(null)
 
   const rows = search.trim()
-    ? DISEASES.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()) || d.icdCode.toLowerCase().includes(search.toLowerCase()))
-    : DISEASES
+    ? demo.data.DISEASES.filter((d) => d.name.toLowerCase().includes(search.toLowerCase()) || d.icdCode.toLowerCase().includes(search.toLowerCase()))
+    : demo.data.DISEASES
 
   return (
     <div className="space-y-4">
@@ -1061,11 +910,11 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
     const problems = failedChecks([[icdCode.trim(), "ICD Code is required"], [name.trim(), "Name is required"]])
     if (problems.length) { toast(validationToast(problems)); return }
     if (isNew) {
-      DISEASES.push({ id: Math.max(0, ...DISEASES.map((d) => d.id)) + 1, icdCode, name, category })
+      demo.data.DISEASES.push({ id: Math.max(0, ...demo.data.DISEASES.map((d) => d.id)) + 1, icdCode, name, category })
       toast({ title: `${name} added` })
     } else if (item) {
-      const idx = DISEASES.findIndex((d) => d.id === item.id)
-      if (idx >= 0) DISEASES[idx] = { ...DISEASES[idx], icdCode, name, category }
+      const idx = demo.data.DISEASES.findIndex((d) => d.id === item.id)
+      if (idx >= 0) demo.data.DISEASES[idx] = { ...demo.data.DISEASES[idx], icdCode, name, category }
       toast({ title: `${name} updated` })
     }
     onClose()
@@ -1095,7 +944,8 @@ function DiseaseModal({ target, onClose }: { target: Disease | "new" | null; onC
   )
 }
 
-function ExpenseCategoriesTab() {
+// Demo-only (mock mode). API mode uses src/components/masterdata/ExpenseCategoriesTab.tsx.
+function MockExpenseCategoriesTab() {
   const { toast } = useToast()
   const heads = useExpenseCategories(financeContract.can("expenseCategories.list"))
   const [editing, setEditing] = React.useState<string | null>(null)
@@ -1162,10 +1012,11 @@ function ExpenseCategoriesTab() {
   )
 }
 
-function ClinicSettingsTab() {
+// Demo-only (mock mode): local state that is never saved. API mode uses src/components/masterdata/ClinicSettingsTab.tsx.
+function MockClinicSettingsTab() {
   const uid = React.useId()
   const { toast } = useToast()
-  const [settings, setSettings] = React.useState(CLINIC_SETTINGS)
+  const [settings, setSettings] = React.useState(demo.data.CLINIC_SETTINGS)
 
   return (
     <div className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 p-8 max-w-3xl">

@@ -9,13 +9,17 @@ import {
 } from "lucide-react"
 
 import { useAuth } from "@/lib/auth"
-import { dashboardContractStatus, dashboardService, dataSource, formatMoneyString, patientsService, type DashboardSummaryData } from "@/lib/services"
-import { listAll } from "@/lib/services/reference/listAll"
+import { useAccess } from "@/lib/session/useAccess"
+import { dashboardContractStatus, dashboardService, dataSource, formatMoneyString, type DashboardSummaryData } from "@/lib/services"
+import { loadRecentPatients } from "@/lib/services/recentPatients"
 import { useMedicines } from "@/lib/useReferenceData"
 import { initials, cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/shared/StatusBadge"
 import { ReportBody, useReportData } from "@/components/reports/ReportState"
+import { ApiDashboard } from "@/components/dashboard/ApiDashboard"
+import { DashboardListsApi } from "@/components/dashboard/DashboardListsApi"
+import { LowStockBanner } from "@/components/dashboard/LowStockBanner"
 
 // Recharts must be loaded client-side only — it accesses browser globals on init
 const RechartsBarChart = dynamic(() => import("./DashboardCharts").then(m => m.PatientFlowChart), { ssr: false, loading: () => <div className="h-[280px] animate-pulse bg-slate-50 rounded-xl" /> })
@@ -29,7 +33,8 @@ const loadSummary = (signal: AbortSignal) => dashboardService.summary({ signal }
 const loadVisits = (signal: AbortSignal) => dashboardService.weeklyVisits({ signal })
 const loadRevenue = (signal: AbortSignal) => dashboardService.revenueTrend({ signal })
 const loadUpNext = (signal: AbortSignal) => dashboardService.upNext({ signal })
-const loadPatients = (signal: AbortSignal) => listAll((o) => patientsService.list(o), { signal })
+// API mode: the Recently Registered widget has its own five-row query (DashboardListsApi); this demo loader must not fetch a page of 100 patients on every dashboard load.
+const loadPatients = (signal: AbortSignal) => (dataSource === "api" ? Promise.resolve({ items: [], total: 0 }) : loadRecentPatients(signal))
 
 function greet() {
   const h = new Date().getHours()
@@ -84,15 +89,18 @@ function KpiTile({
   )
 }
 
-export default function DashboardPage() {
+/** The demo's home screen (mock mode only): it computes from the prototype's arrays. API mode uses ApiDashboard. */
+function MockDashboardPage() {
   const { user } = useAuth()
+  const { can, canAny, modules } = useAccess()
   const router = useRouter()
   const summary = useReportData(loadSummary)
   const visits = useReportData(loadVisits)
   const revenue = useReportData(loadRevenue)
   const upNext = useReportData(loadUpNext)
   const patients = useReportData(loadPatients)
-  const medicines = useMedicines()
+  // stock is asked for only when the user may read pharmacy data AND the pharmacy module is on (otherwise the call would be refused)
+  const medicines = useMedicines(dataSource !== "api" && can("pharmacy.read") && modules?.pharmacy === true) // API mode has its own banner: the server says what is low (LowStockBanner)
   if (!user) return null
 
   // Stock alert: from the pharmacy service's medicine list (the same list the inventory screen uses). Nothing is shown while that list is
@@ -103,8 +111,10 @@ export default function DashboardPage() {
     ? [...patients.data.items].sort((a, b) => new Date(b.registrationDate).getTime() - new Date(a.registrationDate).getTime()).slice(0, 5)
     : []
 
-  const showRevenue = user.role === "admin" || user.role === "billing"
-  const canAddPatient = user.role === "admin" || user.role === "receptionist"
+  // Each part of the dashboard follows the user's permissions (never the role). The single GET /dashboard (chunk D1) will replace these with
+  // "render the sections that come back".
+  const showRevenue = can("reports.read")
+  const canAddPatient = can("patients.write")
 
   // A tile's value comes from the summary service; while it is not connected it reads "—" (never 0), while loading "…".
   const tile = (pick: (s: DashboardSummaryData) => string) => (summary.data ? pick(summary.data) : summary.pending || summary.error ? "—" : "…")
@@ -118,8 +128,9 @@ export default function DashboardPage() {
         <div role="status" data-testid="dashboard-not-connected" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-500/30">
           <p className="font-bold">The Dashboard is not connected to the backend</p>
           <p className="mt-1">
-            The API contract for the dashboard (the summary tiles, charts and schedule — routes, parameters and response schemas) has not been provided to the
-            frontend. In API mode no dashboard request is sent and no demo figure is shown: each tile reads “—” and each widget says what it is awaiting.
+            The API contract for the dashboard summary (the tiles and charts — routes, parameters and response schemas) has not been provided to the frontend. In API
+            mode no tile or chart request is sent and no demo figure is shown: each tile reads “—” and each chart says what it is awaiting. Today&apos;s appointments and
+            the newest patients below come from their own lists and are live.
           </p>
         </div>
       )}
@@ -173,14 +184,15 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── ALERTS ────────────────────────────────────────────────────── */}
-      {lowStock.length > 0 && user.role !== "lab_tech" && (
+      {dataSource === "api" && <LowStockBanner />}
+      {dataSource !== "api" && lowStock.length > 0 && can("pharmacy.read") && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[1.5rem] bg-rose-50 p-5 ring-1 ring-rose-100 shadow-sm">
           <div className="flex items-center gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
               <AlertTriangle className="h-6 w-6" />
             </div>
             <div>
-              <h4 className="font-black text-rose-900 text-base">Critical Inventory Alert</h4>
+              <h2 className="font-black text-rose-900 text-base">Critical Inventory Alert</h2>
               <p className="text-sm font-semibold text-rose-600 mt-0.5">
                 {lowStock.slice(0, 3).map((m) => `${m.name} (${m.stock})`).join(" • ")}
                 {criticalStock.length > 0 && ` • ${criticalStock.length} items completely out of stock`}
@@ -195,17 +207,19 @@ export default function DashboardPage() {
 
       {/* ─── KPI ROW ───────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {user.role === "pharmacist" ? (
+        {can("pharmacy.dispense") && (
           <>
             <KpiTile label="Dispensed Today" value={tile((s) => String(s.dispensedToday))} pending={pending} icon={Pill} bgStyle="bg-emerald-50" iconColor="text-emerald-600" trend={note("dispensedToday")} />
             <KpiTile label="Low Stock Items" value={tile((s) => String(s.lowStockItems))} pending={pending} icon={AlertTriangle} bgStyle="bg-rose-50" iconColor="text-rose-600" onClick={() => router.push("/pharmacy/inventory")} />
           </>
-        ) : user.role === "lab_tech" ? (
+        )}
+        {can("diagnostics.enter_results") && (
           <>
             <KpiTile label="Pending Orders" value={tile((s) => String(s.pendingOrders))} pending={pending} icon={FlaskConical} bgStyle="bg-amber-50" iconColor="text-amber-600" />
             <KpiTile label="Completed Today" value={tile((s) => String(s.completedToday))} pending={pending} icon={Users} bgStyle="bg-emerald-50" iconColor="text-emerald-600" />
           </>
-        ) : (
+        )}
+        {canAny("encounters.read", "encounters.check_in") && (
           <>
             <KpiTile
               label="Today's Patients"
@@ -216,11 +230,12 @@ export default function DashboardPage() {
               iconColor="text-[#0891B2]"
               trend={note("todaysPatients")}
             />
-            {user.role === "doctor" ? (
+            {can("encounters.write") && (
               <KpiTile label="My Patients" value={tile((s) => String(s.myPatients))} pending={pending} icon={Stethoscope} bgStyle="bg-[#1CC0CE]/10" iconColor="text-[#0891B2]" />
-            ) : showRevenue ? (
+            )}
+            {showRevenue && (
               <KpiTile label="Revenue Today" value={tile((s) => formatMoneyString(s.revenueToday))} pending={pending} icon={Banknote} bgStyle="bg-emerald-50" iconColor="text-emerald-600" trend={note("revenueToday")} />
-            ) : null}
+            )}
             <KpiTile label="Pending Lab Reports" value={tile((s) => String(s.pendingLabReports))} pending={pending} icon={FlaskConical} bgStyle="bg-amber-50" iconColor="text-amber-600" />
             <KpiTile label="Admitted (IPD)" value={tile((s) => String(s.admittedIpd))} pending={pending} icon={BedDouble} bgStyle="bg-indigo-50" iconColor="text-indigo-600" trend={note("admittedIpd")} />
           </>
@@ -249,7 +264,8 @@ export default function DashboardPage() {
       </div>
 
       {/* ─── BOTTOM ROW ────────────────────────────────────────────────── */}
-      {user.role !== "lab_tech" && user.role !== "pharmacist" && (
+      {dataSource === "api" && <DashboardListsApi />}
+      {dataSource !== "api" && canAny("appointments.read", "patients.read") && (
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
 
           {/* APPOINTMENTS TABLE */}
@@ -359,4 +375,9 @@ export default function DashboardPage() {
 
     </div>
   )
+}
+
+/** API mode: one GET /dashboard draws the tiles and charts (D1). The demo keeps its own screen. */
+export default function DashboardPage() {
+  return dataSource === "api" ? <ApiDashboard /> : <MockDashboardPage />
 }

@@ -58,6 +58,21 @@ export const mockLabTestsService: LabTestsService = {
     LAB_TESTS[idx] = { ...LAB_TESTS[idx], code: input.code, name: input.name, category: input.category, rate: input.rate, turnaroundHours: input.turnaroundHours }
     return toLabTest(LAB_TESTS[idx])
   },
+
+  async patch(id, patch) {
+    const idx = LAB_TESTS.findIndex((t) => String(t.id) === id)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Lab test not found")
+    const { code, name, category, rate, turnaroundHours } = patch
+    LAB_TESTS[idx] = { ...LAB_TESTS[idx], ...(code !== undefined && { code }), ...(name !== undefined && { name }), ...(category !== undefined && { category }), ...(rate !== undefined && { rate }), ...(turnaroundHours !== undefined && { turnaroundHours }) }
+    return toLabTest(LAB_TESTS[idx])
+  },
+
+  // The demo catalogue has no active flag (decision: not invented); the record is returned unchanged.
+  async setActive(id) {
+    const idx = LAB_TESTS.findIndex((t) => String(t.id) === id)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Lab test not found")
+    return toLabTest(LAB_TESTS[idx])
+  },
 }
 
 const toEcg = (t: EcgUltrasoundTest): EcgUltrasoundTestRecord => ({ ...t, id: String(t.id) })
@@ -86,6 +101,21 @@ export const mockEcgUltrasoundTestsService: EcgUltrasoundTestsService = {
     const idx = ECG_ULTRASOUND_TESTS.findIndex((t) => String(t.id) === id)
     if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Test not found")
     ECG_ULTRASOUND_TESTS[idx] = { ...ECG_ULTRASOUND_TESTS[idx], code: input.code, name: input.name, fee: input.fee, remarks: input.remarks, active: input.active }
+    return toEcg(ECG_ULTRASOUND_TESTS[idx])
+  },
+
+  async patch(id, patch) {
+    const idx = ECG_ULTRASOUND_TESTS.findIndex((t) => String(t.id) === id)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Test not found")
+    const { code, name, fee } = patch
+    ECG_ULTRASOUND_TESTS[idx] = { ...ECG_ULTRASOUND_TESTS[idx], ...(code !== undefined && { code }), ...(name !== undefined && { name }), ...(fee !== undefined && { fee }) }
+    return toEcg(ECG_ULTRASOUND_TESTS[idx])
+  },
+
+  async setActive(id, active) {
+    const idx = ECG_ULTRASOUND_TESTS.findIndex((t) => String(t.id) === id)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Test not found")
+    ECG_ULTRASOUND_TESTS[idx] = { ...ECG_ULTRASOUND_TESTS[idx], active }
     return toEcg(ECG_ULTRASOUND_TESTS[idx])
   },
 }

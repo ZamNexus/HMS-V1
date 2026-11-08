@@ -13,8 +13,7 @@ import { AUDIT_LOG } from "@/data/settings"
 import { CROSS_MODULE_OPERATIONS, crossModuleContractStatus } from "./crossModuleContract"
 import { ENDPOINTS } from "./endpoints"
 import { NotConnectedError } from "./errors"
-import { httpBillSummaryService, httpItemHistoryService, httpNotificationsService, httpServiceUsageService } from "./http/crossModule"
-import { httpServiceCatalogService } from "./http/reports"
+import { httpBillSummaryService, httpNotificationsService, httpServiceUsageService } from "./http/crossModule"
 import { mockBillSummaryService, mockItemHistoryService, mockNotificationsService, mockServiceUsageService } from "./mock/crossModule"
 import { mockMedicinesService } from "./mock/pharmacy"
 import { httpMedicinesService } from "./http/pharmacy"
@@ -27,32 +26,32 @@ import type { BillSummaryState } from "@/lib/useBillSummary"
 // Frontend-only unit tests with controlled demo data. They say nothing about the real backend: no contract for Item History (T12), the
 // catalogue writes, the bill summary or notifications has been published, so none of it is wired.
 
+// The services catalogue (S5) and Item History (D8: the handoff's route plus the proposed entry fields) are connected; the bill summary still awaits its contract.
+const PENDING_OPERATIONS = CROSS_MODULE_OPERATIONS.filter((k) => !k.startsWith("serviceCatalog.") && k !== "itemHistory.list")
 afterEach(() => {
   vi.unstubAllGlobals()
-  for (const k of CROSS_MODULE_OPERATIONS) ENDPOINTS[k] = null
+  for (const k of PENDING_OPERATIONS) ENDPOINTS[k] = null
 })
 
 const root = join(__dirname, "../../..")
 const source = (rel: string) => readFileSync(join(root, rel), "utf8")
 
 describe("contract-pending behaviour (API mode)", () => {
-  it("has no endpoint configured for any of the six operations, and no notification key exists at all", () => {
+  it("has no endpoint configured for Item History or the bill summary, the catalogue is connected, and no notification key exists at all", () => {
     expect(CROSS_MODULE_OPERATIONS).toHaveLength(6)
-    for (const k of CROSS_MODULE_OPERATIONS) expect(ENDPOINTS[k], k).toBeNull()
+    expect(PENDING_OPERATIONS).toEqual(["billSummary.patient", "billSummary.encounter"])
+    expect(ENDPOINTS["itemHistory.list"]).toEqual({ method: "GET", path: "/audit-entries" })
+    for (const k of PENDING_OPERATIONS) expect(ENDPOINTS[k], k).toBeNull()
+    expect(ENDPOINTS["serviceCatalog.list"]).toEqual({ method: "GET", path: "/services" })
     expect(Object.keys(ENDPOINTS).filter((k) => /notification|usage/i.test(k))).toEqual([]) // invoice usage is a demo view: no key either
   })
 
   it("every HTTP operation sends no request and reports 'awaiting the backend contract' (no fake record, no zero)", async () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
-    const input = { code: "C", name: "N", category: "Procedure", rate: 1, active: true }
     const calls = [
-      httpItemHistoryService.list({ subject: "serviceCatalogItem", id: "01HX" }),
       httpBillSummaryService.forPatient("01HX"),
       httpBillSummaryService.forEncounter("01HX"),
-      httpServiceCatalogService.list({ category: "Procedure" }),
-      httpServiceCatalogService.create(input),
-      httpServiceCatalogService.update("01HX", input),
       httpNotificationsService.list(),
       httpServiceUsageService.list({ id: "01HX" }),
     ]
@@ -64,14 +63,9 @@ describe("contract-pending behaviour (API mode)", () => {
   it("even with paths configured, sends nothing until the request/response mapping is implemented", async () => {
     const fetchMock = vi.fn(async () => new Response(JSON.stringify({}), { headers: { "content-type": "application/json" } }))
     vi.stubGlobal("fetch", fetchMock)
-    for (const k of CROSS_MODULE_OPERATIONS) ENDPOINTS[k] = { method: "GET", path: "/hypothetical" } // test-only
-    const input = { code: "C", name: "N", category: "Procedure", rate: 1, active: true }
-    await expect(httpItemHistoryService.list({ subject: "serviceCatalogItem", id: "01HX" })).rejects.toThrow(/query parameters/)
+    for (const k of PENDING_OPERATIONS) ENDPOINTS[k] = { method: "GET", path: "/hypothetical" } // test-only
     await expect(httpBillSummaryService.forPatient("01HX")).rejects.toThrow(/query parameters/)
     await expect(httpBillSummaryService.forEncounter("01HX")).rejects.toThrow(/query parameters/)
-    await expect(httpServiceCatalogService.list()).rejects.toThrow(/query parameters/)
-    await expect(httpServiceCatalogService.create(input)).rejects.toThrow(/request body/)
-    await expect(httpServiceCatalogService.update("01HX", input)).rejects.toThrow(/request body/)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
@@ -81,15 +75,16 @@ describe("contract-pending behaviour (API mode)", () => {
     }
   })
 
-  it("the contract status: API mode with every key null is pending (6 missing); mock mode never is; one key at a time", () => {
+  it("the contract status: API mode is pending for the 2 unpublished bill-summary operations only; mock mode never is; one key at a time", () => {
     const api = crossModuleContractStatus("api")
     expect(api.pending).toBe(true)
-    expect(api.missing).toHaveLength(6)
-    expect(CROSS_MODULE_OPERATIONS.some((op) => api.can(op))).toBe(false)
+    expect(api.missing).toEqual(PENDING_OPERATIONS)
+    expect(PENDING_OPERATIONS.some((op) => api.can(op))).toBe(false)
+    expect(api.can("serviceCatalog.list") && api.can("serviceCatalog.create") && api.can("serviceCatalog.update")).toBe(true)
     expect(crossModuleContractStatus("mock")).toMatchObject({ pending: false, missing: [] })
-    const one = crossModuleContractStatus("api", { ...ENDPOINTS, "itemHistory.list": { method: "GET" as const, path: "/hypothetical" } }) // copy, test-only
-    expect(one.can("itemHistory.list")).toBe(true)
-    expect(one.can("serviceCatalog.list")).toBe(false)
+    const one = crossModuleContractStatus("api", { ...ENDPOINTS, "billSummary.patient": { method: "GET" as const, path: "/hypothetical" } }) // copy, test-only
+    expect(one.can("billSummary.patient")).toBe(true)
+    expect(one.can("billSummary.encounter")).toBe(false)
   })
 })
 

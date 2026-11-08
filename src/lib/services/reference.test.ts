@@ -229,16 +229,16 @@ describe("organisations and guardian relations", () => {
     await expect(mockGuardianRelationsService.create({ name: "father", active: true })).rejects.toMatchObject({ status: 409 })
     await expect(mockGuardianRelationsService.create({ name: " ", active: true })).rejects.toBeInstanceOf(ApiError)
   })
-  it("the HTTP adapters have no contract: every call reports it and sends no request", async () => {
-    const fetchMock = vi.fn()
+  it("the HTTP adapters are connected (Phase 5A): they request /panels and /guardian-relations and refuse a response that does not match the contract", async () => {
+    const fetchMock = vi.fn(async () => new Response(JSON.stringify({ unexpected: true }), { headers: { "content-type": "application/json" } }))
     vi.stubGlobal("fetch", fetchMock)
-    const calls = [
-      httpOrganisationsService.list(),
-      httpOrganisationsService.create({ name: "x", type: "Other", contactPerson: "", phone: "", commissionPct: 0, active: true }),
-      httpGuardianRelationsService.list(),
-      httpGuardianRelationsService.create({ name: "x", active: true }),
-    ]
-    for (const c of calls) await expect(c).rejects.toThrow(/awaiting the backend contract/)
+    await expect(httpOrganisationsService.list()).rejects.toThrow(/Unexpected response/)
+    await expect(httpGuardianRelationsService.list()).rejects.toThrow(/Unexpected response/)
+    expect(fetchMock.mock.calls.map((c) => (c as unknown as [string])[0])).toEqual(["/api/v1/panels", "/api/v1/guardian-relations"])
+    // a panel / relation cannot be created inactive through the API: refused before any request
+    fetchMock.mockClear()
+    await expect(httpOrganisationsService.create({ name: "xx", type: "Other", contactPerson: "", phone: "", commissionPct: 0, active: false })).rejects.toBeInstanceOf(NotConnectedError)
+    await expect(httpGuardianRelationsService.create({ name: "xx", active: false })).rejects.toBeInstanceOf(NotConnectedError)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 })

@@ -32,13 +32,15 @@ const TWO_DP = /^-?\d+\.\d{2}$/
 const addUp = (items: readonly { n: number }[]) => items.reduce((s, i) => s + i.n, 0)
 
 describe("contract-pending behaviour (API mode)", () => {
-  it("has no endpoint configured for any Dashboard or Financial Statistics operation — including GET /reports/revenue, which T11 will change", () => {
+  it("has no endpoint configured for any Dashboard or Financial Statistics operation (their routes have no published shape yet)", () => {
     expect(DASHBOARD_OPERATIONS).toHaveLength(8)
     for (const k of DASHBOARD_OPERATIONS) expect(ENDPOINTS[k], k).toBeNull()
-    // The Task List names exactly one path ("GET /reports/revenue", which T11 "extends"). Its current response and the extension are
-    // unknown, so it is deliberately not configured anywhere.
+    // GET /reports/revenue IS published now (docs/openapi.json RevenueReport) and serves the Revenue REPORT through its own key (Phase 11). The prototype's
+    // demo-shaped key stays unconfigured. The statistics Summary and Graphs routes (/reports/financial-summary, /reports/revenue/daily) are registered as ROUTES ONLY
+    // (HANDOFF_ONLY_ROUTE_KEYS): no parser or screen uses them, so nothing is sent.
     expect(ENDPOINTS["reports.revenue"]).toBeNull()
-    expect(Object.values(ENDPOINTS).filter((e) => e && /reports\/revenue/.test(e.path))).toEqual([])
+    expect(Object.entries(ENDPOINTS).filter(([, e]) => e && /reports\/revenue$/.test(e.path)).map(([k]) => k)).toEqual(["reportsApi.revenue"])
+    expect(Object.entries(ENDPOINTS).filter(([, e]) => e && /financial-summary|revenue\/daily/.test(e.path)).map(([k]) => k).sort()).toEqual(["reportsApi.financialSummary", "reportsApi.revenueDaily"])
   })
 
   it("every HTTP operation sends no request and reports 'awaiting the backend contract' (no fake figure)", async () => {

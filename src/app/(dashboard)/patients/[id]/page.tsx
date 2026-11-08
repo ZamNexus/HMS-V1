@@ -2,18 +2,19 @@
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import { AlertTriangle, Pencil, FlaskConical, ScanLine, Pill, Printer, Plus } from "lucide-react"
 
-import { dataSource, errorSummary, formatMoneyString, isPositiveMoney, legacyPatientId, type PatientRecord } from "@/lib/services"
+import { dataSource, errorSummary, formatCnic, formatMoneyString, formatPatientAge, formatPhone, isPositiveMoney, legacyPatientId, type PatientRecord } from "@/lib/services"
 import { useDoctors, useOrganisations, usePatient } from "@/lib/useReferenceData"
+import { useAccess } from "@/lib/session/useAccess"
+import { usePatientToday } from "@/lib/usePatientToday"
+import { PatientLifecycleActions } from "@/components/patients/PatientLifecycleActions"
+import { PatientAccountPanel } from "@/components/billing/AccountPanels"
+import { PatientVisitsTab } from "@/components/visits/PatientVisitsTab"
 import { isApiError } from "@/lib/api/client"
 import { Skeleton } from "@/components/ui/skeleton"
-import { encountersForPatient } from "@/data/encounters"
-import { LAB_ORDERS } from "@/data/lab"
-import { IMAGING_ORDERS } from "@/data/imaging"
-import { DISPENSE_RECORDS } from "@/data/pharmacy"
-import { CONSULTATION_INVOICES, SERVICES_INVOICES } from "@/data/billing"
+import { demo } from "@hms/demo"
 import { useBillSummary } from "@/lib/useBillSummary"
 import { BillSummaryNotice } from "@/components/shared/BillSummaryNotice"
 import { cn, formatCurrency, initials } from "@/lib/utils"
@@ -63,11 +64,16 @@ export default function PatientProfilePage() {
       </div>
     )
   }
-  return <PatientProfile patient={data} />
+  return <PatientProfile patient={data} onChanged={reload} />
 }
 
-function PatientProfile({ patient }: { patient: PatientRecord }) {
+function PatientProfile({ patient, onChanged }: { patient: PatientRecord; onChanged: () => void }) {
   const router = useRouter()
+  const { can } = useAccess()
+  const today = usePatientToday()
+  // Archive / restore and record / revoke death are real-API actions with their own permissions (see PatientLifecycleActions).
+  const archived = patient.archived === true
+  const deceased = !!patient.deceasedOn
   const [visitFilter, setVisitFilter] = React.useState<string>("all")
 
   // Visits, lab, imaging, pharmacy and the invoice rows still come from other modules' mock data keyed by the legacy numeric patient
@@ -76,18 +82,18 @@ function PatientProfile({ patient }: { patient: PatientRecord }) {
   const legacyId = dataSource === "mock" ? legacyPatientId(patient) : null
   // Doctor names are only needed for the (mock) visit history; organisations only when the patient has one.
   const doctors = useDoctors(legacyId !== null)
-  const organisations = useOrganisations(patient.panelId !== null)
+  const organisations = useOrganisations(dataSource === "mock" && patient.panelId !== null) // the API answer carries the panel names
   const doctorName = (doctorId: number) => doctors.lookup.get(doctorId)?.name ?? "—"
-  const visits = legacyId !== null ? encountersForPatient(legacyId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : []
-  const labResults = legacyId !== null ? LAB_ORDERS.filter((o) => o.patientId === legacyId) : []
-  const imagingResults = legacyId !== null ? IMAGING_ORDERS.filter((o) => o.patientId === legacyId) : []
-  const dispenses = legacyId !== null ? DISPENSE_RECORDS.filter((d) => d.patientId === legacyId) : []
-  const consultInvoices = legacyId !== null ? CONSULTATION_INVOICES.filter((c) => c.patientId === legacyId) : []
-  const servicesInvoices = legacyId !== null ? SERVICES_INVOICES.filter((s) => s.patientId === legacyId) : []
+  const visits = legacyId !== null ? demo.data.encountersForPatient(legacyId).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()) : []
+  const labResults = legacyId !== null ? demo.data.LAB_ORDERS.filter((o) => o.patientId === legacyId) : []
+  const imagingResults = legacyId !== null ? demo.data.IMAGING_ORDERS.filter((o) => o.patientId === legacyId) : []
+  const dispenses = legacyId !== null ? demo.data.DISPENSE_RECORDS.filter((d) => d.patientId === legacyId) : []
+  const consultInvoices = legacyId !== null ? demo.data.CONSULTATION_INVOICES.filter((c) => c.patientId === legacyId) : []
+  const servicesInvoices = legacyId !== null ? demo.data.SERVICES_INVOICES.filter((s) => s.patientId === legacyId) : []
   const panelName =
     patient.panelId === null
       ? "Self-Pay"
-      : organisations.lookup.get(patient.panelId)?.name ?? (organisations.loading ? "…" : "Organisation (not yet connected)")
+      : patient.primaryPanelName ?? organisations.lookup.get(patient.panelId)?.name ?? (organisations.loading ? "…" : "Organisation (not yet connected)")
 
   const scopedEncounterId = visitFilter !== "all" ? Number(visitFilter) : null
   // The totals come from billSummaryService (the backend owns every figure; nothing is summed here): this patient, or one of their visits.
@@ -110,24 +116,37 @@ function PatientProfile({ patient }: { patient: PatientRecord }) {
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-2xl font-bold">{patient.name}</h1>
                 <StatusBadge status={patient.status === "ipd" ? "IPD Admitted" : patient.status} />
+                {deceased && <StatusBadge status="Deceased" />}
               </div>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-teal-100">
-                <span className="font-mono">{patient.mrNo}</span>
-                <Badge variant="outline" className="border-white/30 text-white">{patient.age} · {patient.gender.charAt(0)}</Badge>
+                <span className="font-mono" data-testid="profile-mr-no">{patient.mrNo}</span>
+                <Badge variant="outline" className="border-white/30 text-white" data-testid="profile-age">{today === null ? "—" : formatPatientAge(patient, today)} · {patient.gender.charAt(0)}</Badge>
                 <Badge variant="outline" className="border-white/30 text-white">{patient.bloodGroup}</Badge>
               </div>
               <div className="mt-1 text-xs text-teal-100/80">
-                {patient.phone} {patient.cnic && `· ${patient.cnic}`}
+                {formatPhone(patient.phone)} {patient.cnic && `· ${formatCnic(patient.cnic)}`}
               </div>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10"><Link href={`/patients/${patient.id}/edit`}>
-              <Pencil className="h-4 w-4" /> Edit Patient
-            </Link></Button>
-            <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
-              <Link href={`/encounters/new?patientId=${patient.id}`}><Plus className="h-4 w-4" /> New Encounter</Link>
-            </Button>
+            {dataSource !== "mock" && (
+              <PatientLifecycleActions
+                patient={patient}
+                onChanged={(action) => (action === "archived" ? router.push("/patients") : onChanged())}
+                buttonClassName="border-white/40 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              />
+            )}
+            {can("patients.write") && (
+              <Button asChild variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10"><Link href={`/patients/${patient.id}/edit`}>
+                <Pencil className="h-4 w-4" /> Edit Patient
+              </Link></Button>
+            )}
+            {/* a deceased or archived patient cannot be given a new visit (the API refuses it) */}
+            {!deceased && !archived && (
+              <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
+                <Link href={`/encounters/new?patientId=${patient.id}`}><Plus className="h-4 w-4" /> New Encounter</Link>
+              </Button>
+            )}
             <Button variant="outline" className="border-white/40 bg-transparent text-white hover:bg-white/10" asChild>
               <Link href={`/lab/orders/new?patientId=${patient.id}`}><FlaskConical className="h-4 w-4" /> New Lab Order</Link>
             </Button>
@@ -144,6 +163,17 @@ function PatientProfile({ patient }: { patient: PatientRecord }) {
         </div>
       </div>
 
+      {archived && (
+        <div role="status" data-testid="profile-archived-banner" className="mt-4 rounded-lg border border-slate-300 bg-slate-100 p-3 text-sm text-slate-800">
+          <span className="font-bold">This patient is archived.</span> The record is kept in full but hidden from default searches. {can("patients.archive") ? "Use Restore Patient to bring it back." : ""}
+        </div>
+      )}
+      {deceased && (
+        <div role="status" data-testid="profile-deceased-banner" className="mt-4 rounded-lg border border-slate-300 bg-slate-100 p-3 text-sm text-slate-800">
+          <span className="font-bold">Deceased on {format(parseISO(patient.deceasedOn as string), "dd MMM yyyy")}.</span> The record stays viewable; no new visit can be opened.
+        </div>
+      )}
+
       <Tabs defaultValue="summary" className="mt-6">
         <TabsList>
           <TabsTrigger value="summary">Summary</TabsTrigger>
@@ -156,11 +186,21 @@ function PatientProfile({ patient }: { patient: PatientRecord }) {
           <Card>
             <CardContent className="space-y-2 p-5 text-sm">
               <h3 className="font-semibold text-foreground">Registration Info</h3>
-              <div className="flex justify-between"><span className="text-muted-foreground">Registered</span><span>{format(new Date(patient.registrationDate), "dd MMM yyyy")}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Registered</span><span>{format(parseISO(patient.registrationDate), "dd MMM yyyy")}</span></div>
               {patient.medicalRecordNo && <div className="flex justify-between"><span className="text-muted-foreground">Medical Record No</span><span className="font-mono">{patient.medicalRecordNo}</span></div>}
               {patient.ssEmpNo && <div className="flex justify-between"><span className="text-muted-foreground">SS/Emp No</span><span>{patient.ssEmpNo}</span></div>}
               <div className="flex justify-between"><span className="text-muted-foreground">Referred By</span><span>{patient.referredBy || "—"}</span></div>
+              <div className="flex justify-between"><span className="text-muted-foreground">Date of birth</span><span data-testid="profile-dob">{format(parseISO(patient.dob), "dd MMM yyyy")}{patient.dobEstimated ? " (estimated)" : ""}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Panel</span><span>{panelName}</span></div>
+              {patient.coverages?.map((c) => (
+                <div key={c.priority} data-testid={`profile-coverage-${c.priority}`} className="rounded-md bg-muted/40 p-2 text-xs">
+                  <div className="flex justify-between font-medium"><span className="capitalize">{c.priority} organisation</span><span>{c.panelName}</span></div>
+                  {c.memberNo && <div className="flex justify-between"><span className="text-muted-foreground">Member no.</span><span>{c.memberNo}</span></div>}
+                  {(c.principalMemberName || c.principalRelation) && <div className="flex justify-between"><span className="text-muted-foreground">Principal member</span><span>{c.principalMemberName}{c.principalRelation ? ` (${c.principalRelation})` : ""}</span></div>}
+                  {(c.validFrom || c.validTo) && <div className="flex justify-between"><span className="text-muted-foreground">Valid</span><span>{c.validFrom ? format(parseISO(c.validFrom), "dd MMM yyyy") : "…"} to {c.validTo ? format(parseISO(c.validTo), "dd MMM yyyy") : "…"}</span></div>}
+                  {c.benefitsApply !== undefined && <div className="flex justify-between"><span className="text-muted-foreground">Benefits</span><span>{c.benefitsApply ? "Apply today" : "Do not apply today"}</span></div>}
+                </div>
+              ))}
               <div className="flex justify-between"><span className="text-muted-foreground">Guardian</span><span>{patient.guardianRelation}{patient.guardianName ? ` — ${patient.guardianName}` : ""}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span>{patient.email || "—"}</span></div>
               <div className="flex justify-between"><span className="text-muted-foreground">Address</span><span className="text-right">{patient.address || "—"}, {patient.city}{patient.country && patient.country !== "Pakistan" ? `, ${patient.country}` : ""}</span></div>
@@ -203,7 +243,9 @@ function PatientProfile({ patient }: { patient: PatientRecord }) {
         </TabsContent>
 
         <TabsContent value="visits">
-          {legacyId === null ? (
+          {dataSource !== "mock" ? (
+            can("encounters.read") || can("encounters.check_in") ? <PatientVisitsTab patientId={patient.id} /> : <NotYetConnected what="Visit history (your role cannot see visits)" />
+          ) : legacyId === null ? (
             <NotYetConnected what="Visit history" />
           ) : visits.length === 0 ? (
             <EmptyState icon={FileText} title="No visits recorded" />
@@ -267,7 +309,12 @@ function PatientProfile({ patient }: { patient: PatientRecord }) {
         </TabsContent>
 
         <TabsContent value="billing">
-          {!bill ? <BillSummaryNotice state={billState} awaiting="patient bill summary" testId="patient-billing-pending" /> : (
+          {dataSource === "api" ? (
+            <div className="space-y-4" data-testid="patient-billing-api">
+              <PatientAccountPanel patientId={patient.id} patientName={patient.name} />
+              {can("billing.read") && <Link className="text-sm font-bold text-[#0891B2] hover:underline" href={`/billing/consultations?patient=${patient.id}`}>See this patient&apos;s invoices</Link>}
+            </div>
+          ) : !bill ? <BillSummaryNotice state={billState} awaiting="patient bill summary" testId="patient-billing-pending" /> : (
           <>
           <div className="mb-4 flex items-center justify-between gap-3">
             <h3 className="text-sm font-semibold text-foreground">

@@ -1,0 +1,1858 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "HMS API: PROPOSED additions (draft)",
+    "version": "draft-1",
+    "description": "PROPOSED contract, written by the frontend, for routes that docs/HMS Frontend Integration Handoff.md (8.2, 8.10, 8.12) names but docs/openapi.json does not define: expense categories, bank accounts and audit entries (Item History). The backend is to be built to match this file exactly; any difference must be reported to the frontend before it ships. Same conventions as openapi.json: ULID ids, money as strings, ISO 8601 UTC instants, one ErrorResponse envelope. Not served by any backend yet."
+  },
+  "x-status": "proposed",
+  "tags": [
+    {
+      "name": "Catalogs"
+    },
+    {
+      "name": "Accounts"
+    },
+    {
+      "name": "Audit"
+    }
+  ],
+  "servers": [
+    {
+      "url": "https://zamnexus-hms-api-dev-3aa783b02dad.herokuapp.com",
+      "description": "Dev (Heroku EU) — deploys the Development branch"
+    },
+    {
+      "url": "http://localhost:3000",
+      "description": "Local"
+    }
+  ],
+  "paths": {
+    "/api/v1/expense-categories": {
+      "get": {
+        "tags": [
+          "Catalogs"
+        ],
+        "summary": "List expense categories",
+        "operationId": "ExpenseCategoryController_list",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.read`.\n\n`search` matches the name. Pickers (the expense form) pass `active=true`; the admin screen lists all.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "`field:asc` or `field:desc`. Allowed fields: name, createdAt.",
+            "schema": {
+              "type": "string",
+              "default": "name:asc"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches the name, case-insensitive, anywhere in the text. 1 to 100 characters.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Pickers pass `active=true`; the admin screen lists all.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategoryPageDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catalogs"
+        ],
+        "summary": "Add an expense category",
+        "operationId": "ExpenseCategoryController_create",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nThe name must be unique in this hospital, ignoring case, among active AND deactivated categories.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExpenseCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategoryResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`EXPENSE_CATEGORY_NAME_TAKEN` — another category already has this name (ignoring case).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expense-categories/{id}": {
+      "get": {
+        "tags": [
+          "Catalogs"
+        ],
+        "summary": "Get one an expense category",
+        "operationId": "ExpenseCategoryController_get",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.read`.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategoryResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Catalogs"
+        ],
+        "summary": "Edit an expense category",
+        "operationId": "ExpenseCategoryController_update",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nSend only the fields that changed.\n\nRenaming does not rewrite past expenses: an expense keeps the category name it was recorded with.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExpenseCategoryDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategoryResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`EXPENSE_CATEGORY_NAME_TAKEN` — another category already has this name (ignoring case).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expense-categories/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "Catalogs"
+        ],
+        "summary": "Deactivate an expense category",
+        "operationId": "ExpenseCategoryController_deactivate",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nAllowed even if expenses use it. A deactivated category can no longer be picked for a new expense (`422 CATEGORY_INACTIVE` on `POST /expenses`); past expenses keep it.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategoryResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/expense-categories/{id}/reactivate": {
+      "post": {
+        "tags": [
+          "Catalogs"
+        ],
+        "summary": "Reactivate an expense category",
+        "operationId": "ExpenseCategoryController_reactivate",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nMakes the category pickable again.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseCategoryResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bank-accounts": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "List bank accounts",
+        "operationId": "BankAccountController_list",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `accounts.read`.\n\nReading needs `accounts.read` (not `catalogs.read`): account numbers are for money handlers only. The expense and bank-entry forms pass `active=true`.",
+        "parameters": [
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          },
+          {
+            "name": "sort",
+            "required": false,
+            "in": "query",
+            "description": "`field:asc` or `field:desc`. Allowed fields: bankName, createdAt.",
+            "schema": {
+              "type": "string",
+              "default": "bankName:asc"
+            }
+          },
+          {
+            "name": "search",
+            "required": false,
+            "in": "query",
+            "description": "Matches the bank name, the account title or the account number, case-insensitive, anywhere in the text. 1 to 100 characters.",
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+            }
+          },
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Pickers pass `active=true`; the admin screen lists all.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountPageDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Add a bank account",
+        "operationId": "BankAccountController_create",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nThe account number must be unique in this hospital among active AND deactivated accounts, ignoring case and spaces.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBankAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`BANK_ACCOUNT_NO_TAKEN` — another account already has this account number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bank-accounts/{id}": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get one a bank account",
+        "operationId": "BankAccountController_get",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `accounts.read`.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Edit a bank account",
+        "operationId": "BankAccountController_update",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nSend only the fields that changed.\n\n`branch: null` or `\"\"` clears the branch. Changing an account's details never changes past entries.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateBankAccountDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`BANK_ACCOUNT_NO_TAKEN` — another account already has this account number.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bank-accounts/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Deactivate a bank account",
+        "operationId": "BankAccountController_deactivate",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nAllowed whatever the balance. A deactivated account cannot take new expenses or bank entries (`422 BANK_ACCOUNT_INACTIVE`); past entries, balances and statements stay.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/bank-accounts/{id}/reactivate": {
+      "post": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Reactivate a bank account",
+        "operationId": "BankAccountController_reactivate",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `catalogs.write`.\n\nMakes the account usable again.",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountResponseDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/audit-entries": {
+      "get": {
+        "tags": [
+          "Audit"
+        ],
+        "summary": "Item History: the change log of one record",
+        "operationId": "AuditController_list",
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "description": "**Access:** Requires permission: `audit.read`.\n\nNewest first (`occurredAt` descending, ties by `id` descending). Read-only. `entityType` is the kind of record, `entityId` its id (for `doctor` the doctor's user id; for `clinic_settings` the hospital's id from `GET /api/v1/auth/me`). A record that does not exist in this hospital answers `404 NOT_FOUND`.",
+        "parameters": [
+          {
+            "name": "entityType",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/AuditEntityType"
+            }
+          },
+          {
+            "name": "entityId",
+            "required": true,
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+            }
+          },
+          {
+            "name": "page",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "perPage",
+            "required": false,
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 25
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuditEntryPageDto_Output"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`VALIDATION_FAILED` — `details` lists each invalid field as `[{ path, message }]`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not signed in or session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`NOT_FOUND` — including records that belong to another hospital.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`TOO_MANY_REQUESTS` — rate limit reached; retry after a minute.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`INTERNAL_ERROR` — quote `requestId` when reporting it.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearer": {
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "type": "http"
+      },
+      "cookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "hms_session"
+      }
+    },
+    "schemas": {
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "statusCode",
+          "code",
+          "message",
+          "requestId",
+          "path",
+          "timestamp"
+        ],
+        "properties": {
+          "statusCode": {
+            "type": "integer",
+            "example": 403
+          },
+          "code": {
+            "type": "string",
+            "description": "Stable, machine-readable. Branch on this.",
+            "example": "FORBIDDEN"
+          },
+          "message": {
+            "type": "string",
+            "description": "For humans. May be reworded between releases.",
+            "example": "You do not have permission to do this."
+          },
+          "details": {
+            "description": "Present for validation failures (`[{ path, message }]`) and for errors carrying context, e.g. `{ retryAfterSeconds }` or `{ problems }`."
+          },
+          "requestId": {
+            "type": "string",
+            "nullable": true,
+            "description": "Quote this in support reports."
+          },
+          "path": {
+            "type": "string",
+            "example": "/api/v1/users"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PageMeta": {
+        "type": "object",
+        "required": [
+          "page",
+          "perPage",
+          "total",
+          "totalPages"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "page": {
+            "type": "integer"
+          },
+          "perPage": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "totalPages": {
+            "type": "integer"
+          }
+        }
+      },
+      "ExpenseCategoryResponseDto_Output": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "active",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateExpenseCategoryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80,
+            "description": "Trimmed. Unique in the hospital, ignoring case."
+          }
+        }
+      },
+      "UpdateExpenseCategoryDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          }
+        }
+      },
+      "ExpenseCategoryPageDto_Output": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExpenseCategoryResponseDto_Output"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMeta"
+          }
+        }
+      },
+      "BankAccountResponseDto_Output": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "bankName",
+          "accountTitle",
+          "accountNo",
+          "branch",
+          "active",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "bankName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "accountTitle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "accountNo": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 34
+          },
+          "branch": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateBankAccountDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "bankName",
+          "accountTitle",
+          "accountNo"
+        ],
+        "properties": {
+          "bankName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "accountTitle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "accountNo": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 34,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]*$",
+            "description": "Letters, digits, spaces and hyphens (an IBAN or a local number). Unique in the hospital, ignoring case and spaces."
+          },
+          "branch": {
+            "type": "string",
+            "maxLength": 120
+          }
+        }
+      },
+      "UpdateBankAccountDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "bankName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "accountTitle": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 120
+          },
+          "accountNo": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 34,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9 -]*$"
+          },
+          "branch": {
+            "type": "string",
+            "maxLength": 120,
+            "nullable": true,
+            "description": "`null` or `\"\"` clears it."
+          }
+        }
+      },
+      "BankAccountPageDto_Output": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BankAccountResponseDto_Output"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMeta"
+          }
+        }
+      },
+      "AuditEntityType": {
+        "type": "string",
+        "enum": [
+          "service_catalog_item",
+          "lab_test",
+          "imaging_test",
+          "medicine",
+          "panel",
+          "guardian_relation",
+          "expense_category",
+          "bank_account",
+          "ward",
+          "bed",
+          "user",
+          "doctor",
+          "clinic_settings"
+        ]
+      },
+      "AuditActorDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "AuditChangeDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ],
+        "description": "A scalar (string, number, boolean) or null. Money is a decimal string. A value that is a list or an object (for example a lab test's parameters) is sent as a short text summary such as `3 parameters`: the frontend renders every value as plain text.",
+        "properties": {
+          "from": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "nullable": true
+          },
+          "to": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "boolean"
+              }
+            ],
+            "nullable": true
+          }
+        }
+      },
+      "AuditEntryDto_Output": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "occurredAt",
+          "action",
+          "actor",
+          "changes"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{26}$"
+          },
+          "occurredAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "created",
+              "updated",
+              "deactivated",
+              "reactivated"
+            ]
+          },
+          "actor": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/AuditActorDto"
+              }
+            ],
+            "nullable": true,
+            "description": "`null` for a change the system made; the frontend shows \"System\"."
+          },
+          "changes": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/AuditChangeDto"
+            },
+            "description": "For `updated`: one entry per changed field, keyed by the API's field name (for example `rate`, `name`, `phone`). `null` for `created`, `deactivated` and `reactivated`. Secrets (passwords, temporary passwords, tokens) never appear."
+          }
+        }
+      },
+      "AuditEntryPageDto_Output": {
+        "type": "object",
+        "required": [
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AuditEntryDto_Output"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/PageMeta"
+          }
+        }
+      }
+    }
+  }
+}

@@ -22,8 +22,9 @@ async function rejection(p: Promise<unknown>): Promise<ApiError> {
 }
 
 function setup(res: Response | (() => Promise<Response>)) {
-  const fetchMock = vi.fn<typeof fetch>(async () => (typeof res === "function" ? res() : res))
-  const client = createApiClient({ fetch: fetchMock })
+  // a GET that fails on the network / 5xx is retried (F2), so hand out a fresh copy each time and do not really wait
+  const fetchMock = vi.fn<typeof fetch>(async () => (typeof res === "function" ? res() : res.clone()))
+  const client = createApiClient({ fetch: fetchMock, sleep: async () => {} })
   const lastCall = () => {
     const [url, init = {}] = fetchMock.mock.calls.at(-1)!
     return { url, init, headers: new Headers(init.headers) }

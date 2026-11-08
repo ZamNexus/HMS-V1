@@ -1,131 +1,113 @@
 "use client"
 import * as React from "react"
-import { api, isApiError, setAccessToken } from "@/lib/api/client"
-import type { LoginRequest, LoginResponse } from "@/lib/api/types"
-import { ROLE_LABELS } from "@/data/users"
-import { NAV_PERMISSIONS, hasPermission } from "@/lib/services/identity"
-import type { Role } from "@/types"
+import {
+  setAuthRefreshHandler, setForbiddenHandler, setPasswordChangeRequiredHandler, setSessionOverHandler,
+} from "@/lib/api/client"
+import { ROLE_LABELS } from "@/lib/labels"
+import { invalidateFamily } from "@/lib/query/invalidate"
+import { IDLE_TIMEOUT_MS, createSessionManager, defaultDeps, type EndReason, type SessionManager, type SessionState, type SignInInput, type SignInResult } from "@/lib/session/session"
+import { watchIdle } from "@/lib/session/idle"
+import type { SessionUser } from "@/lib/session/sessionUser"
 
-// `hms_session` is a FRONTEND-ONLY UI HINT, NOT AUTHENTICATION. It is a plain
-// JavaScript-set cookie (not httpOnly) that anyone can create or delete in their
-// browser, with no identity or token in it. Its only use is letting the Next
-// proxy (src/proxy.ts) send visibly signed-out visitors to /login instead of
-// rendering a page shell. It proves nothing and protects no data. The real
-// credential is the access token held in memory (src/lib/api/client.ts), and
-// only the backend can decide whether a request is authenticated or allowed.
-const SESSION_HINT_COOKIE = "hms_session"
+export type { SessionUser } from "@/lib/session/sessionUser"
+export type { EndReason, SignInInput, SignInResult } from "@/lib/session/session"
+
+// SECURITY NOTE: nothing derived from `SessionUser` is an authorization control. It only shapes the UI. The backend authorizes every request from
+// the access token; a user who tampers with this state gains no server-side access. What the user may see comes from `user.permissions`
+// (GET /auth/me), never from `user.role` (src/lib/session/permissions.ts).
+//
+// The rules of the session (boot refresh, one shared refresh, sign-out, multi-tab, idle) are in src/lib/session/session.ts and are unit-tested
+// there. This file only connects them to React.
+
 const LEGACY_STORAGE_KEY = "hms_user" // demo-era localStorage record; removed on load
 
-// SECURITY NOTE: nothing in this file (or anything derived from `SessionUser`,
-// such as `canSee`/`canSeeNav`/`RoleGate`) is an authorization control. It only
-// shapes the UI. The backend must authorize every request from the access token;
-// a user who tampers with this state gains no server-side access. No role or
-// permission is ever assumed: both stay unset until the backend provides them.
-//
-// Known limitations (no backend behaviour is assumed to work around them):
-//  - logout() clears frontend state only; the httpOnly refresh cookie is managed by
-//    the backend and is not touched, because no logout contract is available.
-//  - A full page reload signs the user out: the in-memory access token is lost and no
-//    session-restore contract is available.
-//
-// What the frontend knows about the signed-in user.
-//
-// Only `hospitalCode` and `identifier` (what the user typed to sign in) are
-// known. The login response's user/role shape is not yet confirmed, so `role`
-// is null and `name` falls back to the identifier. Nothing here is invented.
-export interface SessionUser {
-  hospitalCode: string
-  identifier: string
-  name: string
-  role: Role | null
-  /**
-   * Permissions for navigation (see NAV_PERMISSIONS). Always null today: nothing populates it
-   * until the /auth/me schema is confirmed. Representation (string names) is unconfirmed.
-   * null = unknown, which grants nothing.
-   */
-  permissions: string[] | null
+let manager: SessionManager | null = null
+function getManager(): SessionManager {
+  manager ??= createSessionManager(defaultDeps())
+  return manager
 }
 
-function setSessionHint(on: boolean) {
-  const secure = window.location.protocol === "https:" ? "; Secure" : ""
-  // Session cookie (no max-age): it dies with the browser session.
-  document.cookie = on
-    ? `${SESSION_HINT_COOKIE}=1; path=/; SameSite=Lax${secure}`
-    : `${SESSION_HINT_COOKIE}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax`
-}
-
-export type LoginResult = { ok: true } | { ok: false; error: string }
-
-// Backend `message` text is written for end users; the request id lets support
-// find the exact request. Transport failures use the client's own message.
-function describeLoginError(err: unknown): string {
-  if (!isApiError(err)) return "Something went wrong while signing in. Please try again."
-  const ref = err.requestId ? ` (Reference: ${err.requestId})` : ""
-  return `${err.message}${ref}`
-}
+const SERVER_STATE: SessionState = { status: "booting", user: null, endedReason: null, bootError: null }
 
 interface AuthContextValue {
   user: SessionUser | null
+  /** False until the boot refresh has answered: show a neutral splash, never the sign-in form. */
   isInitialized: boolean
-  login: (credentials: LoginRequest) => Promise<LoginResult>
-  logout: () => void
+  endedReason: EndReason | null
+  /** The boot could not reach the server (this is not "not signed in"). */
+  bootError: string | null
+  login: (credentials: SignInInput) => Promise<SignInResult>
+  logout: () => Promise<void>
+  logoutAll: () => Promise<void>
+  /** Read /auth/me again (after a password change, or when the permissions may have changed). */
+  reloadUser: () => Promise<void>
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>
 }
 
 const AuthContext = React.createContext<AuthContextValue | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<SessionUser | null>(null)
-  const [isInitialized, setIsInitialized] = React.useState(false)
+  const m = getManager()
+  const state = React.useSyncExternalStore(m.subscribe, m.getState, () => SERVER_STATE)
 
-  // A full page load always starts signed out: the access token lives in memory
-  // only, and no session-restoration endpoint is documented, so the httpOnly
-  // refresh cookie cannot be exchanged for a new token. Clear stale hints.
+  // Start once: handlers, tab channel, boot refresh, focus handling.
   React.useEffect(() => {
-    setAccessToken(null)
-    setSessionHint(false)
     try {
       localStorage.removeItem(LEGACY_STORAGE_KEY)
     } catch {
       // storage unavailable: nothing to clean up
     }
-    setIsInitialized(true)
-  }, [])
-
-  const login = React.useCallback(async (credentials: LoginRequest): Promise<LoginResult> => {
-    const hospitalCode = credentials.hospitalCode.trim()
-    const identifier = credentials.identifier.trim()
-    try {
-      const res = await api.post<LoginResponse>(
-        "/auth/login",
-        { hospitalCode, identifier, password: credentials.password },
-        { auth: false }
-      )
-      if (!res || typeof res.accessToken !== "string" || !res.accessToken) {
-        return { ok: false, error: "The server sent an unexpected sign-in response. Please contact support." }
-      }
-      if (process.env.NODE_ENV !== "production") {
-        // Dev only: logs the response STRUCTURE (never values). Removed from production builds.
-        void import("@/lib/api/devInspect").then((m) => m.logLoginResponseShape(res))
-      }
-      setAccessToken(res.accessToken)
-      setSessionHint(true)
-      setUser({ hospitalCode, identifier, name: identifier, role: null, permissions: null })
-      return { ok: true }
-    } catch (err) {
-      return { ok: false, error: describeLoginError(err) }
+    const uninstall = m.install()
+    setAuthRefreshHandler(async () => { await m.refreshAccessToken() })
+    setSessionOverHandler((code, sentToken) => m.handlers.sessionOver(code, sentToken))
+    setForbiddenHandler((sentToken) => m.handlers.onForbidden(sentToken))
+    setPasswordChangeRequiredHandler(() => m.handlers.onPasswordChangeRequired())
+    const onFocus = () => m.handlers.onFocus()
+    const onOnline = () => m.handlers.onOnline()
+    window.addEventListener("focus", onFocus)
+    window.addEventListener("online", onOnline)
+    void m.boot()
+    return () => {
+      window.removeEventListener("focus", onFocus)
+      window.removeEventListener("online", onOnline)
+      setAuthRefreshHandler(null)
+      setSessionOverHandler(null)
+      setForbiddenHandler(null)
+      setPasswordChangeRequiredHandler(null)
+      uninstall()
     }
-  }, [])
+  }, [m])
 
-  // No logout endpoint is documented: this clears the frontend session only.
-  // The httpOnly refresh cookie cannot be cleared from JavaScript.
-  const logout = React.useCallback(() => {
-    setAccessToken(null)
-    setSessionHint(false)
-    setUser(null)
-    window.location.href = "/login"
-  }, [])
+  // Sign out after 15 minutes without activity.
+  const signedIn = state.status === "signed-in"
+  React.useEffect(() => {
+    if (!signedIn) return
+    const watcher = watchIdle(IDLE_TIMEOUT_MS, () => { void m.signOut({ reason: "idle" }) }, { onActivity: () => m.announceActivity() })
+    const stopPeers = m.onPeerActivity(() => watcher.touch())
+    return () => {
+      stopPeers()
+      watcher()
+    }
+  }, [signedIn, m])
 
-  const value = React.useMemo(() => ({ user, isInitialized, login, logout }), [user, isInitialized, login, logout])
+  const value = React.useMemo<AuthContextValue>(
+    () => ({
+      user: state.user,
+      isInitialized: state.status !== "booting",
+      endedReason: state.endedReason,
+      bootError: state.bootError,
+      login: (credentials) => m.signIn(credentials),
+      logout: () => m.signOut(),
+      logoutAll: () => m.signOut({ all: true }),
+      // the department switches and settings are read again together with the user (an admin may have changed them)
+      reloadUser: async () => {
+        await m.reloadUser()
+        void invalidateFamily("settings")
+      },
+      changePassword: (current, next) => m.changePassword(current, next),
+    }),
+    [state, m]
+  )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
@@ -136,33 +118,10 @@ export function useAuth() {
   return ctx
 }
 
-export const SIDEBAR_VISIBILITY: Record<Role, string[]> = {
-  admin: ["dashboard", "patients", "encounters", "billing", "laboratory", "imaging", "pharmacy", "users", "doctors", "master-data", "reports"],
-  doctor: ["dashboard", "patients", "encounters", "laboratory", "imaging", "pharmacy"],
-  receptionist: ["dashboard", "patients", "encounters"],
-  billing: ["dashboard", "patients", "billing", "imaging", "reports"],
-  lab_tech: ["dashboard", "laboratory"],
-  pharmacist: ["dashboard", "pharmacy"],
-  nurse: ["dashboard", "patients", "encounters", "laboratory"],
-}
-
-// Display label for a role; a null role (not yet mapped from the backend) has none.
-export function roleLabel(role: Role | null): string {
-  return role ? ROLE_LABELS[role] : "Role not set"
-}
-
-// A null role (not yet mapped from the backend) can see nothing: permissions are never guessed.
-export function canSee(role: Role | null, key: string): boolean {
-  return role ? (SIDEBAR_VISIBILITY[role]?.includes(key) ?? false) : false
-}
-
-// Navigation visibility. The API Reference says to build navigation from the permissions that
-// GET /auth/me returns, so a mapped permission (NAV_PERMISSIONS) decides when the permission
-// list is known; otherwise the legacy role table applies, and with no role either, nothing shows.
-// UI-only: the backend authorizes every request.
-export function canSeeNav(user: Pick<SessionUser, "role" | "permissions"> | null, key: string): boolean {
-  if (!user) return false
-  const required = NAV_PERMISSIONS[key]
-  if (required && user.permissions) return hasPermission(user.permissions, required)
-  return canSee(user.role, key)
+/** Display label for a role (the backend's role names, e.g. "lab_tech"). For DISPLAY only: never used to decide what a user may do. */
+export function roleLabel(role: string | null): string {
+  if (!role) return "Role not set"
+  const known = (ROLE_LABELS as Record<string, string>)[role]
+  if (known) return known
+  return role.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase())
 }

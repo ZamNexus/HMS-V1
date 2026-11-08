@@ -6,6 +6,7 @@ import { NotConnectedError } from "./errors"
 import { httpPatientsService } from "./http/patients"
 import { mockPatientsService } from "./mock/patients"
 import { findDuplicatePhone, legacyPatientId, pickerSearchTerm, toLegacyPatient, PICKER_MIN_CHARS } from "./patientHelpers"
+import { localToday } from "./patientFormat"
 import type { PatientInput, PatientRecord } from "./types"
 
 // Frontend-only unit tests with controlled data. They verify the UI-facing contract of the mock adapter and
@@ -16,7 +17,6 @@ const snapshot = structuredClone(PATIENTS)
 beforeEach(() => PATIENTS.splice(0, PATIENTS.length, ...structuredClone(snapshot)))
 afterEach(() => {
   vi.unstubAllGlobals()
-  for (const key of ["patients.list", "patients.get", "patients.create", "patients.update", "patients.delete"] as const) ENDPOINTS[key] = null
 })
 
 const input: PatientInput = {
@@ -70,7 +70,7 @@ describe("mock patients service", () => {
     expect(PATIENTS).toHaveLength(before + 1)
     expect(created.id).toBe(String(PATIENTS.at(-1)!.id))
     expect(created.mrNo).toMatch(/^MR-\d{4}-\d{4}$/)
-    expect(created.registrationDate).toBe(new Date().toISOString().slice(0, 10))
+    expect(created.registrationDate).toBe(localToday())
     expect(created.age).toBeGreaterThanOrEqual(0)
     expect(created.panelId).toBe("2")
     expect(PATIENTS.at(-1)!.panelId).toBe(2) // legacy readers still see a numeric panel id
@@ -93,42 +93,26 @@ describe("mock patients service", () => {
   })
 })
 
-describe("http patients service while the contract is unconfirmed", () => {
-  it("has no endpoint configured for any Patients operation", () => {
-    for (const key of ["patients.list", "patients.get", "patients.create", "patients.update", "patients.delete"] as const) {
-      expect(ENDPOINTS[key]).toBeNull()
-    }
+describe("http patients service (connected in Phase 5A; the full request/response checks are in phase5a.test.ts)", () => {
+  it("has an endpoint for every Patients operation, all from the specification", () => {
+    expect(ENDPOINTS["patients.list"]).toEqual({ method: "GET", path: "/patients" })
+    expect(ENDPOINTS["patients.get"]).toEqual({ method: "GET", path: "/patients/:id" })
+    expect(ENDPOINTS["patients.create"]).toEqual({ method: "POST", path: "/patients" })
+    expect(ENDPOINTS["patients.update"]).toEqual({ method: "PATCH", path: "/patients/:id" })
+    expect(ENDPOINTS["patients.delete"]).toEqual({ method: "POST", path: "/patients/:id/archive" })
   })
 
-  it("sends no request and reports 'awaiting the backend contract' for every operation", async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal("fetch", fetchMock)
-    const calls = [
-      httpPatientsService.list({ search: "x" }),
-      httpPatientsService.get("1"),
-      httpPatientsService.create(input),
-      httpPatientsService.update("1", input),
-      httpPatientsService.remove("1"),
-    ]
-    for (const c of calls) await expect(c).rejects.toThrow(/awaiting the backend contract/)
-    for (const c of calls) await expect(c).rejects.toBeInstanceOf(NotConnectedError)
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it("even with a path configured, sends nothing until the request/response mapping is implemented", async () => {
-    const fetchMock = vi.fn()
-    vi.stubGlobal("fetch", fetchMock)
-    ENDPOINTS["patients.list"] = { method: "GET", path: "/patients" } // hypothetical path, test-only
-    ENDPOINTS["patients.create"] = { method: "POST", path: "/patients" }
-    await expect(httpPatientsService.list({ search: "x" })).rejects.toThrow(/query parameters/)
-    await expect(httpPatientsService.create(input)).rejects.toThrow(/request payload/)
-    expect(fetchMock).not.toHaveBeenCalled()
-  })
-
-  it("does not read or guess a response when the mapping is pending", async () => {
+  it("does not render a response that does not match the contract", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ items: [{ id: "x" }], total: 1 }), { headers: { "content-type": "application/json" } })))
-    ENDPOINTS["patients.get"] = { method: "GET", path: "/patients/:id" } // hypothetical path, test-only
-    await expect(httpPatientsService.get("01ARZ3NDEKTSV4RRFFQ69G5FAV")).rejects.toThrow(/response mapping/)
+    await expect(httpPatientsService.get("01ARZ3NDEKTSV4RRFFQ69G5FAV")).rejects.toThrow(/Unexpected response/)
+    await expect(httpPatientsService.list({})).rejects.toThrow(/Unexpected response/)
+  })
+
+  it("still reports 'awaiting the backend contract' for a filter the API cannot express (Inactive), sending nothing", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    await expect(httpPatientsService.list({ status: "inactive" })).rejects.toBeInstanceOf(NotConnectedError)
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 

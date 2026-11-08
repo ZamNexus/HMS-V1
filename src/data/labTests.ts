@@ -59,6 +59,4 @@ export function getLabTest(id: number): LabTest | undefined {
   return LAB_TESTS.find((t) => t.id === id)
 }
 
-export const LAB_TEST_CATEGORIES = [
-  "Haematology", "Biochemistry", "Serology", "Urine Analysis", "Cardiology", "Radiology",
-] as const
+export { LAB_TEST_CATEGORIES } from "@/lib/labels"

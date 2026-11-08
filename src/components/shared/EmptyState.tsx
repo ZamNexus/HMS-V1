@@ -17,7 +17,7 @@ export function EmptyState({
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <Icon className="h-6 w-6 text-muted-foreground" />
       </div>
-      <h3 className="text-base font-semibold text-foreground">{title}</h3>
+      <h2 className="text-base font-semibold text-foreground">{title}</h2>
       {subtitle && <p className="max-w-xs text-sm text-muted-foreground">{subtitle}</p>}
       {action}
     </div>

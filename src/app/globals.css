@@ -50,8 +50,70 @@
   }
 }
 
+/* the off-screen copy that is measured to size a thermal page (src/lib/print.ts): the same narrow layout the print rules below give, on screen */
+.print-probe-thermal {
+  width: 72mm;
+  font-size: 10.5px;
+}
+.print-probe-thermal .grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
 @media print {
   .no-print {
     display: none !important;
+  }
+
+  /*
+   * A printable view (receipt, dispense slip, lab and imaging report, tube label) wraps itself in .print-root (src/lib/print.ts). While one is open, everything that neither contains
+   * it nor sits inside it is removed from the layout (so no blank pages are left where the app was), and the dialog that holds it stops being a fixed, centred, scrolling box:
+   * a scroll container is cut at its edge when printed, which would truncate a long report.
+   */
+  body:has(.print-root) *:not(:has(.print-root)):not(.print-root):not(.print-root *) {
+    display: none !important;
+  }
+  [role="dialog"]:has(.print-root) {
+    position: static !important;
+    transform: none !important;
+    translate: none !important; /* the dialog is centred with the individual translate property, not transform */
+    scale: none !important;
+    animation: none !important; /* the open animation slides the dialog in from -50%: a print must not be taken mid-slide */
+    transition: none !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+  }
+  .print-root {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: #fff;
+    color: #000;
+  }
+  .print-root section,
+  .print-root tr,
+  .print-root table {
+    break-inside: avoid;
+  }
+  /* an 80 mm roll: one narrow column, small type */
+  html[data-paper="thermal"] .print-root {
+    width: 72mm;
+    font-size: 10.5px;
+  }
+  html[data-paper="thermal"] .print-root .grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+  /* a 50 x 25 mm tube label */
+  html[data-paper="label"] .print-root {
+    width: 47mm;
+    font-size: 8px;
+    line-height: 1.15;
   }
 }

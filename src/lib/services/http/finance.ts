@@ -1,13 +1,10 @@
-import type {
-  BankAccountsService, BankTransactionsService, ConsultationInvoicesService, ExpenseCategoriesService, ExpensesService, PaymentsService,
-  ReceiptsService, ServicesInvoicesService,
-} from "../types"
+import type { BankTransactionsService, ConsultationInvoicesService, ExpensesService, PaymentsService, ReceiptsService, ServicesInvoicesService } from "../types"
 import { callEndpoint } from "./call"
 import {
-  bankAccountListQuery, bankAccountPayload, bankStatementQuery, bankTransactionPayload, consultationInvoiceListQuery, consultationInvoicePayload,
-  expenseCategoryListQuery, expenseCategoryPayload, expenseListQuery, expensePayload, expenseTotalsQuery, parseBankAccount, parseBankAccountList,
-  parseBankStatement, parseBankTransaction, parseConsultationInvoice, parseConsultationInvoiceList, parseExpense, parseExpenseCategory,
-  parseExpenseCategoryList, parseExpenseList, parseExpenseTotals, parsePayment, parsePaymentList, parseReceipt, parseReceiptList,
+  bankStatementQuery, bankTransactionPayload, consultationInvoiceListQuery, consultationInvoicePayload,
+  expenseListQuery, expensePayload, expenseTotalsQuery,
+  parseBankStatement, parseBankTransaction, parseConsultationInvoice, parseConsultationInvoiceList, parseExpense,
+  parseExpenseList, parseExpenseTotals, parsePayment, parsePaymentList, parseReceipt, parseReceiptList,
   parseServicesInvoice, parseServicesInvoiceList, paymentListQuery, paymentPayload, receiptListQuery, receiptPayload, servicesInvoiceListQuery,
   servicesInvoicePayload,
 } from "./mappers"
@@ -63,20 +60,6 @@ export const httpReceiptsService: ReceiptsService = {
 
 const listQuery = (opts: { search?: string; page?: number; pageSize?: number }) => ({ search: opts.search?.trim() || undefined, page: opts.page, pageSize: opts.pageSize })
 
-export const httpExpenseCategoriesService: ExpenseCategoriesService = {
-  async list(opts = {}) {
-    return parseExpenseCategoryList(await callEndpoint<unknown>("expenseCategories.list", { query: () => expenseCategoryListQuery(listQuery(opts)), signal: opts.signal }))
-  },
-  async create(input) {
-    return parseExpenseCategory(await callEndpoint<unknown>("expenseCategories.create", { body: () => expenseCategoryPayload(input) }))
-  },
-  async update(id, input) {
-    return parseExpenseCategory(await callEndpoint<unknown>("expenseCategories.update", { params: { id }, body: () => expenseCategoryPayload(input) }))
-  },
-  async remove(id) {
-    await callEndpoint<unknown>("expenseCategories.remove", { params: { id } })
-  },
-}
 
 export const httpExpensesService: ExpensesService = {
   async list(opts = {}) {
@@ -92,17 +75,6 @@ export const httpExpensesService: ExpensesService = {
   },
 }
 
-export const httpBankAccountsService: BankAccountsService = {
-  async list(opts = {}) {
-    return parseBankAccountList(await callEndpoint<unknown>("bankAccounts.list", { query: () => bankAccountListQuery(listQuery(opts)), signal: opts.signal }))
-  },
-  async create(input) {
-    return parseBankAccount(await callEndpoint<unknown>("bankAccounts.create", { body: () => bankAccountPayload(input) }))
-  },
-  async update(id, input) {
-    return parseBankAccount(await callEndpoint<unknown>("bankAccounts.update", { params: { id }, body: () => bankAccountPayload(input) }))
-  },
-}
 
 export const httpBankTransactionsService: BankTransactionsService = {
   async statement(opts = {}) {

@@ -20,8 +20,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/components/ui/use-toast"
 import { useAuth } from "@/lib/auth"
+import * as ReactNs from "react"
+import { useParams as useRouteParams, useRouter as useRouteRouter } from "next/navigation"
+import { dataSource as dxDataSource } from "@/lib/services"
 
-export default function LabResultEntryPage() {
+function MockLabResultEntryPage() {
   const params = useParams()
   const id = params?.id as string | undefined
   const orderQuery = useLabOrder(id)
@@ -203,4 +206,16 @@ function ResultEntryForm({ order, catalog }: { order: LabOrderRecord; catalog: R
       </div>
     </div>
   )
+}
+
+// Against the real API a result is entered in a dialog on the order itself (the server lists the buttons it allows), so this old route goes back to the order.
+export default function LabResultEntryPage() {
+  const params = useRouteParams()
+  const router = useRouteRouter()
+  const id = params?.id as string | undefined
+  ReactNs.useEffect(() => {
+    if (dxDataSource === "api" && id) router.replace(`/lab/orders/${id}`)
+  }, [id, router])
+  if (dxDataSource === "api") return <p className="p-10 text-center text-sm text-slate-500" role="status">Opening the order…</p>
+  return <MockLabResultEntryPage />
 }

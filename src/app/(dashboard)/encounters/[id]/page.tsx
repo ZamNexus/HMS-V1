@@ -1,4 +1,6 @@
 "use client"
+import { VisitDetailScreen } from "@/components/visits/VisitDetailScreen"
+import { dataSource as visitsDataSource } from "@/lib/services"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter, useParams } from "next/navigation"
@@ -21,7 +23,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-export default function EncounterDetailPage() {
+// Demo only (mock mode). Against the real API the encounter page is src/components/visits/VisitDetailScreen.tsx.
+function MockEncounterDetailPage() {
   const params = useParams()
   const id = params?.id as string | undefined
   const { data, error, loading, reload } = useEncounter(id)
@@ -245,4 +248,11 @@ function BillStat({ label, value, tone, emphasize }: { label: string; value: Bil
       <div className={cn("mt-0.5 font-mono", emphasize ? "text-base font-bold" : "text-sm font-medium", toneClass)}>{formatMoneyString(value)}</div>
     </div>
   )
+}
+
+export default function EncounterDetailPage() {
+  const params = useParams()
+  const id = params?.id as string | undefined
+  if (visitsDataSource === "api") return id ? <VisitDetailScreen id={id} /> : null
+  return <MockEncounterDetailPage />
 }

@@ -6,7 +6,7 @@ import { LAB_ORDERS } from "@/data/lab"
 import { LAB_TESTS } from "@/data/labTests"
 import { ENDPOINTS } from "./endpoints"
 import { NotConnectedError } from "./errors"
-import { httpEcgUltrasoundTestsService, httpLabOrdersService, httpLabTestsService } from "./http/lab"
+import { httpLabOrdersService } from "./http/lab"
 import { labOrdersService, labTestsService } from "./index"
 import {
   LAB_FILTERS, flagFor, isLegalLabTransition, labFilterStatus, labLineTotal, labOrderTotals,
@@ -20,8 +20,8 @@ import type { LabOrderInput, LabOrderRecord } from "./types"
 // real backend. (Screen rendering — loading, error, empty — is verified in a browser, not here.)
 
 const ULID = "01ARZ3NDEKTSV4RRFFQ69G5FAV"
+// The lab tests (S6) and imaging tests (S7) catalogues are connected; the orders still await their contracts.
 const KEYS = [
-  "labTests.list", "labTests.create", "labTests.update", "ecgTests.list", "ecgTests.create", "ecgTests.update",
   "labOrders.list", "labOrders.get", "labOrders.create", "labOrders.transition", "labOrders.enterResults",
 ] as const
 const testsSnapshot = structuredClone(LAB_TESTS)
@@ -57,12 +57,6 @@ describe("contract-pending behaviour (API mode)", () => {
     const fetchMock = vi.fn()
     vi.stubGlobal("fetch", fetchMock)
     const calls = [
-      httpLabTestsService.list({ search: "x" }),
-      httpLabTestsService.create({ code: "C", name: "N", category: "Haematology", rate: 1, turnaroundHours: 1 }),
-      httpLabTestsService.update("1", { code: "C", name: "N", category: "Haematology", rate: 1, turnaroundHours: 1 }),
-      httpEcgUltrasoundTestsService.list(),
-      httpEcgUltrasoundTestsService.create({ code: "C", name: "N", fee: 1, active: true }),
-      httpEcgUltrasoundTestsService.update("1", { code: "C", name: "N", fee: 1, active: true }),
       httpLabOrdersService.list({ status: "Pending" }),
       httpLabOrdersService.get("1"),
       httpLabOrdersService.create(newOrder),
@@ -82,12 +76,10 @@ describe("contract-pending behaviour (API mode)", () => {
     ENDPOINTS["labOrders.create"] = { method: "POST", path: "/lab-orders" }
     ENDPOINTS["labOrders.transition"] = { method: "POST", path: "/lab-orders/:id/status" }
     ENDPOINTS["labOrders.enterResults"] = { method: "POST", path: "/lab-orders/:id/results" }
-    ENDPOINTS["labTests.list"] = { method: "GET", path: "/lab-tests" }
     await expect(httpLabOrdersService.list()).rejects.toThrow(/query parameters/)
     await expect(httpLabOrdersService.create(newOrder)).rejects.toThrow(/request payload/)
     await expect(httpLabOrdersService.transition("1", "Collected")).rejects.toThrow(/request payload/)
     await expect(httpLabOrdersService.enterResults("1", { tests: [], markComplete: false })).rejects.toThrow(/request payload/)
-    await expect(httpLabTestsService.list()).rejects.toThrow(/query parameters/)
     expect(fetchMock).not.toHaveBeenCalled()
   })
 

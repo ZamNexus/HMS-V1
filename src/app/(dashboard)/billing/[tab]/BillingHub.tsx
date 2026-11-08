@@ -18,7 +18,11 @@ import { listAll } from "@/lib/services/reference/listAll"
 import { useBankAccounts, useDoctors, useExpenseCategories, usePatients } from "@/lib/useReferenceData"
 import { useResource } from "@/lib/useResource"
 import type { PaymentMode } from "@/types"
+import { BankApiTab } from "@/components/accounts/BankApiTab"
+import { ExpensesApiTab } from "@/components/accounts/ExpensesApiTab"
 import { cn } from "@/lib/utils"
+import { InvoicesTab } from "@/components/billing/InvoicesTab"
+import { ChargesRegisterTab, PaymentsRegisterTab } from "@/components/billing/RegistersTabs"
 import { ContractPending } from "@/components/shared/ContractPending"
 import { PatientRecordPicker } from "@/components/shared/PatientPicker"
 import { StatusBadge } from "@/components/shared/StatusBadge"
@@ -110,7 +114,7 @@ export default function BillingHubPage() {
         </div>
 
         <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          <div className="flex h-11 items-center gap-1 rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/5">
+          <div className={cn("flex h-11 items-center gap-1 rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/5", dataSource === "api" && "hidden")}>
             {DATE_RANGES.map((r) => {
               const isActive = dateRange === r
               return (
@@ -132,22 +136,11 @@ export default function BillingHubPage() {
         </div>
       </div>
 
-      {contract.pending && (
-        <div role="status" data-testid="billing-not-connected" className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-amber-500/30">
-          <p className="font-bold">Billing, Expenses and Bank are not connected to the backend</p>
-          <p className="mt-1">
-            The API contract for consultation and services invoices, payments, receipts, expenses, expense categories, bank accounts and bank transactions
-            (routes and request/response schemas) has not been provided to the frontend, so nothing can be loaded or saved here. In API mode no request
-            is sent and no demo data is shown; the figures below read “—” rather than zero.
-          </p>
-        </div>
-      )}
-
-      <Tiles version={version} />
+      {dataSource !== "api" && <Tiles version={version} />}
 
       {/* ─── TABS NAVIGATION ─────────────────────────────────────────── */}
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {TABS.map((t) => {
+        {(dataSource === "api" ? [...TABS, { key: "transactions", label: "Daily Transactions", icon: ReceiptIcon }] : TABS).map((t) => {
           const isActive = tab === t.key
           return (
             <Link href={`/billing/${t.key}`}
@@ -168,12 +161,13 @@ export default function BillingHubPage() {
       </div>
 
       {/* ─── TAB CONTENT ─────────────────────────────────────────────── */}
-      {tab === "consultations" && <ConsultationsTab />}
-      {tab === "services" && <ServicesTab />}
-      {tab === "payments" && <PaymentsTab onChanged={changed} />}
-      {tab === "receipts" && <ReceiptsTab onChanged={changed} />}
-      {tab === "expenses" && <ExpensesTab onChanged={changed} />}
-      {tab === "bank" && <BankTab onChanged={changed} />}
+      {tab === "consultations" && (dataSource === "api" ? <InvoicesTab sourceType="consultation" /> : <ConsultationsTab />)}
+      {tab === "services" && (dataSource === "api" ? <InvoicesTab sourceType="service" /> : <ServicesTab />)}
+      {tab === "payments" && (dataSource === "api" ? <PaymentsRegisterTab defaultType="payment" /> : <PaymentsTab onChanged={changed} />)}
+      {tab === "receipts" && (dataSource === "api" ? <PaymentsRegisterTab defaultType="advance" /> : <ReceiptsTab onChanged={changed} />)}
+      {tab === "transactions" && (dataSource === "api" ? <ChargesRegisterTab /> : <div className="p-6 text-sm text-slate-500">Daily Transactions are available when the app is connected to the backend.</div>)}
+      {tab === "expenses" && (dataSource === "api" ? <ExpensesApiTab /> : <ExpensesTab onChanged={changed} />)}
+      {tab === "bank" && (dataSource === "api" ? <BankApiTab /> : <BankTab onChanged={changed} />)}
     </div>
   )
 }
@@ -552,7 +546,7 @@ function ExpensesTab({ onChanged }: { onChanged: () => void }) {
 
         <Card className="rounded-[1.5rem] border-none bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden h-fit">
           <CardContent className="p-6">
-            <h3 className="mb-1 text-lg font-bold text-[#0D1B2E]">This Month by Category</h3>
+            <h2 className="mb-1 text-lg font-bold text-[#0D1B2E]">This Month by Category</h2>
             {!totalsEnabled ? (
               <ContractPending title="Expense totals are unavailable" awaiting={awaiting(["expenses.totals"])} testId="billing-expense-totals-pending" />
             ) : totals.error && !totals.data ? (

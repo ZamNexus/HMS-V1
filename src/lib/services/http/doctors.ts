@@ -1,8 +1,12 @@
 import type { DoctorsService } from "../types"
 import { callEndpoint } from "./call"
-import { doctorListQuery, doctorPayload, parseDoctor, parseDoctorList } from "./mappers"
+import { doctorPayload, parseDoctor } from "./mappers"
+import { doctorListQuery, parseDoctorList } from "./doctorPicker"
 
-/** Real-backend Doctors service. Inert until ENDPOINTS and mappers.ts are filled in from the OpenAPI spec. */
+/**
+ * Real-backend Doctors service. `list` is connected (GET /doctors, the active-doctor picker). `create` / `update` stay inert: a doctor is a staff user with a
+ * doctor profile, managed by userAdminService (Admin > Doctors and Admin > Users), not through a separate doctor record.
+ */
 export const httpDoctorsService: DoctorsService = {
   async list(opts = {}) {
     const raw = await callEndpoint<unknown>("doctors.list", {

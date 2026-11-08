@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/components/ui/use-toast"
+import { LabOrderDetailScreen } from "@/components/diagnostics/LabOrderDetailScreen"
+import { dataSource as dxDataSource } from "@/lib/services"
 
 function resultSummary(o: LabOrderRecord, testId: string) {
   const test = o.tests.find((t) => t.testId === testId)
@@ -29,7 +31,7 @@ function resultSummary(o: LabOrderRecord, testId: string) {
   return "—"
 }
 
-export default function LabOrderDetailPage() {
+function MockLabOrderDetailPage() {
   const params = useParams()
   const id = params?.id as string | undefined
   const { data, error, loading, reload } = useLabOrder(id)
@@ -156,4 +158,9 @@ function LabOrderDetail({ order, onChanged }: { order: LabOrderRecord; onChanged
       )}
     </div>
   )
+}
+
+export default function LabOrderDetailPage() {
+  if (dxDataSource === "api") return <LabOrderDetailScreen />
+  return <MockLabOrderDetailPage />
 }

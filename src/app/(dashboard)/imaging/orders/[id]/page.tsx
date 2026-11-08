@@ -17,8 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { useToast } from "@/components/ui/use-toast"
+import { ImagingOrderDetailScreen } from "@/components/diagnostics/ImagingOrderDetailScreen"
+import { dataSource as dxDataSource } from "@/lib/services"
 
-export default function ImagingOrderDetailPage() {
+function MockImagingOrderDetailPage() {
   const params = useParams()
   const id = params?.id as string | undefined
   const { data, error, loading, reload } = useImagingOrder(id)
@@ -120,4 +122,9 @@ function ImagingOrderDetail({ order, onChanged }: { order: ImagingOrderRecord; o
       </Card>
     </div>
   )
+}
+
+export default function ImagingOrderDetailPage() {
+  if (dxDataSource === "api") return <ImagingOrderDetailScreen />
+  return <MockImagingOrderDetailPage />
 }

@@ -1,5 +1,7 @@
 # Frontend ⇄ Backend integration handoff — Users, Roles, Doctors, Patients, Encounters, Laboratory, Imaging, Pharmacy, Billing, Reports, Dashboard, Item History
 
+> **Update (Phase 5A):** `docs/openapi.json` is now in the repo, and Patients, Organisations, Guardian relations and the `/auth/me` parser are connected to it (11 of 93 endpoint keys set; not verified live). Statements below that say "nothing is connected" or "87 of 88 keys are null" describe the state **before** Phase 5A. See "Phase 5A" before section 3.
+
 **Status:** the frontend is *prepared*. Backend compatibility is **unconfirmed and untested**; no
 real-backend verification has been done (no credentials, no contract).
 
@@ -1163,6 +1165,79 @@ Low-stock `<` vs `<=` and zero (above) · whether `prescription[].medicine` is a
 * **Ready on the frontend:** service interfaces, mock and inert HTTP adapters, contract-status modules, loading / error / empty / contract-pending states for every migrated screen; exact-money handling; no screen in API mode shows demo data (verified in the browser where reachable, by server render and structural tests where not); 87 `null` keys + the `pending(...)` mappers listing exactly what each contract must supply.
 * **Blocked on the backend / product owner (nothing can be wired without these):** paths, methods, request bodies and response schemas for every operation in §2b–§2m and the Master Data items above; the role / permission response; the low-stock rule; the ID form for prescriptions; the Item History audit shape and its admin permission.
 * **First practical Phase 5 step, once credentials and the OpenAPI document exist:** confirm `auth.me`, then take one read-only list (e.g. patients or wards), fill its key and mapper, flip the mapper from `pending`, and run the module's browser suite against the development backend with development data only. Until then "frontend-prepared" must not be reported as "integrated".
+
+## Phase 5A — Real contract: identity parser, Patients, Organisations (panels), Guardian relations
+
+*Scope: the first modules connected to `docs/openapi.json` (supplied by the project owner; 170 operations, identical to the route list in `docs/backend-routes.md`, checked by script). Frontend only. Not Phase 5B. Stopped for review.*
+
+**Four statuses, restated for this phase**
+1. *Backend functionality documented* — **yes** for these modules: `docs/openapi.json`.
+2. *Frontend-prepared* — yes (all earlier phases).
+3. *Connected to a confirmed API contract* — **now true for:** the `GET /auth/me` parser, Patients (list / get / create / update / archive / restore), Organisations (`/panels` list / create) and Guardian relations (list / create). 11 of 93 endpoint keys are set; the other 82 are still `null` and unchanged.
+4. *Live backend integration verified* — **none.** No credentials and no live response were used. Everything below was checked against the specification and a fake backend, not the real one.
+
+### What was done
+* `ENDPOINTS` (now 93 keys, 11 set): `auth.me`, `patients.list|get|create|update|delete|restore`, `organisations.list|create`, `guardianRelations.list|create`. New keys: `organisations.*`, `guardianRelations.*`, `patients.restore`. `patients.delete` is **`POST /patients/:id/archive`** because the spec says archive is "what the screens call Inactive or Delete".
+* `http/wire.ts` (new): strict readers (`reqStr`, `optStr`, `reqUlid`, `reqDate`, `reqEnum`, `parsePage`, `pageQuery`). A response that does not match throws a `TypeError` naming the field (never the value); `perPage` above 100 is refused, not cut.
+* `http/mappers.ts`: `parseCurrentUser` (permission list only), `parsePatient` / `parsePatientList`, `patientListQuery`, `patientCreatePayload`, `patientUpdatePayload`, `patientUpdateContext`, `parseOrganisation(List)`, `organisationPayload`, `parseGuardianRelation(List)`, `guardianRelationPayload`. The old `patientPayload` was removed.
+* `http/patients.ts`, `http/reference.ts`: real adapters.
+* UI: the patients list "Inactive" tab shows a contract-pending panel in API mode (decision 1); the patient form passes the record `version`, and its delete dialog says **Archive** (hidden, kept, restorable) in API mode; the dashboard's "Recently registered" widget now fetches **one page of 100** instead of every patient (the old `listAll` could have been up to 50 requests per dashboard load on a real database).
+* Types: `PatientRecord.version?` (the API's `updatedAt`, sent back as `expectedUpdatedAt`). Mock mode ignores it.
+
+### Decisions the spec does not make (each is a mapping choice, please confirm)
+1. **"Inactive" filter.** The API has `includeArchived` (live and archived together) but no archived-only filter, so the tab is "not connected" rather than wrong.
+2. **Status.** `archived` → "inactive"; otherwise `admitted` → "ipd"; otherwise "active". The UI has no deceased state, so `deceasedOn` is not shown.
+3. **Active switch on the patient form** = archive / restore (the API has no active field on create / update). It is applied after the PATCH (archive) or before it (restore), so it is never silently dropped. If the PATCH fails after a restore, the record stays restored.
+4. **Organisation.** The UI holds one panel; it maps to the `primary` coverage. Other coverages are read before every update and sent back, because `coverages` replaces the whole set. `coverages` is sent only when the primary changed.
+5. **Guardian relation** is sent as `guardianRelationText` (the form's value is a name, not an id). It round-trips as `{id:null,name}`.
+6. **Not sent:** `ssEmpNo` (no such field), `photoUrl` (no such field; file storage is not built), MR number / registration date / age (server-issued). `age` is computed from `dob`.
+7. **Panels / relations cannot be created inactive** through the API; the adapters refuse rather than create an active one.
+8. **Optimistic concurrency:** the loaded `updatedAt` is sent as `expectedUpdatedAt`. A stale edit is refused with `409 PATIENT_CHANGED` (documented in the spec; found in Phase 1); the UI shows the backend message with that heading and the support reference.
+
+### Specification problems found (please raise with the backend team)
+* **76 properties in 24 schemas are typed `array of string` where a nullable string is clearly meant** — e.g. `PatientDetailDto_Output.fatherName / cnic / city / email / address / area / country / guardianName / referredBy / remarks / photoUrl / medicalRecordNo / emergencyContact`, `UpdatePatientDto.email / country`, `AuthUserDto_Output.email / primaryLocationId`, and, in the `PanelResponseDto_Output` / `GuardianRelationResponseDto_Output` create responses, `contactPerson / phone / commissionPct / remarks`. The **list** DTOs type the same fields `string | null`. Phase 5A rejected arrays; **Phase 1 now accepts them** (first element used, one console warning per DTO.field) and a create whose 2xx answer cannot be read is reported as "Saved" instead of an error. What the real server sends is still **unverified**: it is the first thing to check against a live response. The full list is in `docs/SPEC_BUGS_FOR_BACKEND.md`.
+* Id fields carry no ULID pattern in the spec; the mappers still require a ULID (the documented convention).
+* The spec header says OpenAPI 3.0.0 but some schemas use 3.1-style `type: ["string","null"]`; harmless here.
+
+### Not done / limits
+* Doctors, wards, users, encounters, lab, imaging, pharmacy, billing and all reports keep their previous status. Several do not map 1:1 (see `docs/backend-routes.md`).
+* `GET /patients/duplicates` and the 409 `POSSIBLE_DUPLICATE` flow (`acknowledgeDuplicates`) are not built: the form still warns by searching the phone number.
+* Patient balance (`balance`, `/patients/{id}/account`), "Last Visit" and the visits / lab / billing tabs of the patient page are unchanged (still mode-gated).
+* `/auth/me` is parsed but **not called by anything**; permission-based navigation is a separate decision (authentication and roles are out of scope here).
+* The Master Data "Panels" and "Guardian Relations" tabs are still the mock-only tabs shown as "not connected" in API mode, although the services behind them now exist.
+* Dev credentials: none used; the permission set a real role receives is unknown.
+
+### Tests (frontend-only, against the specification and a fake backend — not backend verification)
+* `src/lib/services/http/specValidate.ts` validates values against `docs/openapi.json`. `phase5a.test.ts` checks every fixture and every request body against the schemas, the exact requests the adapter sends, the status filter, archive / restore sequencing, and malformed-response rejection. `backendRoutes.test.ts` fails if `ENDPOINTS` holds a route that is not in the route list.
+* Old tests that asserted "patients / panels / relations are not connected" were rewritten for the new truth (`patients`, `reference`, `readiness`, `services`, `backendRoutes`).
+* Browser (Edge, production builds): `p5a-api.js` runs against a fake backend whose every response and request is validated against the spec (violations must be 0). Mock-mode regressions are identical to before. API-mode regressions differ only in "no request at all" and "no console error" assertions, which now see `GET /patients|/panels|/guardian-relations` and the test stub's 599.
+
+## Phase 1 — Hardening of Patients, Panels and Guardian relations (offline)
+
+*Scope: removes the known risks in the three connected modules before anything else is connected. Code, tests and docs only: **no request was sent to the real dev server** and no credentials were used. Stopped for review.*
+
+**Statuses.** Connected to the confirmed contract: unchanged (the same 11 of 93 endpoint keys). Verified against the REAL backend: **none**. Verified against the specification and a fake spec-shaped backend: yes (below).
+
+### What changed
+* **Array-typed fields (Task 1).** `http/wire.ts`: `optStr` / `optDecimalString` accept string, null, undefined and `""`; an array is read as its first element (empty array = empty) and `console.warn("spec mismatch: <DTO>.<field> arrived as array")` is written **once per DTO.field per page load**. A first element that is not text/null, or any number/object, still throws. The mappers pass the real DTO names (`PatientDetailDto_Output`, `PatientPageDto_Output`, `PanelResponseDto_Output`, `PanelPageDto_Output`, `GuardianRelationResponseDto_Output`, `GuardianRelationPageDto_Output`). Requests never send an array: `UpdatePatientDto.email` / `country` are plain strings (`""` clears them, never `null`). The full list of 76 array-typed properties (73 single-value bugs + 3 ambiguous) is in `docs/SPEC_BUGS_FOR_BACKEND.md`.
+* **Create safety (Task 2).** `SavedButUnreadableError` (errors.ts) and `createAndParse` (http/call.ts): a create that returns **2xx but whose body cannot be read** (non-JSON, empty, wrong shape) is reported as *saved*, never as an error that invites a retry; any non-2xx, network error or unbuilt body stays an ordinary failure. `classifyCreateError` (createOutcome.ts) turns an error into either `saved-unreadable` ("Saved. Refreshing the list.") or `failed` (heading chosen from the documented `code`, the backend's own `message`, `details`, and the `requestId`). A network error says the record "may or may not have been saved" (no "try again"). `invalidatingService` drops the cached lists after a saved-but-unreadable create. The patient form and both quick-add dialogs (organisation, relation) use it: `CreateErrorNote` shows the message with a small **"Support reference: <requestId>"** line; the unreadable case toasts "Saved. Refreshing the list.", refreshes/redirects to the list and never re-sends. `createSingleFlight` (lib/singleFlight.ts) lets only one save run at a time (a double click, or Register + Save & OPD + Save & IPD in the same tick, sends one request); the buttons are also disabled while saving. A patient registered with the Active switch off is archived right after; if that second call fails the patient already exists, so it is reported as saved ("could not be archived"), not as a failed registration.
+* **Agreed decisions (Task 3)**, each checked in code: Archive label with the real backend (done in 5A, now with tests); **Restore** is now available: `PatientsService.restore` (POST /patients/{id}/restore), a "Restore Patient" button on the edit form and on the patient page for an archived patient (API mode only; the mock keeps its Active switch); the Inactive tab stays "Not connected"; one organisation = the primary coverage with secondary coverages kept on edit; SS/Emp and photo not sent; the dashboard widget now uses `loadRecentPatients` (one page of 100) in `services/recentPatients.ts`, so it is testable.
+* **Headings for documented codes** (409 / 422 descriptions in the spec): `VALIDATION_FAILED`, `POSSIBLE_DUPLICATE`, `PANEL_INACTIVE`, `GUARDIAN_RELATION_INACTIVE`, `PANEL_NAME_TAKEN`, `GUARDIAN_RELATION_TAKEN`, `PATIENT_CHANGED`, `PATIENT_ARCHIVED`, `PATIENT_ADMITTED`, plus `NOT_FOUND`, `FORBIDDEN`, `AUTHENTICATION_REQUIRED`, `TOO_MANY_REQUESTS`. A test pins this list to the spec.
+
+### Facts found in the spec while doing this (not guessed)
+* `PATCH /patients/{id}` returns **422 `PATIENT_ARCHIVED`** for an archived patient, and **409 `PATIENT_CHANGED`** when `expectedUpdatedAt` is stale. So editing an archived patient requires a restore first (the update flow already restores before it PATCHes when the Active switch is on). The UI shows the backend message under the heading "This patient was changed by someone else" and the support reference; it does not yet offer a one-click reload.
+* `POST /patients/{id}/archive` returns **422 `PATIENT_ADMITTED`** for an admitted patient.
+* Phase 5A decision 8 ("the error code is unknown") is superseded by the line above.
+
+### Limits / risks that remain
+* Nothing here is verified against the real backend. Whether the real server sends arrays, strings or nulls for the 73 fields is unknown; the warning in the browser console will say so.
+* A create whose connection drops before any answer arrives cannot be distinguished from "never reached the server" (status 0): the message tells the user to check the list before trying again. There is no idempotency key in the spec.
+* `GET /patients/duplicates` and `acknowledgeDuplicates` are still not used.
+* The mock path of the patient form now also goes through the single-flight guard and `CreateErrorNote` (same behaviour, verified by the mock browser suites).
+
+### Tests
+* `phase1.test.ts` (49): the scan of the whole spec for array-typed properties pins 76 in 24 schemas; every array-typed field of `PatientDetailDto_Output` as string / null / "" / array / empty array (13 fields), panel and relation fields, one warning per DTO.field, requests never contain arrays; for patient, panel and relation creates: (a) unreadable 2xx (HTML, empty, malformed JSON, wrong shape) is "saved" with exactly one POST, (b) non-2xx shows the backend message, heading, code and requestId with exactly one POST (400, 422, unknown code, 502 gateway page, network error), (c) double click sends one request; cache invalidation; the decision checks; the documented-codes table. A mutation check (four behaviours deliberately broken) made 23 of these tests fail, then they were restored.
+* Browser (Edge, production builds) `p1-api.js`: the same scenarios through the real screens against the fake backend, including the deliberately unreadable answer.
 
 ## 3. Domain mapping conventions (boundary rules)
 

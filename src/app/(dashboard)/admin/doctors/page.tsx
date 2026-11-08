@@ -2,7 +2,8 @@
 import * as React from "react"
 import { AlertTriangle, Phone, Plus, Search, Stethoscope, Pencil, Clock, CheckCircle2 } from "lucide-react"
 
-import { DEFAULT_PAGE_SIZE, activeSuffix, doctorsService, errorSummary, validateDoctorForm, viewState, type DoctorRecord } from "@/lib/services"
+import { DoctorsAdmin } from "@/components/admin/DoctorsAdmin"
+import { DEFAULT_PAGE_SIZE, activeSuffix, dataSource, doctorsService, errorSummary, validateDoctorForm, viewState, type DoctorRecord } from "@/lib/services"
 import { Pagination } from "@/components/shared/Pagination"
 import { useResource } from "@/lib/useResource"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -24,7 +25,12 @@ const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 
+// API mode: doctors are staff users with a doctor profile (src/components/admin/DoctorsAdmin.tsx). Mock mode keeps the demo screen below.
 export default function DoctorsPage() {
+  return dataSource === "api" ? <DoctorsAdmin /> : <MockDoctorsPage />
+}
+
+function MockDoctorsPage() {
   const [modalTarget, setModalTarget] = React.useState<DoctorRecord | "new" | null>(null)
   const [search, setSearch] = React.useState("")
   const [query, setQuery] = React.useState("")

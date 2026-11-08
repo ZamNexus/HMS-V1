@@ -7,8 +7,8 @@ import type { PharmacyTab } from "./tabs"
 import { format } from "date-fns"
 import { AlertTriangle, Pill, Plus, Printer, Search, ClipboardList, Activity, Wallet, TrendingDown } from "lucide-react"
 
-import { MEDICINE_CATEGORIES } from "@/data/medicines"
-import { nextDispenseNo } from "@/data/pharmacy"
+import { MEDICINE_CATEGORIES } from "@/lib/labels"
+import { demo } from "@hms/demo"
 import {
   DEFAULT_PAGE_SIZE, INVENTORY_FILTERS, PHARMACY_OPERATION_LABELS, dataSource, daysToExpiry, dispenseTotals, dispensingService, encountersService, errorSummary,
   findStockShortfalls, inventorySummary, legacyNumericId, matchesInventoryFilter, medicineStatus, medicinesService, pharmacyContractStatus, planDispense, viewState,
@@ -39,6 +39,8 @@ import {
 } from "@/components/ui/dialog"
 import { useToast } from "@/components/ui/use-toast"
 import { failedChecks, validationToast } from "@/lib/validation"
+import { PharmacyApiHub } from "@/components/pharmacy/PharmacyApiHub"
+import { dataSource as pmDataSource } from "@/lib/services"
 
 const TABS = [
   { key: "inventory", label: "Inventory", icon: Pill },
@@ -74,7 +76,7 @@ function ContractPending({ title, operations, testId }: { title: string; operati
   )
 }
 
-export default function PharmacyPage() {
+function MockPharmacyPage() {
   const params = useParams()
   const tab = (params?.tab as string) || "inventory"
 
@@ -703,7 +705,7 @@ function DispenseTab({ medicines }: { medicines: Medicines }) {
       <Card className="h-fit lg:sticky lg:top-24 rounded-[1.5rem] border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] ring-1 ring-black/5 overflow-hidden">
         <div className="bg-gradient-to-r from-[#0F2A4D] to-[#16375F] p-5 text-white">
           <h3 className="text-sm font-bold opacity-80 uppercase tracking-wider mb-1">Dispense Summary</h3>
-          <p className="font-mono text-xl">{dataSource === "mock" ? nextDispenseNo() : "Number assigned on save"}</p>
+          <p className="font-mono text-xl">{dataSource === "mock" ? demo.data.nextDispenseNo() : "Number assigned on save"}</p>
         </div>
         <CardContent className="space-y-4 p-5 bg-white">
           {lines.length === 0 ? (
@@ -878,4 +880,10 @@ function HistoryTab() {
       </div>
     </div>
   )
+}
+
+export default function PharmacyPage() {
+  const params = useParams()
+  if (pmDataSource === "api") return <PharmacyApiHub tab={(params?.tab as string) || "inventory"} />
+  return <MockPharmacyPage />
 }

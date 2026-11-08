@@ -290,7 +290,7 @@ function filterTransactions(rows: ReturnType<typeof allTransactions>, f: DailyTr
 // Mutates the shared SERVICE_CATALOG in place, as the Master Data tab and the Services Invoice form used to do inline.
 export const mockServiceCatalogService: ServiceCatalogService = {
   async list(opts = {}) {
-    const matches = opts.category ? SERVICE_CATALOG.filter((s) => s.category === opts.category) : SERVICE_CATALOG
+    const matches = SERVICE_CATALOG.filter((s) => (!opts.category || s.category === opts.category) && (opts.active === undefined || s.active === opts.active))
     return { items: paginate(matches, opts.page, opts.pageSize).map((s) => ({ ...s, id: S(s.id) })), total: matches.length }
   },
   async create(input) {
@@ -303,6 +303,20 @@ export const mockServiceCatalogService: ServiceCatalogService = {
     const idx = numeric === null ? -1 : SERVICE_CATALOG.findIndex((s) => s.id === numeric)
     if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Catalogue item not found")
     SERVICE_CATALOG[idx] = { ...SERVICE_CATALOG[idx], ...input }
+    return { ...SERVICE_CATALOG[idx], id: S(SERVICE_CATALOG[idx].id) }
+  },
+  async patch(id, patch) {
+    const numeric = legacyNumericId(id)
+    const idx = numeric === null ? -1 : SERVICE_CATALOG.findIndex((s) => s.id === numeric)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Catalogue item not found")
+    SERVICE_CATALOG[idx] = { ...SERVICE_CATALOG[idx], ...patch }
+    return { ...SERVICE_CATALOG[idx], id: S(SERVICE_CATALOG[idx].id) }
+  },
+  async setActive(id, active) {
+    const numeric = legacyNumericId(id)
+    const idx = numeric === null ? -1 : SERVICE_CATALOG.findIndex((s) => s.id === numeric)
+    if (idx < 0) throw mockApiError(404, "NOT_FOUND", "Catalogue item not found")
+    SERVICE_CATALOG[idx] = { ...SERVICE_CATALOG[idx], active }
     return { ...SERVICE_CATALOG[idx], id: S(SERVICE_CATALOG[idx].id) }
   },
 }

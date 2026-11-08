@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { ChangePasswordForm } from "@/components/auth/ChangePasswordForm"
 import { useAuth, roleLabel } from "@/lib/auth"
 import { initials } from "@/lib/utils"
 import { Card, CardContent } from "@/components/ui/card"
@@ -9,16 +10,17 @@ import { ShieldCheck, User, Mail, Briefcase, KeyRound, Save } from "lucide-react
 import { useToast } from "@/components/ui/use-toast"
 
 export default function UserProfilePage() {
-  const { user } = useAuth()
+  const { user, logoutAll } = useAuth()
   const { toast } = useToast()
 
   if (!user) return null
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
+    // The API has no endpoint for editing your own profile (the handoff lists none): never claim it was saved.
     toast({
-      title: "Profile Updated",
-      description: "Your profile settings have been saved successfully.",
+      title: "Not saved",
+      description: "Your profile cannot be changed here. Ask an administrator to update your details on the Users screen.",
     })
   }
 
@@ -56,7 +58,7 @@ export default function UserProfilePage() {
                 <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
                   <div className="flex items-center gap-3 text-sm text-slate-600">
                     <Mail className="h-4 w-4 text-slate-400" />
-                    <span>{user.identifier}</span>
+                    <span>{user.username}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm text-slate-600">
                     <Briefcase className="h-4 w-4 text-slate-400" />
@@ -91,7 +93,7 @@ export default function UserProfilePage() {
                     <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Email Address</label>
                     <input 
                       type="text" 
-                      defaultValue={user.identifier}
+                      defaultValue={user.username}
                       className="w-full h-11 px-4 rounded-xl border border-slate-200 bg-slate-50 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] outline-none transition-all"
                     />
                   </div>
@@ -128,13 +130,19 @@ export default function UserProfilePage() {
               </h3>
               <p className="text-sm text-slate-500 mb-6">Manage your password and security preferences.</p>
               
+              <div className="py-4 border-t border-slate-100">
+                <h4 className="font-semibold text-sm text-slate-900">Change Password</h4>
+                <p className="mb-4 mt-0.5 text-xs text-slate-500">Changing it signs you out of your other devices.</p>
+                <ChangePasswordForm />
+              </div>
+
               <div className="flex items-center justify-between py-4 border-t border-slate-100">
                 <div>
-                  <h4 className="font-semibold text-sm text-slate-900">Change Password</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">Update your password to keep your account secure.</p>
+                  <h4 className="font-semibold text-sm text-slate-900">Sign out of all devices</h4>
+                  <p className="text-xs text-slate-500 mt-0.5">Ends every session of your account, including this one.</p>
                 </div>
-                <Button variant="outline" className="rounded-xl font-bold" onClick={() => toast({ title: "Check Email", description: "Password reset link sent to your email." })}>
-                  Update Password
+                <Button variant="outline" className="rounded-xl font-bold" onClick={() => void logoutAll()}>
+                  Sign out everywhere
                 </Button>
               </div>
             </CardContent>

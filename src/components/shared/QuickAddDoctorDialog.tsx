@@ -1,7 +1,9 @@
 "use client"
 import * as React from "react"
+import Link from "next/link"
 
-import { doctorsService, errorSummary, legacyNumericId, type DoctorRecord } from "@/lib/services"
+import { dataSource, doctorsService, errorSummary, legacyNumericId, type DoctorRecord } from "@/lib/services"
+import { useAccess } from "@/lib/session/useAccess"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,14 +20,43 @@ import { failedChecks, validationToast } from "@/lib/validation"
  * so `onCreated` only fires for a record that has a faithful numeric id; anything else is reported, never coerced.
  * Migrated forms (string doctor ids) use `onCreatedRecord` instead, which receives the created record whatever its id.
  */
-export function QuickAddDoctorDialog({ open, onClose, onCreated, onCreatedRecord }: {
+type QuickAddProps = {
   open: boolean
   onClose: () => void
   /** Legacy hosts: called with a numeric id (never for ids without a numeric form). */
   onCreated?: (id: number) => void
   /** Migrated hosts: called with the created record, any id format. */
   onCreatedRecord?: (doctor: DoctorRecord) => void
-}) {
+}
+
+/**
+ * Against the real API a doctor is a staff account (POST /users with a doctor profile, handoff 8.1), which needs a sign-in, a role and a temporary
+ * password: that is Admin > Doctors, not a one-line inline form. So API mode points there instead of offering a form that could only fail.
+ */
+export function QuickAddDoctorDialog(props: QuickAddProps) {
+  return dataSource === "api" ? <ApiModeNotice open={props.open} onClose={props.onClose} /> : <MockQuickAddDoctorDialog {...props} />
+}
+
+function ApiModeNotice({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { can } = useAccess()
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent size="md" data-testid="quick-add-doctor-api-notice">
+        <DialogHeader><DialogTitle>Register New Doctor</DialogTitle></DialogHeader>
+        <p className="text-sm text-slate-600">
+          A doctor is a staff account with a sign-in, so doctors are registered under Admin &gt; Doctors.
+          {can("users.write") ? " Open it, add the doctor, then come back and pick them here." : " Ask an administrator to add the doctor, then pick them here."}
+        </p>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>Close</Button>
+          {can("users.write") && <Button asChild><Link href="/admin/doctors" target="_blank" rel="noopener">Open Admin &gt; Doctors</Link></Button>}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function MockQuickAddDoctorDialog({ open, onClose, onCreated, onCreatedRecord }: QuickAddProps) {
   const uid = React.useId()
   const { toast } = useToast()
   const [name, setName] = React.useState("")

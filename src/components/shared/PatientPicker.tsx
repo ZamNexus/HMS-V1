@@ -1,12 +1,10 @@
 "use client"
 import * as React from "react"
 import { Search, User, X } from "lucide-react"
-import { differenceInYears } from "date-fns"
 
-import {
-  PICKER_RESULT_LIMIT, errorSummary, patientsService, pickerSearchTerm, toLegacyPatient, type PatientRecord,
-} from "@/lib/services"
-import { useResource } from "@/lib/useResource"
+import { errorSummary, formatPatientAge, patientsService, toLegacyPatient, type PatientRecord } from "@/lib/services"
+import { usePickerOptions } from "@/lib/query/usePickerOptions"
+import { usePatientToday } from "@/lib/usePatientToday"
 import { cn, initials } from "@/lib/utils"
 import type { Patient } from "@/types"
 import { Input } from "@/components/ui/input"
@@ -27,23 +25,19 @@ function PatientPickerBase({
   onClear: () => void
   id?: string
 }) {
-  const [query, setQuery] = React.useState("")
-  const [term, setTerm] = React.useState<string | null>(null)
   const [selectError, setSelectError] = React.useState("")
+  const today = usePatientToday()
 
-  // Debounce: search only once the query is long enough, and not on every keystroke.
-  React.useEffect(() => {
-    const t = setTimeout(() => setTerm(pickerSearchTerm(query)), 200)
-    return () => clearTimeout(t)
-  }, [query])
-
-  const search = React.useCallback(
-    async (signal: AbortSignal): Promise<PatientRecord[]> =>
-      term ? (await patientsService.list({ search: term, pageSize: PICKER_RESULT_LIMIT, signal })).items : [],
-    [term]
+  // The list endpoint with perPage=6: searched from 2 characters after a 300 ms pause, the previous request aborted (handoff 6). Live patients
+  // only (archived ones are left out by default). The search text stays in this component, never in the address bar.
+  const picker = usePickerOptions("patient", async ({ search, perPage, signal }) =>
+    search ? (await patientsService.list({ search, pageSize: perPage, signal })).items : []
   )
-  const { data, error, loading } = useResource(search)
-  const results = term ? (data ?? []) : []
+  const query = picker.input
+  const term = picker.searching ? query.trim() : null
+  const results = picker.searching ? picker.options : []
+  const loading = picker.loading
+  const error = picker.error
 
   const choose = (record: PatientRecord) => {
     const refusal = onSelect(record)
@@ -51,13 +45,12 @@ function PatientPickerBase({
       setSelectError(refusal)
       return
     }
-    setQuery("")
-    setTerm(null)
+    picker.onInputChange("")
     setSelectError("")
   }
 
   if (selected) {
-    const age = selected.age ?? differenceInYears(new Date(), new Date(selected.dob))
+    const age = today === null ? "—" : formatPatientAge({ dob: selected.dob }, today)
     return (
       <div className="flex items-center justify-between gap-3 rounded-md border border-secondary bg-accent-50 p-3">
         <div className="flex items-center gap-3">
@@ -88,7 +81,7 @@ function PatientPickerBase({
           className="pl-9"
           placeholder="Search by patient name, MR No. or phone..."
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => picker.onInputChange(e.target.value)}
         />
       </div>
       {results.length > 0 && (
@@ -108,7 +101,7 @@ function PatientPickerBase({
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-foreground">{p.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  <span className="font-mono text-secondary">{p.mrNo}</span> · {p.age} {p.gender.charAt(0)} · {p.phone}
+                  <span className="font-mono text-secondary">{p.mrNo}</span> · {today === null ? "—" : formatPatientAge(p, today)} {p.gender.charAt(0)} · {p.phone}{p.deceasedOn ? " · Deceased" : ""}
                 </div>
               </div>
             </button>

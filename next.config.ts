@@ -1,11 +1,17 @@
 import type { NextConfig } from "next";
+import path from "node:path";
+import { resolveDataSource } from "./src/lib/services/dataSource";
 
-// Baseline security headers. A full Content-Security-Policy is deliberately
-// left out until the backend/API origins are known (a premature CSP breaks
-// API calls and Next's inline scripts); `frame-ancestors` is safe to set now.
+// The demo seam. "@hms/demo" is the one module that reaches the prototype's sample data and in-memory services (src/lib/demo/registry.ts). A build that talks to the real API
+// (every production build unless NEXT_PUBLIC_HMS_DATA_SOURCE=mock is set explicitly) gets the stub in its place, so the sample records are not part of the client bundle at all.
+// The rule is the app's own (resolveDataSource), not a second copy of it. `npm run check:build` is the proof.
+const demoIncluded = resolveDataSource(process.env.NEXT_PUBLIC_HMS_DATA_SOURCE, process.env.NODE_ENV) === "mock";
+const demoStub = "./src/lib/demo/registry.stub.ts";
+
+// Baseline security headers. The Content-Security-Policy is NOT here: it carries a per-request nonce, so it is built in src/proxy.ts (src/lib/csp.ts).
+// X-Frame-Options stays as the belt to the policy's `frame-ancestors 'none'` (and covers responses the proxy does not match).
 const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
@@ -38,6 +44,11 @@ function resolveBackendUrl(): string {
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  turbopack: demoIncluded ? {} : { resolveAlias: { "@hms/demo": demoStub } },
+  webpack(config) {
+    if (!demoIncluded) config.resolve.alias = { ...config.resolve.alias, "@hms/demo": path.resolve(__dirname, demoStub) };
+    return config;
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

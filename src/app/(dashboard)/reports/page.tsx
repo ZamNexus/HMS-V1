@@ -1,5 +1,6 @@
 "use client"
 import * as React from "react"
+import { Suspense } from "react"
 import dynamic from "next/dynamic"
 import { Download, Printer, ChevronRight, FileText, BarChart3, ListOrdered } from "lucide-react"
 
@@ -7,6 +8,7 @@ import { dataSource, errorSummary, expensesService, reportsContractStatus } from
 import { listAll } from "@/lib/services/reference/listAll"
 import { cn } from "@/lib/utils"
 import { buildCSV } from "@/lib/csv"
+import { ReportsApiHub } from "@/components/reportsApi/ReportsApiHub"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/components/ui/use-toast"
 
@@ -50,7 +52,8 @@ const GROUPS = ["Analytics", "Registers"] as const
 
 const DATE_RANGES = ["Today", "Yesterday", "This Week", "This Month", "Last Month", "Custom"] as const
 
-export default function ReportsPage() {
+/** The demo's report screens (mock mode only): they compute from the prototype's arrays. API mode uses ReportsApiHub. */
+function MockReportsPage() {
   const [active, setActive] = React.useState<(typeof REPORTS)[number]["key"]>("daily")
   const [dateRange, setDateRange] = React.useState<(typeof DATE_RANGES)[number]>("This Month")
   const current = REPORTS.find((r) => r.key === active)!
@@ -176,5 +179,15 @@ export default function ReportsPage() {
         Confidential — Citi Clinic Management Information System
       </p>
     </div>
+  )
+}
+
+/** API mode shows the connected reports (Phase 11); the demo keeps its own screens. The hub keeps its period and filters in the address bar, so it sits under a Suspense boundary. */
+export default function ReportsPage() {
+  if (dataSource !== "api") return <MockReportsPage />
+  return (
+    <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading…</div>}>
+      <ReportsApiHub />
+    </Suspense>
   )
 }

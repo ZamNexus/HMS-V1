@@ -9,9 +9,9 @@ export function Forbidden() {
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-danger-100">
         <ShieldAlert className="h-8 w-8 text-danger-600" />
       </div>
-      <h1 className="text-2xl font-bold text-foreground">403 — Access Denied</h1>
+      <h1 className="text-2xl font-bold text-foreground">403 — Not allowed</h1>
       <p className="max-w-sm text-sm text-muted-foreground">
-        You do not have permission to view this page. Contact your administrator if you believe this is a mistake.
+        Your account does not have permission to open this page. Contact your administrator if you believe this is a mistake.
       </p>
       <Button asChild>
         <Link href="/dashboard">Go to Dashboard</Link>

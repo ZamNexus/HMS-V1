@@ -16,6 +16,9 @@ const STATUS_STYLES: Record<string, string> = {
   "in progress": "bg-teal-100 text-teal-700",
   collected: "bg-blue-100 text-blue-700",
 
+  requested: "bg-warning-100 text-warning-700",
+  confirmed: "bg-blue-100 text-blue-700",
+  "no show": "bg-danger-100 text-danger-700",
   pending: "bg-warning-100 text-warning-700",
   partial: "bg-warning-100 text-warning-700",
   waiting: "bg-warning-100 text-warning-700",
@@ -25,6 +28,7 @@ const STATUS_STYLES: Record<string, string> = {
   "expiring soon": "bg-orange-100 text-orange-700",
 
   inactive: "bg-slate-200 text-slate-500",
+  deceased: "bg-slate-800 text-slate-100",
   cancelled: "bg-danger-100 text-danger-700",
   unpaid: "bg-danger-100 text-danger-700",
   "out of stock": "bg-danger-100 text-danger-700",

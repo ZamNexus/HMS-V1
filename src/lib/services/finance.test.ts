@@ -8,7 +8,7 @@ import { NotConnectedError } from "./errors"
 import { FINANCE_OPERATIONS, financeContractStatus } from "./financeContract"
 import { bankStatementRows, consultationTotals, expenseTotalsFor, paymentStatusFor, serviceLineAmount, servicesTotals } from "./financeHelpers"
 import {
-  httpBankAccountsService, httpBankTransactionsService, httpConsultationInvoicesService, httpExpenseCategoriesService, httpExpensesService, httpPaymentsService,
+  httpBankTransactionsService, httpConsultationInvoicesService, httpExpensesService, httpPaymentsService,
   httpReceiptsService, httpServicesInvoicesService,
 } from "./http/finance"
 import { bankAccountsService, expenseCategoriesService } from "./index"
@@ -38,9 +38,11 @@ beforeEach(() => {
   restore(RECEIPTS, SNAPSHOTS.receipts); restore(EXPENSES, SNAPSHOTS.expenses); restore(EXPENSE_CATEGORIES, SNAPSHOTS.categories)
   restore(BANKS, SNAPSHOTS.banks); restore(BANK_TRANSACTIONS, SNAPSHOTS.bank)
 })
+// Expense categories (S12) and bank accounts (S13) are connected since the proposed contract; every other finance operation still awaits its contract.
+const PENDING_FINANCE = FINANCE_OPERATIONS.filter((k) => !k.startsWith("expenseCategories.") && !k.startsWith("bankAccounts."))
 afterEach(() => {
   vi.unstubAllGlobals()
-  for (const k of FINANCE_OPERATIONS) ENDPOINTS[k] = null
+  for (const k of PENDING_FINANCE) ENDPOINTS[k] = null
 })
 
 const consult: ConsultationInvoiceInput = {
@@ -145,10 +147,12 @@ describe("finance helpers (demo rules, exact arithmetic)", () => {
 })
 
 describe("contract-pending behaviour (API mode)", () => {
-  const nullKeys = FINANCE_OPERATIONS as readonly EndpointKey[]
+  const nullKeys = PENDING_FINANCE as readonly EndpointKey[]
 
   it("has no endpoint configured for any Billing, Expenses or Bank operation", () => {
-    expect(nullKeys).toHaveLength(20)
+    expect(nullKeys).toHaveLength(13)
+    expect(ENDPOINTS["expenseCategories.list"]).toEqual({ method: "GET", path: "/expense-categories" })
+    expect(ENDPOINTS["bankAccounts.list"]).toEqual({ method: "GET", path: "/bank-accounts" })
     for (const k of nullKeys) expect(ENDPOINTS[k], k).toBeNull()
   })
 
@@ -160,12 +164,10 @@ describe("contract-pending behaviour (API mode)", () => {
       httpServicesInvoicesService.list(), httpServicesInvoicesService.create(svcInput),
       httpPaymentsService.list(), httpPaymentsService.create({ patientId: "1", date: "2026-01-01", amount: "10.00", mode: "Cash" }),
       httpReceiptsService.list(), httpReceiptsService.create({ patientId: "1", type: "Advance Deposit", amount: "10.00", date: "2026-01-01" }),
-      httpExpenseCategoriesService.list(), httpExpenseCategoriesService.create({ name: "x" }), httpExpenseCategoriesService.update("1", { name: "x" }), httpExpenseCategoriesService.remove("1"),
       httpExpensesService.list(), httpExpensesService.create({ date: "2026-01-01", categoryId: "1", description: "x", amount: "10.00", mode: "Cash" }), httpExpensesService.totals(),
-      httpBankAccountsService.list(), httpBankAccountsService.create({ bankName: "b", accountTitle: "t", accountNo: "1", branch: "x" }), httpBankAccountsService.update("1", { bankName: "b", accountTitle: "t", accountNo: "1", branch: "x" }),
       httpBankTransactionsService.statement(), httpBankTransactionsService.create({ date: "2026-01-01", bankAccountId: "1", direction: "Deposit", amount: "10.00", description: "x" }),
     ]
-    expect(calls).toHaveLength(20) // one per operation
+    expect(calls).toHaveLength(13) // one per still-pending operation
     for (const c of calls) await expect(c).rejects.toBeInstanceOf(NotConnectedError)
     for (const c of calls) await expect(c).rejects.toThrow(/awaiting the backend contract/)
     expect(fetchMock).not.toHaveBeenCalled()
@@ -189,11 +191,11 @@ describe("contract-pending behaviour (API mode)", () => {
     expect(readFileSync(join(dir, "finance.ts"), "utf8")).not.toMatch(/from\s+["'][^"']*(\/data\/|\/mock\/)/)
   })
 
-  it("the contract status: API mode with every key null is pending with all 20 operations missing; mock mode never is; one key at a time", () => {
+  it("the contract status: API mode is pending with the 13 unpublished operations missing; mock mode never is; one key at a time", () => {
     const api = financeContractStatus("api")
     expect(api.pending).toBe(true)
-    expect(api.missing).toHaveLength(20)
-    expect(FINANCE_OPERATIONS.some((op) => api.can(op))).toBe(false)
+    expect(api.missing).toHaveLength(13)
+    expect(PENDING_FINANCE.some((op) => api.can(op))).toBe(false)
     expect(financeContractStatus("mock")).toMatchObject({ pending: false, missing: [] })
     const table = { ...ENDPOINTS, "expenses.list": { method: "GET" as const, path: "/hypothetical" } } // copy, test-only
     const one = financeContractStatus("api", table)

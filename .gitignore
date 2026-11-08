@@ -44,3 +44,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# private handoff material (contains dev credentials) - never commit
+HMS Frontend Integration Handoff.md
+*Handoff*.md
+!docs/*.md

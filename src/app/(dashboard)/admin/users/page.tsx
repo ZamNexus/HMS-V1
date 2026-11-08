@@ -2,8 +2,9 @@
 import * as React from "react"
 import { AlertTriangle, Key, Pencil, Plus, Power, Search, ShieldCheck } from "lucide-react"
 
-import { ROLE_LABELS, ROLE_BADGE_CLASSES } from "@/data/users"
-import { DEFAULT_PAGE_SIZE, activeSuffix, errorSummary, rolesService, usersService, validateUserForm, viewState, type UserRecord } from "@/lib/services"
+import { ROLE_LABELS, ROLE_BADGE_CLASSES } from "@/lib/labels"
+import { UsersAdmin } from "@/components/admin/UsersAdmin"
+import { DEFAULT_PAGE_SIZE, activeSuffix, dataSource, errorSummary, rolesService, usersService, validateUserForm, viewState, type UserRecord } from "@/lib/services"
 import { Pagination } from "@/components/shared/Pagination"
 import { useResource } from "@/lib/useResource"
 import { cn, initials } from "@/lib/utils"
@@ -28,7 +29,12 @@ const roleText = (u: Pick<UserRecord, "role" | "roleLabel">) => u.roleLabel ?? R
 const inputClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 const selectClass = "h-11 rounded-xl bg-slate-50 border-slate-200 focus:bg-white focus:ring-2 focus:ring-[#1CC0CE]/20 focus:border-[#1CC0CE] transition-all"
 
+// API mode: the connected admin screen (src/components/admin/UsersAdmin.tsx). Mock mode keeps the demo screen below.
 export default function UserManagementPage() {
+  return dataSource === "api" ? <UsersAdmin /> : <MockUserManagement />
+}
+
+function MockUserManagement() {
   const { toast } = useToast()
   const [sheetTarget, setSheetTarget] = React.useState<UserRecord | "new" | null>(null)
   const [deactivateTarget, setDeactivateTarget] = React.useState<UserRecord | null>(null)

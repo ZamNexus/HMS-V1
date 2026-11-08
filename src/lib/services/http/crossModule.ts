@@ -1,7 +1,7 @@
 import { NotConnectedError } from "../errors"
-import type { BillSummaryService, ItemHistoryService, NotificationsService, ServiceUsageService } from "../types"
+import type { BillSummaryService, NotificationsService, ServiceUsageService } from "../types"
 import { callEndpoint } from "./call"
-import { itemHistoryQuery, parseBillSummary, parseItemHistory, reportQuery } from "./mappers"
+import { parseBillSummary, reportQuery } from "./mappers"
 
 /**
  * Real-backend Item History (T12), bill summary (patient / encounter balance panels) and notifications. Inert — no request is sent —
@@ -9,11 +9,6 @@ import { itemHistoryQuery, parseBillSummary, parseItemHistory, reportQuery } fro
  * here imports demo data or a mock adapter.
  */
 
-export const httpItemHistoryService: ItemHistoryService = {
-  async list(query) {
-    return parseItemHistory(await callEndpoint<unknown>("itemHistory.list", { query: () => itemHistoryQuery(query), signal: query.signal }))
-  },
-}
 
 // Invoice usage of a catalogue service is a mock-only demo view (see ServiceUsageEntry): no document describes it, so there is no endpoint
 // key or mapper. It must never stand in for the audit log above.

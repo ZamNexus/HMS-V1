@@ -218,7 +218,7 @@ export function Topbar({ onMenuClick }: { onMenuClick?: () => void }) {
             <DropdownMenuLabel className="font-normal p-2">
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-semibold leading-none text-slate-900">{user.name}</p>
-                <p className="text-xs text-slate-500 truncate">{user.identifier}</p>
+                <p className="text-xs text-slate-500 truncate">{user.username}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />

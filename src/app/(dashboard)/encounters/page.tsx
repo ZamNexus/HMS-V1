@@ -1,4 +1,7 @@
 "use client"
+import { Suspense } from "react"
+import { VisitsScreen } from "@/components/visits/VisitsScreen"
+import { dataSource as visitsDataSource } from "@/lib/services"
 import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -18,7 +21,8 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
-export default function EncounterListPage() {
+// Demo only (mock mode). Against the real API the list, the doctor's queue and the bed board are src/components/visits/VisitsScreen.tsx.
+function MockEncounterListPage() {
   const router = useRouter()
   const [search, setSearch] = React.useState("")
   const [query, setQuery] = React.useState("")
@@ -201,4 +205,10 @@ export default function EncounterListPage() {
       </div>
     </div>
   )
+}
+
+export default function EncounterListPage() {
+  // useSearchParams (the filters in the address bar) needs a Suspense boundary
+  if (visitsDataSource === "api") return <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading encounters…</div>}><VisitsScreen /></Suspense>
+  return <MockEncounterListPage />
 }

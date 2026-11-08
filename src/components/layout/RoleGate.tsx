@@ -1,12 +1,3 @@
-"use client"
-import type { ReactNode } from "react"
-
-import { useAuth } from "@/lib/auth"
-import type { Role } from "@/types"
-import { Forbidden } from "@/components/shared/Forbidden"
-
-export function RoleGate({ allow, children }: { allow: Role[]; children: ReactNode }) {
-  const { user } = useAuth()
-  if (!user || !user.role || !allow.includes(user.role)) return <Forbidden />
-  return <>{children}</>
-}
+// REMOVED (Phase 2, chunk A6): screens are gated by permission, not role. Route gating lives in AppShell (src/lib/session/permissions.ts ROUTE_RULES).
+// This empty file only remains because deleting files needs the owner's approval; it is safe to delete.
+export {}

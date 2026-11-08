@@ -4,6 +4,8 @@
 // Phase 1 (GET /health and its JSON error responses). Module-specific
 // request/response types are added per module from the API Reference.
 
+import type { Schemas } from "./contract"
+
 /** ULID identifier (26-char Crockford base32). */
 export type Ulid = string
 /** Money is always a decimal string on the wire (never a JS number). */
@@ -23,28 +25,23 @@ export interface ErrorResponse {
   requestId: string | null
   path: string
   timestamp: IsoDateTime
-  /** Present on VALIDATION_FAILED: one entry per invalid field. */
-  details?: { path: string; message: string }[]
+  /**
+   * On VALIDATION_FAILED: a list with one { path, message } per invalid field. On most other codes an object (for example
+   * { matches }, { retryAfterSeconds }, { problems }). Use fieldErrorsOf() instead of assuming a list.
+   */
+  details?: { path: string; message: string }[] | Record<string, unknown>
   /** Any additional fields the backend sends. */
   [extra: string]: unknown
 }
 
 /** POST /api/v1/auth/login request body. */
-export interface LoginRequest {
-  hospitalCode: string
-  identifier: string
-  password: string
-}
+export type LoginRequest = Schemas["SignInDto"]
 
 /**
- * POST /api/v1/auth/login response. Only `accessToken` is documented; the
- * refresh token arrives as an httpOnly cookie. Any other fields (user, role,
- * ...) are intentionally left untyped until the response structure is confirmed.
+ * POST /api/v1/auth/login response (SignInResponseDto_Output): accessToken, tokenType, expiresIn and the signed-in user with role,
+ * mustChangePassword and permissions. The refresh token arrives as an httpOnly cookie. Sign-in chunk A1 reads the rest of it.
  */
-export interface LoginResponse {
-  accessToken: string
-  [extra: string]: unknown
-}
+export type LoginResponse = Schemas["SignInResponseDto_Output"]
 
 /** GET /health */
 export interface HealthResponse {

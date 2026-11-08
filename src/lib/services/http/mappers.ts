@@ -1,6 +1,12 @@
 import type { QueryParams } from "@/lib/api/client"
+import type { Schemas } from "@/lib/api/contract"
 import { NotConnectedError } from "../errors"
-import type {
+import { asObj, optDecimalString, optStr, pageQuery, parsePage, reqBool, reqEnum, reqStr, reqUlid } from "./wire"
+import type { GuardianRelationPatch, OrganisationPatch,
+  GuardianRelationInput,
+  GuardianRelationRecord,
+  OrganisationInput,
+  OrganisationRecord,
   CashFlowData,
   DailyCheckupRevenuePoint,
   DashboardRevenuePoint,
@@ -23,13 +29,7 @@ import type {
   PharmacyReportData,
   PrescriptionHistoryReportData,
   RevenueReportData,
-  ServiceCatalogInput,
-  ServiceCatalogRecord,
-  ItemHistoryEntry,
-  ItemHistoryQuery,
   BillSummary,
-  BankAccountInput,
-  BankAccountRecord,
   BankStatementRow,
   BankTransactionInput,
   BankTransactionRecord,
@@ -40,8 +40,6 @@ import type {
   BillingReceiptRecord,
   ConsultationInvoiceInput,
   ConsultationInvoiceRecord,
-  ExpenseCategoryInput,
-  ExpenseCategoryRecord,
   ExpenseInput,
   ExpenseRecord,
   ExpenseTotals,
@@ -52,8 +50,6 @@ import type {
   DischargeInput,
   DischargeResult,
   DoctorRecord,
-  EcgUltrasoundTestInput,
-  EcgUltrasoundTestRecord,
   EncounterInput,
   EncounterListOptions,
   DispenseInput,
@@ -69,15 +65,9 @@ import type {
   LabOrderListOptions,
   LabOrderRecord,
   LabResultEntryInput,
-  LabTestInput,
-  LabTestListOptions,
-  LabTestRecord,
   ListResult,
   MedicineInput,
   MedicineRecord,
-  PatientInput,
-  PatientListOptions,
-  PatientRecord,
   StockAdjustmentInput,
   UserInput,
   UserRecord,
@@ -111,14 +101,17 @@ type ListParams = Pick<ListOptions, "search" | "page" | "pageSize">
 
 // ── Current user ──
 /**
- * GET /auth/me. The API Reference overview says only that it returns the signed-in
- * user's permissions; the response schema (field names, types, any identity or role
- * fields) is NOT documented there, so no field name is assumed. Implement from the
- * OpenAPI schema. Until then this rejects, and permissions stay unknown (grant nothing).
+ * GET /auth/me -> AuthUserDto (docs/openapi.json). Only the permission list is read: `permissions` is an array of
+ * permission names such as "patients.read". Unknown names are kept (a newer backend may add some), a missing or
+ * non-array list is rejected so permissions stay unknown (grant nothing) instead of silently becoming empty.
+ * Nothing calls this yet: wiring navigation to permissions is a separate decision (auth/roles are out of scope here).
  */
 export function parseCurrentUser(raw: unknown): CurrentUser {
-  void raw
-  return pending("auth.me response mapping")
+  const o = asObj(raw, "auth/me")
+  if (!Array.isArray(o.permissions) || !o.permissions.every((p) => typeof p === "string")) {
+    throw new TypeError("Unexpected response: auth/me.permissions is not a list of strings.")
+  }
+  return { permissions: [...new Set(o.permissions as string[])] }
 }
 
 // ── Users ──
@@ -145,14 +138,6 @@ export function userActivePayload(active: boolean): unknown {
 }
 
 // ── Doctors ──
-export function doctorListQuery(params: ListParams): QueryParams {
-  void params
-  return pending("doctors.list query parameters (search / pagination)")
-}
-export function parseDoctorList(raw: unknown): ListResult<DoctorRecord> {
-  void raw
-  return pending("doctors.list response mapping")
-}
 // NOTE: `DoctorInput.photoUrl` is a browser data URL today (PhotoUpload). File storage (T13) is not
 // built, so the mapper must NOT send it as base64 inside the doctor payload; omit it until the
 // documented upload mechanism exists.
@@ -165,26 +150,111 @@ export function doctorPayload(input: DoctorInput): unknown {
   return pending("doctors.create/update request payload")
 }
 
-// ── Patients (CONTRACT REQUIRED: every function below needs the OpenAPI schema) ──
-// Conventions to apply when implementing: ids via isUlid(); dates stay YYYY-MM-DD strings; instants ISO-8601;
-// any money field via parseMoney (src/lib/api/convert.ts). Malformed data must throw, never render as NaN/blank.
-// `PatientInput.photoUrl` is a browser data URL: do NOT send it as base64 (file storage, task T13, is not built).
-// MR number, age and registration date are not inputs; confirm which the backend assigns/returns.
-export function patientListQuery(params: Pick<PatientListOptions, "search" | "status" | "page" | "pageSize">): QueryParams {
-  void params
-  return pending("patients.list query parameters (search / status filter / pagination)")
+// ── Patients: moved to ./patientMap (Phase 5). Re-exported so older imports keep working. ──
+export {
+  CNIC_RE, PATIENT_LIMITS, PHONE_RE, coverageSetOf, duplicateMatchesOf, duplicateQuery, parseDuplicateMatches, parsePatient, parsePatientList,
+  patientCreatePayload, patientHasChanges, patientListQuery, patientUpdatePayload, recordDeathPayload,
+  type CreatePatientBody, type RecordDeathBody, type UpdatePatientBody,
+} from "./patientMap"
+
+// ── Organisations (panels) and guardian relations: CONNECTED in Phase 5A (PanelPageDto / GuardianRelationPageDto) ──
+const trimmed = (v: string | undefined): string | undefined => {
+  const t = v?.trim()
+  return t ? t : undefined
 }
-export function parsePatientList(raw: unknown): ListResult<PatientRecord> {
-  void raw
-  return pending("patients.list response mapping")
+const PANEL_TYPE_FROM_WIRE = { insurance: "Insurance", corporate: "Corporate", government: "Government", other: "Other" } as const
+const PANEL_TYPE_TO_WIRE: Record<string, "insurance" | "corporate" | "government" | "other"> = { Insurance: "insurance", Corporate: "corporate", Government: "government", Other: "other" }
+
+export function referenceListQuery(params: ListParams): QueryParams {
+  return { ...pageQuery(params.page, params.pageSize), search: params.search || undefined }
 }
-export function parsePatient(raw: unknown): PatientRecord {
-  void raw
-  return pending("patient response mapping")
+
+export function parseOrganisation(raw: unknown, dto = "PanelResponseDto_Output"): OrganisationRecord {
+  const o = asObj(raw, "panel")
+  return {
+    id: reqUlid(o, "id", "panel"),
+    name: reqStr(o, "name", "panel"),
+    type: PANEL_TYPE_FROM_WIRE[reqEnum(o, "type", "panel", ["insurance", "corporate", "government", "other"])],
+    contactPerson: optStr(o, "contactPerson", "panel", dto) ?? "",
+    phone: optStr(o, "phone", "panel", dto) ?? "",
+    // commissionPct travels as a decimal string (or null); the UI shows it as a plain number.
+    commissionPct: Number(optDecimalString(o, "commissionPct", "panel", dto) ?? "0"),
+    discountPct: Number(optDecimalString(o, "discountPct", "panel", dto) ?? "0"),
+    billingMode: reqEnum(o, "billingMode", "panel", ["patient_pays", "panel_billed"]),
+    active: reqBool(o, "active", "panel"),
+  }
 }
-export function patientPayload(input: PatientInput): unknown {
-  void input
-  return pending("patients.create/update request payload")
+export function parseOrganisationList(raw: unknown): ListResult<OrganisationRecord> {
+  return parsePage(raw, "panels", (item) => parseOrganisation(item, "PanelPageDto_Output"))
+}
+/** POST /panels (CreatePanelDto). `active` is not a create field: a panel is created active, so creating an inactive one is refused. */
+export type CreatePanelBody = Schemas["CreatePanelDto"]
+export type UpdatePanelBody = Schemas["UpdatePanelDto"]
+export type CreateGuardianRelationBody = Schemas["CreateGuardianRelationDto"]
+export type UpdateGuardianRelationBody = Schemas["UpdateGuardianRelationDto"]
+
+export function organisationPayload(input: OrganisationInput): CreatePanelBody {
+  if (!input.active) throw new NotConnectedError("creating an inactive panel (the API creates panels active; deactivate is a separate call)")
+  if (!Number.isFinite(input.commissionPct) || input.commissionPct < 0) throw new RangeError("Commission must be zero or more.")
+  const type = PANEL_TYPE_TO_WIRE[input.type]
+  if (!type) throw new TypeError("Unsupported organisation type.")
+  const body: CreatePanelBody = { name: input.name.trim(), type, commissionPct: String(input.commissionPct) }
+  if (trimmed(input.contactPerson)) body.contactPerson = trimmed(input.contactPerson)
+  if (trimmed(input.phone)) body.phone = trimmed(input.phone)
+  if (input.discountPct !== undefined) body.discountPct = percentString(input.discountPct, "Discount")
+  if (input.billingMode !== undefined) body.billingMode = input.billingMode
+  return body
+}
+
+/** A percentage as the decimal string the API takes (not a float formatted by the browser). */
+function percentString(value: number, label: string): string {
+  if (!Number.isFinite(value) || value < 0) throw new RangeError(`${label} must be zero or more.`)
+  return String(value)
+}
+
+/**
+ * PATCH /panels/{id} (UpdatePanelDto): ONLY the fields in `patch` (the caller passes what changed). "" clears contactPerson / phone
+ * (the API: null or "" clears an optional field).
+ */
+export function organisationUpdatePayload(patch: OrganisationPatch): UpdatePanelBody {
+  const body: UpdatePanelBody = {}
+  if (patch.name !== undefined) body.name = patch.name.trim()
+  if (patch.type !== undefined) {
+    const wire = PANEL_TYPE_TO_WIRE[patch.type]
+    if (!wire) throw new TypeError("Unsupported organisation type.")
+    body.type = wire
+  }
+  if (patch.contactPerson !== undefined) body.contactPerson = trimmed(patch.contactPerson) ?? ""
+  if (patch.phone !== undefined) body.phone = trimmed(patch.phone) ?? ""
+  if (patch.commissionPct !== undefined) body.commissionPct = percentString(patch.commissionPct, "Commission")
+  if (patch.discountPct !== undefined) body.discountPct = percentString(patch.discountPct, "Discount")
+  if (patch.billingMode !== undefined) body.billingMode = patch.billingMode
+  if (Object.keys(body).length === 0) throw new RangeError("Nothing to update.")
+  return body
+}
+
+export function parseGuardianRelation(raw: unknown, dto = "GuardianRelationResponseDto_Output"): GuardianRelationRecord {
+  const o = asObj(raw, "guardian relation")
+  return { id: reqUlid(o, "id", "guardian relation"), name: reqStr(o, "name", "guardian relation"), remarks: optStr(o, "remarks", "guardian relation", dto), active: reqBool(o, "active", "guardian relation") }
+}
+export function parseGuardianRelationList(raw: unknown): ListResult<GuardianRelationRecord> {
+  return parsePage(raw, "guardian relations", (item) => parseGuardianRelation(item, "GuardianRelationPageDto_Output"))
+}
+/** POST /guardian-relations (CreateGuardianRelationDto). Same rule as panels for `active`. */
+export function guardianRelationPayload(input: GuardianRelationInput): CreateGuardianRelationBody {
+  if (!input.active) throw new NotConnectedError("creating an inactive guardian relation (the API creates them active)")
+  const body: CreateGuardianRelationBody = { name: input.name.trim() }
+  if (trimmed(input.remarks)) body.remarks = trimmed(input.remarks)
+  return body
+}
+
+/** PATCH /guardian-relations/{id} (UpdateGuardianRelationDto): only what changed; "" clears the remarks. */
+export function guardianRelationUpdatePayload(patch: GuardianRelationPatch): UpdateGuardianRelationBody {
+  const body: UpdateGuardianRelationBody = {}
+  if (patch.name !== undefined) body.name = patch.name.trim()
+  if (patch.remarks !== undefined) body.remarks = trimmed(patch.remarks) ?? ""
+  if (Object.keys(body).length === 0) throw new RangeError("Nothing to update.")
+  return body
 }
 
 // ── Encounters + wards/beds (CONTRACT REQUIRED: every function below needs the OpenAPI schema) ──
@@ -240,38 +310,6 @@ export function parseWardList(raw: unknown): ListResult<WardRecord> {
 //  - result flags are server-generated (High/Low/Critical); map them to the UI's "Normal" | "High" | "Low" | "Critical" | ""
 //  - how are status transitions and result entry/verification exposed (one route or several; who may verify)?
 //  - list order must be newest first; supply the query parameters for status, patient, search and paging
-export function labTestListQuery(params: Pick<LabTestListOptions, "search" | "category" | "page" | "pageSize">): QueryParams {
-  void params
-  return pending("labTests.list query parameters (search / category / pagination)")
-}
-export function parseLabTestList(raw: unknown): ListResult<LabTestRecord> {
-  void raw
-  return pending("labTests.list response mapping")
-}
-export function parseLabTest(raw: unknown): LabTestRecord {
-  void raw
-  return pending("lab test response mapping")
-}
-export function labTestPayload(input: LabTestInput): unknown {
-  void input
-  return pending("labTests.create/update request payload")
-}
-export function ecgTestListQuery(params: Pick<ListOptions, "search" | "page" | "pageSize">): QueryParams {
-  void params
-  return pending("ecgTests.list query parameters")
-}
-export function parseEcgTestList(raw: unknown): ListResult<EcgUltrasoundTestRecord> {
-  void raw
-  return pending("ecgTests.list response mapping")
-}
-export function parseEcgTest(raw: unknown): EcgUltrasoundTestRecord {
-  void raw
-  return pending("ECG/ultrasound test response mapping")
-}
-export function ecgTestPayload(input: EcgUltrasoundTestInput): unknown {
-  void input
-  return pending("ecgTests.create/update request payload")
-}
 export function labOrderListQuery(params: Pick<LabOrderListOptions, "search" | "status" | "patientId" | "page" | "pageSize">): QueryParams {
   void params
   return pending("labOrders.list query parameters (search / status / patient / pagination / sort)")
@@ -458,22 +496,6 @@ export function receiptPayload(input: BillingReceiptInput): unknown {
   void input
   return pending("receipts.create request payload")
 }
-export function expenseCategoryListQuery(params: Pick<ListOptions, "search" | "page" | "pageSize">): QueryParams {
-  void params
-  return pending("expenseCategories.list query parameters")
-}
-export function parseExpenseCategoryList(raw: unknown): ListResult<ExpenseCategoryRecord> {
-  void raw
-  return pending("expenseCategories.list response mapping")
-}
-export function parseExpenseCategory(raw: unknown): ExpenseCategoryRecord {
-  void raw
-  return pending("expense category response mapping")
-}
-export function expenseCategoryPayload(input: ExpenseCategoryInput): unknown {
-  void input
-  return pending("expenseCategories.create/update request payload")
-}
 export function expenseListQuery(params: Pick<ListOptions, "search" | "page" | "pageSize">): QueryParams {
   void params
   return pending("expenses.list query parameters")
@@ -497,22 +519,6 @@ export function expenseTotalsQuery(params: { dateFrom?: string; dateTo?: string 
 export function parseExpenseTotals(raw: unknown): ExpenseTotals {
   void raw
   return pending("expenses.totals response mapping")
-}
-export function bankAccountListQuery(params: Pick<ListOptions, "search" | "page" | "pageSize">): QueryParams {
-  void params
-  return pending("bankAccounts.list query parameters")
-}
-export function parseBankAccountList(raw: unknown): ListResult<BankAccountRecord> {
-  void raw
-  return pending("bankAccounts.list response mapping")
-}
-export function parseBankAccount(raw: unknown): BankAccountRecord {
-  void raw
-  return pending("bank account response mapping")
-}
-export function bankAccountPayload(input: BankAccountInput): unknown {
-  void input
-  return pending("bankAccounts.create/update request payload")
 }
 export function bankStatementQuery(params: Pick<ListOptions, "search" | "page" | "pageSize">): QueryParams {
   void params
@@ -599,10 +605,6 @@ export function parsePrescriptionHistoryReport(raw: unknown): PrescriptionHistor
   void raw
   return pending("prescription history report response mapping")
 }
-export function parseServiceCatalogList(raw: unknown): ListResult<ServiceCatalogRecord> {
-  void raw
-  return pending("serviceCatalog.list response mapping")
-}
 
 // ── Dashboard (T10) and Financial Statistics (T11) (CONTRACT REQUIRED: every function below needs the OpenAPI schema) ──
 // Questions for the implementer (also in the handoff): one summary endpoint for all nine tiles, or one per tile? Does it vary by role
@@ -652,22 +654,6 @@ export function parseDailyCheckupRevenue(raw: unknown): DailyCheckupRevenuePoint
 //    paged? Which roles may call it — the Task List says admins only; the frontend must not infer that from a role name.
 //  * bill summary: is there a per-patient / per-encounter summary, or must it come from the Patient Balances report + invoices? What does "balance" mean
 //    (the demo clamps at 0 and treats imaging and pharmacy as always paid — those are demo rules, not documented ones)?
-export function serviceCatalogBody(input: ServiceCatalogInput): unknown {
-  void input
-  return pending("serviceCatalog request body")
-}
-export function parseServiceCatalogRecord(raw: unknown): ServiceCatalogRecord {
-  void raw
-  return pending("serviceCatalog response mapping")
-}
-export function itemHistoryQuery(query: Pick<ItemHistoryQuery, "subject" | "id">): QueryParams {
-  void query
-  return pending("itemHistory.list query parameters (entity type and ID)")
-}
-export function parseItemHistory(raw: unknown): ListResult<ItemHistoryEntry> {
-  void raw
-  return pending("itemHistory.list response mapping")
-}
 export function parseBillSummary(raw: unknown): BillSummary {
   void raw
   return pending("bill summary response mapping")

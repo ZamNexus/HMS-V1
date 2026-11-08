@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Plus, X } from "lucide-react"
 
-import { nextXrNo } from "@/data/imaging"
+import { demo } from "@hms/demo"
 import {
   DEFAULT_PAGE_SIZE, dataSource, encountersService, errorSummary, imagingOrdersService, isImagingTest, labLineTotal, labOrderTotals, type PatientRecord,
 } from "@/lib/services"
@@ -25,6 +25,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import { OrderForm } from "@/components/diagnostics/OrderForm"
+import { dataSource as dxDataSource } from "@/lib/services"
 
 const MODES: PaymentMode[] = ["Cash", "Card", "Bank Transfer", "Insurance", "On Account"]
 const MODE_LABELS: Partial<Record<PaymentMode, string>> = { "On Account": "Credit" }
@@ -281,13 +283,19 @@ function ImagingOrderFormContent() {
   )
 }
 
-export default function ImagingOrderFormPage() {
+function MockImagingOrderFormPage() {
   return (
     <div>
-      <PageHeader title="New Imaging Order" subtitle={dataSource === "mock" ? nextXrNo() : "Order number assigned on save"} />
+      <PageHeader title="New Imaging Order" subtitle={dataSource === "mock" ? demo.data.nextXrNo() : "Order number assigned on save"} />
       <Suspense fallback={<div className="p-10 text-center">Loading form...</div>}>
         <ImagingOrderFormContent />
       </Suspense>
     </div>
   )
+}
+
+// useSearchParams (the filters in the address bar) needs a Suspense boundary
+export default function ImagingOrderFormPage() {
+  if (dxDataSource === "api") return <Suspense fallback={<div className="p-10 text-center text-sm text-slate-500">Loading…</div>}><OrderForm kind="imaging" /></Suspense>
+  return <MockImagingOrderFormPage />
 }

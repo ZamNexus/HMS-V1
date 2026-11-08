@@ -14,7 +14,7 @@ Next.js 16 / React 19 frontend for the HMS. This repository holds the frontend p
 ### Modules moved onto services
 | Module | Covers |
 |---|---|
-| Patients, doctors, organisations, wards, guardian relations | shared reference-data hooks and lookups |
+| Patients, doctors, organisations, wards, guardian relations | shared reference-data hooks and lookups. **Patients, organisations (panels) and guardian relations are also connected to the API specification** (`docs/openapi.json`), checked against the spec and a fake backend; not yet verified against a live backend |
 | Encounters | list, detail, new (4-step wizard), discharge |
 | Laboratory (T1, T2) | tests catalogue, orders, results |
 | Imaging (T3) | orders, reports |
@@ -37,7 +37,7 @@ Next.js 16 / React 19 frontend for the HMS. This repository holds the frontend p
 - Browser checks were run in real Edge in both modes.
 
 ## What is needed to connect to the backend
-- The full API spec (`docs/openapi.json` or `/api/docs`): routes and request/response shapes for each module.
+- Verification against the live backend (the spec is in `docs/openapi.json`; Patients, organisations and guardian relations are connected to it, the other modules are not yet).
 - Development login credentials, and the permissions returned by `GET /auth/me`.
 - A few business decisions, such as the low-stock rule; the questions are listed per module in the handoff.
 
@@ -46,7 +46,7 @@ Next.js 16 / React 19 frontend for the HMS. This repository holds the frontend p
 - **API mode** (production default): real backend only.
 
 ## Documentation
-[`docs/FRONTEND_BACKEND_INTEGRATION_HANDOFF.md`](docs/FRONTEND_BACKEND_INTEGRATION_HANDOFF.md) is the per-phase record of what was built and tested, with the contract questions for each module.
+[`docs/INTEGRATION_PLAN.md`](docs/INTEGRATION_PLAN.md) is the phased plan for connecting every module to the backend (phases, chunks, blocked items, decisions) and [`docs/INTEGRATION_PROGRESS.md`](docs/INTEGRATION_PROGRESS.md) is the live status per chunk. [`docs/FRONTEND_BACKEND_INTEGRATION_HANDOFF.md`](docs/FRONTEND_BACKEND_INTEGRATION_HANDOFF.md) is the per-phase record of what was built and tested, with the contract questions for each module.
 
 ## Tests
 ```bash

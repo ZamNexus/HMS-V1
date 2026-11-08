@@ -6,8 +6,11 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
 
-import { useAuth, roleLabel } from "@/lib/auth"
-import { ROLE_LABELS } from "@/data/users"
+import { api } from "@/lib/api/client"
+import { useAuth, roleLabel, type EndReason } from "@/lib/auth"
+import { parseHospitalBranding } from "@/lib/session/hospital"
+import { readLastHospitalCode, rememberHospitalCode } from "@/lib/session/lastHospital"
+import { ROLE_LABELS } from "@/lib/labels"
 import { useToast } from "@/components/ui/use-toast"
 import { Toaster } from "@/components/ui/toaster"
 
@@ -15,6 +18,14 @@ import { Toaster } from "@/components/ui/toaster"
 const ALL_ROLE_LABELS: Record<string, string> = {
   ...ROLE_LABELS,
   patient: "Patient",
+}
+
+// A short note for a session that ended without the user choosing to sign out.
+const ENDED_NOTES: Partial<Record<EndReason, string>> = {
+  "shift-ended": "Your shift session ended. Please sign in again.",
+  idle: "You were signed out after 15 minutes without activity.",
+  "session-ended": "Your session has ended. Please sign in again.",
+  "signed-out-elsewhere": "You were signed out in another tab.",
 }
 
 // ─── Form schema ─────────────────────────────────────────────────
@@ -207,7 +218,7 @@ function AlreadySignedIn({
           </div>
           <div>
             <p style={{ fontWeight: 600, fontSize: "0.9rem", color: "#0D1B2E", marginBottom: "2px" }}>{user.name}</p>
-            <p style={{ fontSize: "0.78rem", color: "#64748B", marginBottom: "6px" }}>{user.identifier}</p>
+            <p style={{ fontSize: "0.78rem", color: "#64748B", marginBottom: "6px" }}>{user.username}</p>
             <span style={{
               display: "inline-flex", alignItems: "center",
               background: "rgba(28,192,206,0.10)", border: "1px solid rgba(28,192,206,0.30)",
@@ -235,7 +246,7 @@ function AlreadySignedIn({
           </Link>
 
           <button
-            onClick={() => { logout(); router.push("/login" + (roleParam ? `?role=${roleParam}` : "")) }}
+            onClick={() => { logout(); router.push("/login" + (roleParam ? `?role=${encodeURIComponent(roleParam)}` : "")) }}
             style={{
               width: "100%", padding: "13px 16px", borderRadius: "10px",
               background: "transparent", border: "1.5px solid #D8E0EB",
@@ -256,8 +267,11 @@ function AlreadySignedIn({
 // ─── Login page ──────────────────────────────────────────────────
 
 function LoginContent() {
-  const { user, login, logout } = useAuth()
+  const { user, isInitialized, endedReason, bootError, login, logout } = useAuth()
   const router = useRouter()
+  // seconds until sign-in may be tried again (account lockout, or too many attempts from this device)
+  const [wait, setWait] = React.useState(0)
+  const [formError, setFormError] = React.useState<{ message: string; requestId: string | null } | null>(null)
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [showPassword, setShowPassword] = React.useState(false)
@@ -267,18 +281,53 @@ function LoginContent() {
 
   React.useEffect(() => {
     if (roleParam) {
-      setRoleLabel(ALL_ROLE_LABELS[roleParam] ?? null)
+      setRoleLabel(Object.hasOwn(ALL_ROLE_LABELS, roleParam) ? ALL_ROLE_LABELS[roleParam] : null)
     }
   }, [roleParam])
 
   const {
     register,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { hospitalCode: "", identifier: "", password: "", remember: false },
   })
+
+  // Pre-fill the Hospital Code: the hospital behind this address if the server knows it (404 is normal while hospitals share one domain),
+  // otherwise the last code typed on this device. Never overwrites what the user already typed.
+  React.useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      let code = ""
+      try {
+        code = parseHospitalBranding(await api.get<unknown>("/public/hospital", { query: { host: window.location.host }, auth: false })).code
+      } catch {
+        // 404 (shared domain), offline, anything else: fall back to the remembered code
+      }
+      if (!code) code = readLastHospitalCode()
+      if (!cancelled && code && !getValues("hospitalCode")) setValue("hospitalCode", code)
+    })()
+    return () => { cancelled = true }
+  }, [getValues, setValue])
+
+  // Count the wait down once a second
+  React.useEffect(() => {
+    if (wait <= 0) return
+    const timer = setInterval(() => setWait((w) => Math.max(0, w - 1)), 1000)
+    return () => clearInterval(timer)
+  }, [wait > 0]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The boot refresh has not answered yet: a neutral splash, never the sign-in form first
+  if (!isInitialized) {
+    return (
+      <div role="status" aria-live="polite" style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-inter), system-ui, sans-serif", color: "#64748B", fontSize: "0.9rem" }}>
+        Loading…
+      </div>
+    )
+  }
 
   // Already logged in — show switch-account screen instead of form
   if (user) {
@@ -293,9 +342,13 @@ function LoginContent() {
       password: values.password,
     })
     if (!result.ok) {
-      toast({ variant: "destructive", title: "Sign in failed", description: result.error })
+      setFormError({ message: result.error, requestId: result.requestId })
+      if (result.retryAfterSeconds && (result.code === "ACCOUNT_LOCKED" || result.code === "TOO_MANY_REQUESTS")) setWait(result.retryAfterSeconds)
+      toast({ variant: "destructive", title: "Sign in failed", description: result.requestId ? `${result.error} (Reference: ${result.requestId})` : result.error })
       return
     }
+    setFormError(null)
+    rememberHospitalCode(values.hospitalCode)
     router.push("/dashboard")
   }
 
@@ -451,6 +504,12 @@ function LoginContent() {
           <p style={{ fontSize: "0.875rem", color: "#64748B", marginBottom: roleLabel ? "14px" : "24px" }}>
             Enter your credentials to reach your dashboard.
           </p>
+
+          {(bootError || (endedReason && ENDED_NOTES[endedReason])) && (
+            <p role="status" data-testid="login-note" style={{ fontSize: "0.82rem", color: "#92400E", background: "#FEF3C7", border: "1px solid #FDE68A", borderRadius: "10px", padding: "10px 12px", marginBottom: "18px" }}>
+              {bootError ?? (endedReason ? ENDED_NOTES[endedReason] : null)}
+            </p>
+          )}
 
           {/* ── Role badge (from landing page query param) ───────── */}
           {roleLabel && (
@@ -639,7 +698,7 @@ function LoginContent() {
             {/* Sign in button — navy gradient with inset highlight and depth shadow */}
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || wait > 0}
               style={{
                 width: "100%",
                 padding: "14px",
@@ -678,8 +737,15 @@ function LoginContent() {
                 (e.currentTarget as HTMLButtonElement).style.outline = "none"
               }}
             >
-              {isSubmitting ? "Signing in…" : (roleLabel ? `Continue as ${roleLabel}` : "Sign in")}
+              {isSubmitting ? "Signing in…" : wait > 0 ? `Try again in ${wait}s` : (roleLabel ? `Continue as ${roleLabel}` : "Sign in")}
             </button>
+            {formError && (
+              <p role="alert" data-testid="login-error" style={{ fontSize: "0.82rem", color: "#B91C1C", marginTop: "12px" }}>
+                {formError.message}
+                {wait > 0 && <> Try again in {wait} seconds.</>}
+                {formError.requestId && <span data-testid="support-reference" style={{ display: "block", fontSize: "0.72rem", color: "#94A3B8", marginTop: "2px" }}>Support reference: <span style={{ fontFamily: "monospace" }}>{formError.requestId}</span></span>}
+              </p>
+            )}
           </form>
 
           {/* ── Security reassurance line ──────────────────────── */}

@@ -1,9 +1,9 @@
-import type { ListOptions, ReportsService, ServiceCatalogService } from "../types"
+import type { ListOptions, ReportsService } from "../types"
 import { callEndpoint } from "./call"
 import {
   parseAccountsPaymentsReport, parseAccountsReceiptsReport, parseDailySummaryReport, parseDailyTransactionsReport, parseDemographicsReport, parseExpenseTrend,
   parseLabReport, parseOpdStatisticsReport, parseOrganisationBalancesReport, parsePatientAccountSummaryReport, parsePatientBalancesReport, parsePharmacyReport,
-  parsePrescriptionHistoryReport, parseRevenueReport, parseServiceCatalogList, parseServiceCatalogRecord, reportQuery, serviceCatalogBody,
+  parsePrescriptionHistoryReport, parseRevenueReport, reportQuery,
 } from "./mappers"
 
 /**
@@ -56,17 +56,5 @@ export const httpReportsService: ReportsService = {
   },
   async prescriptionHistory(opts = {}) {
     return parsePrescriptionHistoryReport(await callEndpoint<unknown>("reports.prescriptionHistory", { query: () => reportQuery("reports.prescriptionHistory", listParams(opts)), signal: opts.signal }))
-  },
-}
-
-export const httpServiceCatalogService: ServiceCatalogService = {
-  async list(opts = {}) {
-    return parseServiceCatalogList(await callEndpoint<unknown>("serviceCatalog.list", { query: () => reportQuery("serviceCatalog.list", { ...listParams(opts), category: opts.category }), signal: opts.signal }))
-  },
-  async create(input) {
-    return parseServiceCatalogRecord(await callEndpoint<unknown>("serviceCatalog.create", { body: () => serviceCatalogBody(input) }))
-  },
-  async update(id, input) {
-    return parseServiceCatalogRecord(await callEndpoint<unknown>("serviceCatalog.update", { params: { id }, body: () => serviceCatalogBody(input) }))
   },
 }

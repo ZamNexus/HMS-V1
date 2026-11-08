@@ -3,6 +3,7 @@
 // (the public pages). It replaces the root layout, so it renders its own
 // <html>/<body> and can't rely on globals.css: styles are inline.
 import * as React from "react"
+import { logRouteError } from "@/lib/errorLog"
 
 export default function GlobalError({
   error,
@@ -12,7 +13,8 @@ export default function GlobalError({
   retry: () => void
 }) {
   React.useEffect(() => {
-    console.error("Unhandled application error:", error)
+    // names, codes and ids only: the error object can carry the backend response (patient data)
+    logRouteError("Unhandled application error", error)
   }, [error])
 
   return (

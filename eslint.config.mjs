@@ -23,6 +23,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // The API-mode browser suites and their test backends (plain Node scripts, see e2e-api/README.md).
+    "e2e-api/**",
+    // Generated from docs/openapi.json by `npm run types:generate`.
+    "src/lib/api/schema.d.ts",
   ]),
 ]);
 

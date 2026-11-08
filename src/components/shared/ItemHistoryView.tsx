@@ -78,7 +78,7 @@ export function ItemHistoryView({ source, state }: { source: DataSource; state: 
               <TableCell className="text-sm font-medium whitespace-nowrap">{format(new Date(e.at), "dd MMM yyyy, HH:mm")}</TableCell>
               <TableCell className="font-bold">{e.action}</TableCell>
               <TableCell className="font-medium text-slate-600">{e.actor ?? "—"}</TableCell>
-              <TableCell className="font-medium text-slate-600">{e.details}</TableCell>
+              <TableCell className="whitespace-pre-line font-medium text-slate-600">{e.details}</TableCell>
             </TableRow>
           ))}
         </TableBody>

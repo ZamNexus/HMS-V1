@@ -4,11 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   LayoutDashboard, Users, ClipboardList, Receipt, FlaskConical, Pill, ScanLine,
-  UserCog, Stethoscope, Settings, BarChart3, LogOut, Activity, X, ShieldCheck
+  UserCog, Stethoscope, Settings, BarChart3, LogOut, Activity, X, ShieldCheck, CalendarDays
 } from "lucide-react"
 
 import { cn, initials } from "@/lib/utils"
-import { useAuth, canSeeNav, roleLabel } from "@/lib/auth"
+import { useAuth, roleLabel } from "@/lib/auth"
+import { useAccess } from "@/lib/session/useAccess"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface NavItem {
@@ -35,6 +36,7 @@ const SECTIONS: NavSection[] = [
     items: [
       { key: "patients", label: "Patients", to: "/patients", icon: Users },
       { key: "encounters", label: "Encounters", to: "/encounters", icon: ClipboardList },
+      { key: "appointments", label: "Appointments", to: "/appointments", icon: CalendarDays },
     ],
   },
   { 
@@ -64,6 +66,7 @@ const SECTIONS: NavSection[] = [
 
 export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const { user, logout } = useAuth()
+  const { canNav } = useAccess()
   const pathname = usePathname()
   if (!user) return null
 
@@ -114,7 +117,7 @@ export function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: (
         {/* Nav Links List */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:'none'] [scrollbar-width:'none']">
           {SECTIONS.map((section) => {
-            const items = section.items.filter((item) => canSeeNav(user, item.key))
+            const items = section.items.filter((item) => canNav(item.key))
             if (items.length === 0) return null
 
             return (
