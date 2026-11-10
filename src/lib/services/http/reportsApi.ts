@@ -169,6 +169,11 @@ function moneyText(s: Obj, key: string, what: string): string | null {
   if (typeof v !== "string" || !/^-?\d+(\.\d+)?$/.test(v)) throw new TypeError(`Unexpected response: ${what}.${key} is not a decimal string.`)
   return v
 }
+/** A count the backend nests in an object (`lowStock: { count, ... }`, `mine: { today, open }`); a plain number is still read. */
+function nestedCount(s: Obj, key: string, inner: string, what: string): number | null {
+  const v = s[key]
+  return v !== null && typeof v === "object" && !Array.isArray(v) ? dashCount(v as Obj, inner, `${what}.${key}`) : dashCount(s, key, what)
+}
 const series = (s: Obj, key: string): DashSeriesPoint[] | null => (s[key] === undefined || s[key] === null ? null : seriesOf(s[key]))
 
 export function parseDashboard(raw: unknown): DashboardApiData {
@@ -176,11 +181,11 @@ export function parseDashboard(raw: unknown): DashboardApiData {
   const section = (key: string): Obj | null => (o[key] === undefined || o[key] === null ? null : asObj(o[key], `dashboard.${key}`))
   const visits = section("visits"), admitted = section("admitted"), lab = section("lab"), imaging = section("imaging"), pharmacy = section("pharmacy"), revenue = section("revenue"), flow = section("patientFlow")
   return {
-    visits: visits && { today: dashCount(visits, "today", "visits"), yesterday: dashCount(visits, "yesterday", "visits"), mine: dashCount(visits, "mine", "visits") },
+    visits: visits && { today: dashCount(visits, "today", "visits"), yesterday: dashCount(visits, "yesterday", "visits"), mine: nestedCount(visits, "mine", "today", "visits") },
     admitted: admitted && { total: dashCount(admitted, "total", "admitted"), male: dashCount(admitted, "male", "admitted"), female: dashCount(admitted, "female", "admitted"), other: dashCount(admitted, "other", "admitted") },
     lab: lab && { pending: dashCount(lab, "pending", "lab"), doneToday: dashCount(lab, "doneToday", "lab") },
     imaging: imaging && { pending: dashCount(imaging, "pending", "imaging"), doneToday: dashCount(imaging, "doneToday", "imaging") },
-    pharmacy: pharmacy && { dispensedToday: dashCount(pharmacy, "dispensedToday", "pharmacy"), dispensedYesterday: dashCount(pharmacy, "dispensedYesterday", "pharmacy"), lowStock: dashCount(pharmacy, "lowStock", "pharmacy") },
+    pharmacy: pharmacy && { dispensedToday: dashCount(pharmacy, "dispensedToday", "pharmacy"), dispensedYesterday: dashCount(pharmacy, "dispensedYesterday", "pharmacy"), lowStock: nestedCount(pharmacy, "lowStock", "count", "pharmacy") },
     revenue: revenue && { today: moneyText(revenue, "today", "revenue"), yesterday: moneyText(revenue, "yesterday", "revenue"), last7Days: series(revenue, "last7Days") },
     patientFlow: flow && { last7Days: series(flow, "last7Days"), total: dashCount(flow, "total", "patientFlow") },
     raw,

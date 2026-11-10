@@ -29,7 +29,7 @@ async function tryHandle(route, method, p, state = {}) {
  */
 function tryHandleHome(route, method, p) {
   if (method !== "GET") return false
-  if (p === "/dashboard") return json(route, 200, { visits: { today: 1, yesterday: 0, mine: 0 }, admitted: null, lab: null, imaging: null, pharmacy: null, revenue: null, patientFlow: null }), true
+  if (p === "/dashboard") return json(route, 200, { visits: { today: 1, yesterday: 0, mine: { today: 0, open: 0 } }, admitted: null, lab: null, imaging: null, pharmacy: null, revenue: null, patientFlow: null }), true
   if (p === "/reports/cash-flow") return json(route, 200, { date: "2026-11-07", opening: "0.00", closing: "0.00" }), true
   return false
 }

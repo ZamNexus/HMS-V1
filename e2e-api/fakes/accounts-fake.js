@@ -70,8 +70,8 @@ module.exports = function createFake({ validate, schemaOf, stubs }) {
   const balanceOf = (b) => txs.filter((t) => t.bankAccountId === b.id && !t.voided).reduce((n, t) => n + (CREDIT.has(t.kind) ? t.amountC : -t.amountC), 0)
   const dashboard = () => {
     const d = {
-      visits: { today: 14, yesterday: 11, mine: 3 }, admitted: { total: 5, male: 2, female: 3, other: 0 }, lab: { pending: 4, doneToday: 9 }, imaging: { pending: 1, doneToday: 2 },
-      pharmacy: { dispensedToday: 20, dispensedYesterday: 18, lowStock: 6 },
+      visits: { today: 14, yesterday: 11, mine: { today: 3, open: 1 } }, admitted: { total: 5, male: 2, female: 3, other: 0 }, lab: { pending: 4, doneToday: 9 }, imaging: { pending: 1, doneToday: 2 },
+      pharmacy: { dispensedToday: 20, dispensedYesterday: 18, lowStock: { count: 6, outOfStock: 0, first: [] } },
       revenue: { today: fmt(A.dashRevenueC), yesterday: "980000.00", last7Days: Array.from({ length: 7 }, (_, i) => ({ date: day(i - 6), revenue: fmt(100000 * (i + 1)) })) },
       patientFlow: { last7Days: [3, 5, 4, 6, 2, 7, 8].map((n, i) => ({ date: day(i - 6), patients: n })), total: 35 },
     }
