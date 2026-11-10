@@ -187,6 +187,23 @@ describe("the dashboard answer (the handoff names every field)", () => {
     expect(d.patientFlow?.last7Days?.map((p) => p.value)).toEqual(["3", "5", "4", "6", "2", "7", "8"])
     expect(d.patientFlow?.total).toBe(35)
   })
+  it("reads the backend's own answer: lowStock and mine are objects, the series are { date, revenue } and { date, visits }", async () => {
+    const { schemaOf, validate } = await import("./http/specValidate")
+    const real = {
+      today: "2026-11-10",
+      visits: { today: 14, yesterday: 11, mine: { today: 3, open: 1 } }, admitted: { total: 5, male: 2, female: 3, other: 0 }, lab: { pending: 4, doneToday: 9 }, imaging: { pending: 1, doneToday: 2 },
+      pharmacy: { dispensedToday: 20, dispensedYesterday: 18, lowStock: { count: 6, outOfStock: 1, first: [{ medicine: { id: "01JAAAAAAAAAAAAAAAAAAAAAAA", name: "Paracetamol" }, onHand: 0, reorderLevel: 20 }] } },
+      revenue: { today: "12500.00", yesterday: "9800.00", last7Days: [{ date: "2026-11-09", revenue: "100.00" }, { date: "2026-11-10", revenue: "250.00" }] },
+      patientFlow: { last7Days: [{ date: "2026-11-09", visits: 3 }, { date: "2026-11-10", visits: 5 }], total: 8 },
+    }
+    expect(validate(real, schemaOf("DashboardDto_Output"))).toEqual([])
+    const d = parseDashboard(real)
+    expect(d.visits).toEqual({ today: 14, yesterday: 11, mine: 3 })
+    expect(d.pharmacy).toEqual({ dispensedToday: 20, dispensedYesterday: 18, lowStock: 6 })
+    expect(d.revenue?.last7Days).toEqual([{ label: "2026-11-09", value: "100.00" }, { label: "2026-11-10", value: "250.00" }])
+    expect(d.patientFlow?.last7Days?.map((p) => p.value)).toEqual(["3", "5"])
+    expect(parseDashboard({ ...real, visits: { ...real.visits, mine: null } }).visits?.mine).toBeNull()
+  })
   it("a section the user may not see is null, and a missing field is null", () => {
     const d = parseDashboard({ visits: { today: 1 }, revenue: null, lab: null })
     expect(d.visits).toEqual({ today: 1, yesterday: null, mine: null })
