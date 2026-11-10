@@ -292,31 +292,7 @@ export type EndpointKey =
  * Routes the HANDOFF (8.10, 8.11) names but docs/openapi.json and docs/openapi.draft.json do not describe: registered as ROUTES ONLY (no parser, no screen, nothing is sent). The two guards
  * that require every configured route to be in the spec skip exactly these keys; a test fails when the spec starts describing one, so this list only ever shrinks.
  */
-export const HANDOFF_ONLY_ROUTE_KEYS: readonly EndpointKey[] = [
-  "accountsApi.expenses",
-  "accountsApi.expenseCreate",
-  "accountsApi.expenseGet",
-  "accountsApi.expenseUpdate",
-  "accountsApi.expenseVoid",
-  "accountsApi.bankBalances",
-  "accountsApi.bankStatement",
-  "accountsApi.bankTxCreate",
-  "accountsApi.bankTxGet",
-  "accountsApi.bankTxVoid",
-  "accountsApi.drawerGet",
-  "accountsApi.drawerSet",
-  "reportsApi.dailySummary",
-  "reportsApi.opd",
-  "reportsApi.demographics",
-  "reportsApi.lab",
-  "reportsApi.pharmacy",
-  "reportsApi.financialSummary",
-  "reportsApi.revenueDaily",
-  "reportsApi.cashFlow",
-  "reportsApi.expenses",
-  "reportsApi.prescriptions",
-  "reportsApi.dashboard",
-]
+export const HANDOFF_ONLY_ROUTE_KEYS: readonly EndpointKey[] = [] // all 23 are in docs/openapi.json since backend PR #22 (2026-11-10)
 
 export const ENDPOINTS: Record<EndpointKey, Endpoint | null> = {
   // The only documented endpoint (HMS API Reference overview): "GET /api/v1/auth/me returns

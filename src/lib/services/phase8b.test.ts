@@ -78,7 +78,7 @@ describe("payloads are what the specification's DTOs say", () => {
     expect(validate(addChargesPayload(lines), schemaOf("AddChargesDto"))).toEqual([])
     expect(validate(discountPayload({ type: "amount", value: "100" }, "Staff concession"), schemaOf("InvoiceDiscountDto"))).toEqual([])
     expect(validate(discountPayload({ type: "percent", value: "100" }, "Included in package"), schemaOf("InvoiceDiscountDto"))).toEqual([])
-    expect(validate(voidPayload("Entered twice"), schemaOf("VoidDto"))).toEqual([])
+    expect(validate(voidPayload("Entered twice"), schemaOf("BillingVoidDto"))).toEqual([])
     expect(validate(paymentPayload({ patientId: PAT, invoiceId: INV, amount: "1000", mode: "cash", reference: "R-1", notes: "n", allocations: [{ chargeId: CHG, amount: "1000" }], excessAsAdvance: true }), schemaOf("RecordPaymentDto"))).toEqual([])
     expect(validate(paymentPayload({ panelId: PANEL, amount: "5000.50", mode: "insurance" }), schemaOf("RecordPaymentDto"))).toEqual([])
     expect(validate(advancePayload({ patientId: PAT, amount: "2000", mode: "card" }), schemaOf("RecordAdvanceDto"))).toEqual([])

@@ -260,7 +260,7 @@ export function addChargesPayload(charges: ChargeLineInput[]): Schemas["AddCharg
 export function discountPayload(discount: DiscountInput, reason: string): Schemas["InvoiceDiscountDto"] {
   return { discount: discountBody(discount), reason: reasonText(reason) }
 }
-export function voidPayload(reason: string): Schemas["VoidDto"] {
+export function voidPayload(reason: string): Schemas["BillingVoidDto"] {
   return { reason: reasonText(reason) }
 }
 export function paymentPayload(input: PaymentInput): Schemas["RecordPaymentDto"] {

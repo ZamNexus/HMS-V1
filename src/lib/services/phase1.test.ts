@@ -81,21 +81,16 @@ function specArrayFields(): { dto: string; path: string }[] {
   for (const [n, sc] of Object.entries(spec().components.schemas)) walk(n, sc as Record<string, unknown>, "")
   return out
 }
-const fieldsOf = (dto: string) => specArrayFields().filter((f) => f.dto === dto).map((f) => f.path)
+/** Text fields an older backend spec typed as arrays (fixed in backend PR #22); the parser still reads an array without failing. */
+const PATIENT_DETAIL_TEXT_FIELDS = ["address", "area", "cnic", "city", "country", "email", "emergencyContact", "fatherName", "guardianName", "medicalRecordNo", "photoUrl", "referredBy", "remarks"]
 
 describe("Task 1: array-typed fields in the spec", () => {
-  it("the scan of the whole spec finds the documented list (76 properties in 24 schemas), so a spec change is noticed", () => {
-    const all = specArrayFields()
-    expect(all).toHaveLength(76)
-    expect(new Set(all.map((f) => f.dto)).size).toBe(24)
-    expect(fieldsOf("PatientDetailDto_Output").sort()).toEqual(["address", "area", "cnic", "city", "country", "email", "emergencyContact", "fatherName", "guardianName", "medicalRecordNo", "photoUrl", "referredBy", "remarks"].sort())
-    expect(fieldsOf("PanelResponseDto_Output").sort()).toEqual(["commissionPct", "contactPerson", "phone"])
-    expect(fieldsOf("GuardianRelationResponseDto_Output")).toEqual(["remarks"])
-    expect(fieldsOf("UpdatePatientDto").sort()).toEqual(["country", "email"])
+  it("the scan of the whole spec finds only the real lists: the 76 mistyped text fields were fixed in backend PR #22, so a spec change is noticed", () => {
+    expect(specArrayFields().map((f) => `${f.dto}.${f.path}`).sort()).toEqual(["CreateWardDto.beds", "ImagingReportDto_Output.pending", "LabReportDto_Output.pending"])
   })
 
   describe("patient detail: every array-typed field arrives as string, null, empty, one-element array, many-element array, empty array", () => {
-    for (const field of fieldsOf("PatientDetailDto_Output")) {
+    for (const field of PATIENT_DETAIL_TEXT_FIELDS) {
       it(field, () => {
         const read = (v: unknown) => (parsePatient(detail({ [field]: v })) as unknown as Record<string, unknown>)[field] ?? ""
         expect(read("text")).toBe("text")
@@ -153,7 +148,7 @@ describe("Task 1: array-typed fields in the spec", () => {
   })
 
   it("request bodies never contain an array for any of those fields (create and update), and email / country are plain strings", () => {
-    const names = new Set([...fieldsOf("PatientDetailDto_Output"), ...fieldsOf("UpdatePatientDto"), "guardianRelationText"])
+    const names = new Set([...PATIENT_DETAIL_TEXT_FIELDS, "guardianRelationText"])
     const base = parsePatient(detail())
     for (const body of [
       patientCreatePayload(input()), patientCreatePayload(input({ email: "", country: "" })),

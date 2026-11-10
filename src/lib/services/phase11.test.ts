@@ -187,14 +187,10 @@ describe("the routes the handoff names for the chunks that have no published sha
     const reports = readFileSync(path.resolve(process.cwd(), "src/lib/services/http/reportsApi.ts"), "utf8")
     for (const k of routeOnly) expect((k.startsWith("accountsApi.") ? accounts : reports).includes(`"${k}"`), `${k} is called by its adapter`).toBe(true)
   })
-  it("are exactly the keys the spec guards skip, and the list shrinks: a route the spec now describes must be taken off it", async () => {
-    expect([...HANDOFF_ONLY_ROUTE_KEYS].sort()).toEqual(ROUTES.map(([k]) => k).sort())
-    const { operation, spec } = await import("./http/specValidate")
-    for (const [k, method, p] of ROUTES) {
-      const specPath = "/api/v1" + p.replace(/:([A-Za-z]+)/g, "{$1}")
-      const inSpec = (() => { try { operation(method, specPath); return true } catch { return false } })() || !!spec("draft").paths[specPath]?.[method.toLowerCase()]
-      expect(inSpec, `${k} is now in the spec: remove it from HANDOFF_ONLY_ROUTE_KEYS`).toBe(false)
-    }
+  it("are all described by the spec now, so the spec guards skip none of them", async () => {
+    expect(HANDOFF_ONLY_ROUTE_KEYS).toEqual([])
+    const { operation } = await import("./http/specValidate")
+    for (const [k, method, p] of ROUTES) expect(() => operation(method, "/api/v1" + p.replace(/:([A-Za-z]+)/g, "{$1}")), k).not.toThrow()
   })
   it("leave the demo-shaped keys unconfigured: filling them would make the old payload builders send guessed fields", () => {
     for (const k of ["expenses.list", "expenses.create", "expenses.totals", "bankTransactions.statement", "bankTransactions.create", "dashboard.summary", "dashboard.cashFlow", "statistics.summary", "statistics.records", "reports.dailySummary", "reports.prescriptionHistory"] as const) expect(ENDPOINTS[k], k).toBeNull()
