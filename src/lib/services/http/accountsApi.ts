@@ -17,7 +17,7 @@ import { asObj, pageQuery, reqInt, reqUlid, type Obj } from "./wire"
 export const AC_MODES: readonly AcMode[] = ["cash", "bank_transfer", "cheque", "card"]
 /** The kinds a user may enter. The "expense" kind is posted by the server when a bank-paid expense is recorded and is never entered (handoff 8.10). */
 export const AC_ENTERABLE_KINDS: readonly AcBankKind[] = ["opening_balance", "deposit", "withdrawal", "other_credit", "other_debit"]
-export const AC_LIMITS = { search: 100, reason: { min: 3, max: 500 }, reference: 100, description: 500 } as const
+export const AC_LIMITS = { search: 100, reason: { min: 3, max: 300 }, reference: 60, description: 300 } as const
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/
 const AMOUNT_RE = /^\d+(\.\d{1,2})?$/
 const DECIMAL_RE = /^-?\d+(\.\d+)?$/
@@ -57,7 +57,9 @@ function ref(o: Obj, objectKey: string, idKey: string, nameKeys: string[]): AcRe
   const id = o[idKey]
   return { id: typeof id === "string" && isUlid(id) ? id : null, name: text(o, ...nameKeys) }
 }
-const isVoided = (o: Obj): boolean => o.voided === true || (typeof o.voidedAt === "string" && o.voidedAt !== "") || o.status === "voided" || o.isVoided === true
+// The backend sends `voided` as `{ at, by, reason }` on a voided record and `null` on a live one.
+const voidOf = (o: Obj): Obj | null => (o.voided !== null && typeof o.voided === "object" && !Array.isArray(o.voided) ? (o.voided as Obj) : null)
+const isVoided = (o: Obj): boolean => voidOf(o) !== null || o.voided === true || (typeof o.voidedAt === "string" && o.voidedAt !== "") || o.status === "voided" || o.isVoided === true
 
 export function parseExpense(raw: unknown): AcExpense {
   const o = asObj(raw, "expense")
@@ -72,7 +74,7 @@ export function parseExpense(raw: unknown): AcExpense {
     bankAccount: bank.id || bank.name ? bank : null,
     referenceNo: text(o, "referenceNo", "reference"),
     voided: isVoided(o),
-    voidReason: text(o, "voidReason", "voidedReason"),
+    voidReason: text(voidOf(o) ?? {}, "reason") ?? text(o, "voidReason", "voidedReason"),
     updatedAt: text(o, "updatedAt"),
     raw: o,
   }
@@ -85,6 +87,13 @@ export function parseExpensePage(raw: unknown): AcExpensePage {
   return { items: o.data.map(parseExpense), total: reqInt(meta, "total", "expenses.meta"), totalAmount: moneyOrNull(o, "totalAmount", "meta.totalAmount", "totals.amount") }
 }
 
+/** A bank entry carries `debit` and `credit` (one of them "0.00"); its amount is whichever moved money. */
+function bankAmount(o: Obj): string {
+  if (o.amount !== undefined) return money(o, "bank transaction", "amount")
+  const credit = money(o, "bank transaction", "credit")
+  return /^0+(.0+)?$/.test(credit) ? money(o, "bank transaction", "debit") : credit
+}
+
 export function parseBankTx(raw: unknown): AcBankTx {
   const o = asObj(raw, "bank transaction")
   const account = ref(o, "bankAccount", "bankAccountId", [])
@@ -93,7 +102,7 @@ export function parseBankTx(raw: unknown): AcBankTx {
     bankAccountId: account.id,
     date: day(o, "bank transaction", "date"),
     kind: text(o, "kind", "type") ?? "",
-    amount: money(o, "bank transaction", "amount"),
+    amount: bankAmount(o),
     description: text(o, "description") ?? "",
     referenceNo: text(o, "referenceNo", "reference"),
     voided: isVoided(o),

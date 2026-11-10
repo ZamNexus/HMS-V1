@@ -428,6 +428,176 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/appointments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List appointments
+         * @description **Access:** Requires permission: `appointments.read`.
+         *
+         *     In time order. `date` gives one hospital day (the day list and the dashboard); `dateFrom`/`dateTo` a range. Narrow by `doctorId`, `patientId` (a patient’s history) or `status`; `search` matches the appointment number, MR number or patient name.
+         */
+        get: operations["AppointmentsController_list"];
+        put?: never;
+        /**
+         * Book an appointment
+         * @description **Access:** Requires permission: `appointments.write`.
+         *
+         *     Into a free slot from `GET /doctors/:id/slots`. Booked `requested`, or `confirmed` with `confirmed: true`. Nothing is charged: the consultation is charged at check-in.
+         */
+        post: operations["AppointmentsController_book"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * An appointment
+         * @description **Access:** Requires permission: `appointments.read`.
+         *
+         *     `allowedActions` says which buttons to show.
+         */
+        get: operations["AppointmentsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Reschedule an appointment
+         * @description **Access:** Requires permission: `appointments.write`.
+         *
+         *     Move it to another `time`, `date` or `doctorId` (the old slot is freed), or change its `notes`. Its status stays.
+         */
+        patch: operations["AppointmentsController_reschedule"];
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm an appointment
+         * @description **Access:** Requires permission: `appointments.write`.
+         */
+        post: operations["AppointmentsController_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel an appointment
+         * @description **Access:** Requires permission: `appointments.write`.
+         *
+         *     With a `reason`. The slot is free again at once.
+         */
+        post: operations["AppointmentsController_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/appointments/{id}/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark an appointment a no-show
+         * @description **Access:** Requires permission: `appointments.write`.
+         *
+         *     Once its time has started. Open appointments of days that have ended are marked automatically within the hour after midnight.
+         */
+        post: operations["AppointmentsController_noShow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/doctors/{id}/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A doctor’s weekly schedule
+         * @description **Access:** Requires permission: `doctors.read`.
+         *
+         *     The days they see patients, from and to (`HH:MM`, hospital time), and the slot length. `from`/`to` are null until set.
+         */
+        get: operations["DoctorScheduleController_get"];
+        /**
+         * Set a doctor’s weekly schedule
+         * @description **Access:** Requires permission: `users.write`.
+         *
+         *     Replaces it whole. `days: []` takes the doctor off appointments. Appointments already booked are never moved or cancelled; any the new hours no longer cover come back with `outsideSchedule: true`.
+         */
+        put: operations["DoctorScheduleController_set"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/doctors/{id}/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A doctor’s slots on a day
+         * @description **Access:** Requires permission: `appointments.read`.
+         *
+         *     Every slot of the day, each `free`, `booked` or `passed` (a free slot whose time has gone). None on a day the doctor does not work.
+         */
+        get: operations["DoctorScheduleController_slots"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/public/hospital": {
         parameters: {
             query?: never;
@@ -882,6 +1052,174 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/expense-categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List expense categories
+         * @description **Access:** Requires permission: `catalogs.read`.
+         */
+        get: operations["ExpenseCategoriesController_list"];
+        put?: never;
+        /** @description **Access:** Requires permission: `catalogs.write`. */
+        post: operations["ExpenseCategoriesController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expense-categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Access:** Requires permission: `catalogs.read`. */
+        get: operations["ExpenseCategoriesController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Rename an expense category
+         * @description **Access:** Requires permission: `catalogs.write`.
+         *
+         *     Expenses already recorded keep the name they were recorded under.
+         */
+        patch: operations["ExpenseCategoriesController_update"];
+        trace?: never;
+    };
+    "/api/v1/expense-categories/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate an expense category
+         * @description **Access:** Requires permission: `catalogs.write`.
+         *
+         *     No new expense can use it; its expenses stay as they are (ADR-0024).
+         */
+        post: operations["ExpenseCategoriesController_deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expense-categories/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Access:** Requires permission: `catalogs.write`. */
+        post: operations["ExpenseCategoriesController_reactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List bank accounts
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     Balances are on `GET /bank-balances` and on each account’s statement.
+         */
+        get: operations["BankAccountsController_list"];
+        put?: never;
+        /**
+         * Add a bank account
+         * @description **Access:** Requires permission: `catalogs.write`.
+         *
+         *     Its starting balance is entered as an `opening_balance` (`POST /bank-transactions`).
+         */
+        post: operations["BankAccountsController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-accounts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Access:** Requires permission: `accounts.read`. */
+        get: operations["BankAccountsController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** @description **Access:** Requires permission: `catalogs.write`. */
+        patch: operations["BankAccountsController_update"];
+        trace?: never;
+    };
+    "/api/v1/bank-accounts/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate a bank account
+         * @description **Access:** Requires permission: `catalogs.write`.
+         *
+         *     No new entry can use it; its statement stays readable (ADR-0024).
+         */
+        post: operations["BankAccountsController_deactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-accounts/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description **Access:** Requires permission: `catalogs.write`. */
+        post: operations["BankAccountsController_reactivate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/patients": {
         parameters: {
             query?: never;
@@ -893,7 +1231,7 @@ export interface paths {
          * Search and list patients
          * @description **Access:** Requires permission: `patients.read`.
          *
-         *     One `search` term matches name, MR number (`MR-2026-0042` or `42`), phone in any format, or CNIC. Archived patients are excluded unless `includeArchived=true`. Pickers use the same endpoint with a small `perPage`. `balance` is what each patient owes, for roles holding `billing.read`; null for everyone else.
+         *     One `search` term matches name, MR number (`MR-2026-0042` or `42`), phone in any format, or CNIC. Archived patients are excluded unless `includeArchived=true`; `archived=true` lists only them. Pickers use the same endpoint with a small `perPage`. `balance` is what each patient owes, for roles holding `billing.read`; null for everyone else.
          */
         get: operations["PatientsController_list"];
         put?: never;
@@ -1033,6 +1371,28 @@ export interface paths {
          * @description **Access:** Requires permission: `patients.archive`.
          */
         post: operations["PatientsController_restore"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/demographics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Patient Demographics
+         * @description **Access:** Requires permission: `reports.read`.
+         *
+         *     Every patient not archived and registered by `dateTo`: gender, age bands as of today, primary Panel or self-pay, and area. The period itself drives only `registrationsByMonth`. At most 366 days.
+         */
+        get: operations["PatientReportsController_demographics"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1409,6 +1769,28 @@ export interface paths {
          *     Earned (net of discount, ex-GST), less credit notes; GST and voided charges shown apart, never counted. By kind of charge, by doctor with commission owed, and by Panel.
          */
         get: operations["BillingReportsController_revenue"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/revenue/daily": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Revenue per day
+         * @description **Access:** Requires permission: `reports.read`.
+         *
+         *     Each day of the period, zero days included: that day’s earned revenue as `/reports/revenue` counts it, optionally for one `sourceType`. The Financial Statistics graphs. At most 366 days.
+         */
+        get: operations["BillingReportsController_daily"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2035,7 +2417,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/appointments": {
+    "/api/v1/reports/opd": {
         parameters: {
             query?: never;
             header?: never;
@@ -2043,119 +2425,21 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List appointments
-         * @description **Access:** Requires permission: `appointments.read`.
+         * OPD Statistics
+         * @description **Access:** Requires permission: `reports.read`.
          *
-         *     In time order. `date` gives one hospital day (the day list and the dashboard); `dateFrom`/`dateTo` a range. Narrow by `doctorId`, `patientId` (a patient’s history) or `status`; `search` matches the appointment number, MR number or patient name.
+         *     Visits per day, new vs returning patients (a patient’s first OPD visit here is new), the ten commonest primary diagnoses, and visits and consultation revenue by doctor. At most 366 days.
          */
-        get: operations["AppointmentsController_list"];
-        put?: never;
-        /**
-         * Book an appointment
-         * @description **Access:** Requires permission: `appointments.write`.
-         *
-         *     Into a free slot from `GET /doctors/:id/slots`. Booked `requested`, or `confirmed` with `confirmed: true`. Nothing is charged: the consultation is charged at check-in.
-         */
-        post: operations["AppointmentsController_book"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/appointments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * An appointment
-         * @description **Access:** Requires permission: `appointments.read`.
-         *
-         *     `allowedActions` says which buttons to show.
-         */
-        get: operations["AppointmentsController_get"];
+        get: operations["EncounterReportsController_opd"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /**
-         * Reschedule an appointment
-         * @description **Access:** Requires permission: `appointments.write`.
-         *
-         *     Move it to another `time`, `date` or `doctorId` (the old slot is freed), or change its `notes`. Its status stays.
-         */
-        patch: operations["AppointmentsController_reschedule"];
-        trace?: never;
-    };
-    "/api/v1/appointments/{id}/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Confirm an appointment
-         * @description **Access:** Requires permission: `appointments.write`.
-         */
-        post: operations["AppointmentsController_confirm"];
-        delete?: never;
-        options?: never;
-        head?: never;
         patch?: never;
         trace?: never;
     };
-    "/api/v1/appointments/{id}/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cancel an appointment
-         * @description **Access:** Requires permission: `appointments.write`.
-         *
-         *     With a `reason`. The slot is free again at once.
-         */
-        post: operations["AppointmentsController_cancel"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/appointments/{id}/no-show": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mark an appointment a no-show
-         * @description **Access:** Requires permission: `appointments.write`.
-         *
-         *     Once its time has started. Open appointments of days that have ended are marked automatically within the hour after midnight.
-         */
-        post: operations["AppointmentsController_noShow"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/doctors/{id}/schedule": {
+    "/api/v1/prescriptions": {
         parameters: {
             query?: never;
             header?: never;
@@ -2163,40 +2447,12 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A doctor’s weekly schedule
-         * @description **Access:** Requires permission: `doctors.read`.
+         * Prescription History
+         * @description **Access:** Requires permission: `encounters.read`.
          *
-         *     The days they see patients, from and to (`HH:MM`, hospital time), and the slot length. `from`/`to` are null until set.
+         *     Every prescribed medicine across visits, newest visit first. Narrow by the visit’s days, patient, doctor or catalog medicine; `search` matches medicine, patient name or MR number.
          */
-        get: operations["DoctorScheduleController_get"];
-        /**
-         * Set a doctor’s weekly schedule
-         * @description **Access:** Requires permission: `users.write`.
-         *
-         *     Replaces it whole. `days: []` takes the doctor off appointments. Appointments already booked are never moved or cancelled; any the new hours no longer cover come back with `outsideSchedule: true`.
-         */
-        put: operations["DoctorScheduleController_set"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/doctors/{id}/slots": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * A doctor’s slots on a day
-         * @description **Access:** Requires permission: `appointments.read`.
-         *
-         *     Every slot of the day, each `free`, `booked` or `passed` (a free slot whose time has gone). None on a day the doctor does not work.
-         */
-        get: operations["DoctorScheduleController_slots"];
+        get: operations["EncounterReportsController_prescriptions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2785,6 +3041,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/lab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Laboratory
+         * @description **Access:** Requires permission: `reports.read`.
+         *
+         *     Lab orders placed in the period: tests by category, the ten most-ordered tests with revenue, and turnaround (placed to verified) per category against its target. `overdue` lists orders still being worked over 24 hours after they were placed, as of now. At most 366 days.
+         */
+        get: operations["DiagnosticsReportsController_lab"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/medicines": {
         parameters: {
             query?: never;
@@ -3082,6 +3360,366 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reports/pharmacy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pharmacy
+         * @description **Access:** Requires permission: `reports.read`.
+         *
+         *     Dispensed in the period, net of returns: totals and the ten top medicines with revenue. Now, whatever the period: active medicines below their reorder level, and batches expiring within `expiringWithinDays` (60 by default). At most 366 days.
+         */
+        get: operations["PharmacyReportsController_pharmacy"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List expenses
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     Newest first. `totalAmount` is the live expenses matching the filter, across every page. Voided ones appear only with `includeVoided=true`.
+         */
+        get: operations["ExpensesController_list"];
+        put?: never;
+        /**
+         * Record an expense
+         * @description **Access:** Requires permission: `accounts.write`.
+         *
+         *     Numbered `EXP-2026-0001`. Paid by `bank_transfer`, `cheque` or `card`, it needs `bankAccountId`, and its debit is posted to that account in the same step.
+         */
+        post: operations["ExpensesController_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/expenses/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Access:** Requires permission: `accounts.read`. */
+        get: operations["ExpensesController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Correct an expense
+         * @description **Access:** Requires permission: `accounts.write`.
+         *
+         *     Date, category, description, amount or reference; its bank entry follows. How it was paid can’t change: void it and record it again.
+         */
+        patch: operations["ExpensesController_correct"];
+        trace?: never;
+    };
+    "/api/v1/expenses/{id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void an expense
+         * @description **Access:** Requires permission: `accounts.write`.
+         *
+         *     With a `reason`. Its bank entry is voided with it.
+         */
+        post: operations["ExpensesController_void"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every bank account’s balance
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     The sum of its live entries; nothing is stored.
+         */
+        get: operations["BankController_balances"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-accounts/{id}/statement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A bank account’s statement
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     The balance before `dateFrom`, each live entry in the period with the balance after it, and the closing balance. Voided entries are left out.
+         */
+        get: operations["BankController_statement"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-transactions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description **Access:** Requires permission: `accounts.read`. */
+        get: operations["BankController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-transactions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record a bank entry
+         * @description **Access:** Requires permission: `accounts.write`.
+         *
+         *     “Record Transfer”: a `deposit` (cash from the drawer into the bank) or `withdrawal` (cash drawn into the drawer), both counted in the Cash Flow; an `other_credit` or `other_debit` that never touches the drawer; or the account’s `opening_balance`. Expenses post their own entries.
+         */
+        post: operations["BankController_record"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bank-transactions/{id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Void a bank entry
+         * @description **Access:** Requires permission: `accounts.write`.
+         *
+         *     With a `reason`.
+         */
+        post: operations["BankController_void"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/expenses": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Expenses by category and by mode
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     Live expenses on hospital days `dateFrom`–`dateTo`, both included. The billing hub’s Net is `/reports/revenue` less this `total`.
+         */
+        get: operations["AccountsReportsController_expenses"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/cash-flow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The cash drawer for a day or a range
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     `date` for one day, or `dateFrom`/`dateTo` (at most 366 days). Opening (the previous day’s closing), cash received and drawn from the bank, cash refunded, spent and deposited in the bank, and the closing. Card, transfer and cheque money is left out: it never passes through the drawer.
+         */
+        get: operations["AccountsReportsController_cashFlow"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/cash-drawer/opening": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The drawer’s opening cash
+         * @description **Access:** Requires permission: `accounts.read`.
+         *
+         *     Both null until set.
+         */
+        get: operations["AccountsReportsController_opening"];
+        /**
+         * Set the drawer’s opening cash
+         * @description **Access:** Requires permission: `settings.write`.
+         *
+         *     The cash it held at the start of `date`. Every later day’s opening is worked out from it; set it once, at go-live.
+         */
+        put: operations["AccountsReportsController_setOpening"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/daily-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily Summary
+         * @description **Access:** Requires permission: `reports.read`.
+         *
+         *     New patients, OPD visits, admissions and discharges; revenue by kind (lab and imaging apart); visits and revenue by doctor; and the payment mix. Every figure matches the report it comes from for the same period. At most 366 days.
+         */
+        get: operations["ReportsController_summary"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/reports/financial-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Financial Statistics — Summary
+         * @description **Access:** Requires permission: `reports.read`.
+         *
+         *     The sales table — per kind of sale, imaging per Modality: count, billed (net + GST), revenue (net, ex-GST), settled, outstanding, and billed by OPD, IPD or other — with its Total Sales row; the period’s payments, advances, refunds and credit notes by type; and, with `accounts.read`, expenses, the bank’s net movement and the cash drawer over the period. At most 366 days.
+         */
+        get: operations["ReportsController_financial"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The dashboard
+         * @description **Access:** Requires permission: `encounters.read`, `encounters.check_in`, `ipd.read`, `diagnostics.read`, `pharmacy.read`, `reports.read`.
+         *
+         *     Today’s figures in one call. Each section is null when the caller may not see it — show the tiles whose section is there. Refresh it every minute or so; nothing is cached.
+         */
+        get: operations["DashboardController_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/audit-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List a master-data item's audit history
+         * @description **Access:** Requires permission: `audit.read`.
+         *
+         *     Newest first. `entityType` is the kind of item and `entityId` its id; archived and inactive items keep their history. `changes` holds `{ field: { from, to } }` for the fields an action changed.
+         */
+        get: operations["AuditLogController_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3107,7 +3745,7 @@ export interface components {
                 role: "super_admin" | "admin" | "doctor" | "receptionist" | "billing" | "lab_tech" | "pharmacist" | "nurse" | "radiographer";
                 isPlatform: boolean;
                 mustChangePassword: boolean;
-                permissions: ("patients.read" | "patients.write" | "patients.archive" | "patients.record_death" | "appointments.read" | "appointments.write" | "encounters.read" | "encounters.write" | "encounters.check_in" | "encounters.record_vitals" | "encounters.correct" | "encounters.archive" | "diagnostics.read" | "diagnostics.order" | "diagnostics.collect" | "diagnostics.enter_results" | "diagnostics.perform" | "diagnostics.verify" | "diagnostics.archive" | "pharmacy.read" | "pharmacy.stock" | "pharmacy.dispense" | "ipd.read" | "ipd.admit" | "ipd.discharge" | "ipd.write" | "billing.read" | "billing.charge" | "billing.write" | "billing.collect_payment" | "reports.read" | "users.read" | "users.write" | "doctors.read" | "catalogs.read" | "catalogs.write" | "settings.read" | "settings.write")[];
+                permissions: ("patients.read" | "patients.write" | "patients.archive" | "patients.record_death" | "appointments.read" | "appointments.write" | "encounters.read" | "encounters.write" | "encounters.check_in" | "encounters.record_vitals" | "encounters.correct" | "encounters.archive" | "diagnostics.read" | "diagnostics.order" | "diagnostics.collect" | "diagnostics.enter_results" | "diagnostics.perform" | "diagnostics.verify" | "diagnostics.archive" | "pharmacy.read" | "pharmacy.stock" | "pharmacy.dispense" | "ipd.read" | "ipd.admit" | "ipd.discharge" | "ipd.write" | "billing.read" | "billing.charge" | "billing.write" | "billing.collect_payment" | "reports.read" | "accounts.read" | "accounts.write" | "users.read" | "users.write" | "doctors.read" | "catalogs.read" | "catalogs.write" | "settings.read" | "settings.write" | "audit.read")[];
                 hospital: {
                     id: string;
                     code: string;
@@ -3128,13 +3766,13 @@ export interface components {
         AuthUserDto_Output: {
             id: string;
             username: string;
-            email: string[];
+            email: string | null;
             name: string;
             /** @enum {string} */
             role: "super_admin" | "admin" | "doctor" | "receptionist" | "billing" | "lab_tech" | "pharmacist" | "nurse" | "radiographer";
             isPlatform: boolean;
             mustChangePassword: boolean;
-            permissions: ("patients.read" | "patients.write" | "patients.archive" | "patients.record_death" | "appointments.read" | "appointments.write" | "encounters.read" | "encounters.write" | "encounters.check_in" | "encounters.record_vitals" | "encounters.correct" | "encounters.archive" | "diagnostics.read" | "diagnostics.order" | "diagnostics.collect" | "diagnostics.enter_results" | "diagnostics.perform" | "diagnostics.verify" | "diagnostics.archive" | "pharmacy.read" | "pharmacy.stock" | "pharmacy.dispense" | "ipd.read" | "ipd.admit" | "ipd.discharge" | "ipd.write" | "billing.read" | "billing.charge" | "billing.write" | "billing.collect_payment" | "reports.read" | "users.read" | "users.write" | "doctors.read" | "catalogs.read" | "catalogs.write" | "settings.read" | "settings.write")[];
+            permissions: ("patients.read" | "patients.write" | "patients.archive" | "patients.record_death" | "appointments.read" | "appointments.write" | "encounters.read" | "encounters.write" | "encounters.check_in" | "encounters.record_vitals" | "encounters.correct" | "encounters.archive" | "diagnostics.read" | "diagnostics.order" | "diagnostics.collect" | "diagnostics.enter_results" | "diagnostics.perform" | "diagnostics.verify" | "diagnostics.archive" | "pharmacy.read" | "pharmacy.stock" | "pharmacy.dispense" | "ipd.read" | "ipd.admit" | "ipd.discharge" | "ipd.write" | "billing.read" | "billing.charge" | "billing.write" | "billing.collect_payment" | "reports.read" | "accounts.read" | "accounts.write" | "users.read" | "users.write" | "doctors.read" | "catalogs.read" | "catalogs.write" | "settings.read" | "settings.write" | "audit.read")[];
             hospital: {
                 id: string;
                 code: string;
@@ -3142,7 +3780,7 @@ export interface components {
                 defaultCity: string | null;
                 defaultCountry: string;
             } | null;
-            primaryLocationId: string[];
+            primaryLocationId: string | null;
         };
         ChangePasswordDto: {
             currentPassword: string;
@@ -3192,13 +3830,13 @@ export interface components {
         UserResponseDto_Output: {
             id: string;
             username: string;
-            email: string[];
+            email: string | null;
             name: string;
-            phone: string[];
-            cnic: string[];
-            address: string[];
-            city: string[];
-            joiningDate: string[];
+            phone: string | null;
+            cnic: string | null;
+            address: string | null;
+            city: string | null;
+            joiningDate: string | null;
             /** @enum {string} */
             role: "super_admin" | "admin" | "doctor" | "receptionist" | "billing" | "lab_tech" | "pharmacist" | "nurse" | "radiographer";
             active: boolean;
@@ -3275,7 +3913,7 @@ export interface components {
         };
         UpdateUserDto: {
             username?: string;
-            email?: string[];
+            email?: string | null;
             /** @enum {string} */
             role?: "admin" | "doctor" | "receptionist" | "billing" | "lab_tech" | "pharmacist" | "nurse" | "radiographer";
             name?: string;
@@ -3316,6 +3954,12 @@ export interface components {
                 specialization: string | null;
                 qualifications: string | null;
                 consultationFee: string;
+                schedule: {
+                    days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
+                    from: string;
+                    to: string;
+                    slotMinutes: number;
+                } | null;
             }[];
             meta: {
                 page: number;
@@ -3327,13 +3971,13 @@ export interface components {
         SettingsResponseDto_Output: {
             hospitalCode: string;
             nameEn: string;
-            nameUr: string[];
-            address: string[];
-            phone: string[];
-            email: string[];
-            tagline: string[];
-            printHeader: string[];
-            defaultCity: string[];
+            nameUr: string | null;
+            address: string | null;
+            phone: string | null;
+            email: string | null;
+            tagline: string | null;
+            printHeader: string | null;
+            defaultCity: string | null;
             defaultCountry: string;
             timezone: string;
             currencyCode: string;
@@ -3376,6 +4020,172 @@ export interface components {
             /** Format: date-time */
             enabledAt: string | null;
         };
+        AppointmentPageDto_Output: {
+            data: {
+                id: string;
+                appointmentNo: string;
+                /** @enum {string} */
+                status: "requested" | "confirmed" | "completed" | "cancelled" | "no_show";
+                /** Format: date */
+                date: string;
+                time: string;
+                /** Format: date-time */
+                startsAt: string;
+                /** Format: date-time */
+                endsAt: string;
+                durationMinutes: number;
+                patient: {
+                    id: string;
+                    mrNo: string;
+                    name: string;
+                    phone: string;
+                };
+                doctor: {
+                    id: string;
+                    name: string;
+                };
+                notes: string | null;
+                outsideSchedule: boolean;
+                encounter: {
+                    id: string;
+                    encId: string;
+                } | null;
+                /** Format: date-time */
+                bookedAt: string;
+                bookedBy: {
+                    id: string;
+                    name: string;
+                };
+                /** Format: date-time */
+                confirmedAt: string | null;
+                confirmedBy: {
+                    id: string;
+                    name: string;
+                } | null;
+                /** Format: date-time */
+                cancelledAt: string | null;
+                cancelledBy: {
+                    id: string;
+                    name: string;
+                } | null;
+                cancelReason: string | null;
+                /** Format: date-time */
+                noShowAt: string | null;
+                noShowBy: {
+                    id: string;
+                    name: string;
+                } | null;
+                allowedActions: ("confirm" | "reschedule" | "cancel" | "no_show" | "check_in")[];
+            }[];
+            meta: {
+                page: number;
+                perPage: number;
+                total: number;
+                totalPages: number;
+            };
+        };
+        AppointmentResponseDto_Output: {
+            id: string;
+            appointmentNo: string;
+            /** @enum {string} */
+            status: "requested" | "confirmed" | "completed" | "cancelled" | "no_show";
+            /** Format: date */
+            date: string;
+            time: string;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+            durationMinutes: number;
+            patient: {
+                id: string;
+                mrNo: string;
+                name: string;
+                phone: string;
+            };
+            doctor: {
+                id: string;
+                name: string;
+            };
+            notes: string | null;
+            outsideSchedule: boolean;
+            encounter: {
+                id: string;
+                encId: string;
+            } | null;
+            /** Format: date-time */
+            bookedAt: string;
+            bookedBy: {
+                id: string;
+                name: string;
+            };
+            /** Format: date-time */
+            confirmedAt: string | null;
+            confirmedBy: {
+                id: string;
+                name: string;
+            } | null;
+            /** Format: date-time */
+            cancelledAt: string | null;
+            cancelledBy: {
+                id: string;
+                name: string;
+            } | null;
+            cancelReason: string | null;
+            /** Format: date-time */
+            noShowAt: string | null;
+            noShowBy: {
+                id: string;
+                name: string;
+            } | null;
+            allowedActions: ("confirm" | "reschedule" | "cancel" | "no_show" | "check_in")[];
+        };
+        BookAppointmentDto: {
+            patientId: string;
+            doctorId: string;
+            /** Format: date */
+            date: string;
+            time: string;
+            notes?: string;
+            /** @default false */
+            confirmed?: boolean;
+        };
+        RescheduleAppointmentDto: {
+            doctorId?: string;
+            /** Format: date */
+            date?: string;
+            time?: string;
+            notes?: string | null;
+        };
+        CancelAppointmentDto: {
+            reason: string;
+        };
+        ScheduleResponseDto_Output: {
+            doctorId: string;
+            days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
+            from: string | null;
+            to: string | null;
+            slotMinutes: number;
+        };
+        SetScheduleDto: {
+            days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
+            from: string;
+            to: string;
+            slotMinutes: number;
+        };
+        SlotsResponseDto_Output: {
+            doctorId: string;
+            /** Format: date */
+            date: string;
+            slotMinutes: number;
+            slots: {
+                time: string;
+                /** Format: date-time */
+                startsAt: string;
+                /** @enum {string} */
+                state: "free" | "booked" | "passed";
+            }[];
+        };
         HospitalBrandingDto_Output: {
             code: string;
             name: string;
@@ -3408,9 +4218,9 @@ export interface components {
             name: string;
             /** @enum {string} */
             type: "insurance" | "corporate" | "government" | "other";
-            contactPerson: string[];
-            phone: string[];
-            commissionPct: string[];
+            contactPerson: string | null;
+            phone: string | null;
+            commissionPct: string | null;
             discountPct: string;
             /** @enum {string} */
             billingMode: "patient_pays" | "panel_billed";
@@ -3465,7 +4275,7 @@ export interface components {
         GuardianRelationResponseDto_Output: {
             id: string;
             name: string;
-            remarks: string[];
+            remarks: string | null;
             active: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -3500,9 +4310,9 @@ export interface components {
         };
         ServiceResponseDto_Output: {
             id: string;
-            code: string[];
+            code: string | null;
             name: string;
-            category: string[];
+            category: string | null;
             rate: string;
             gstPct: string;
             discountPct: string;
@@ -3586,7 +4396,7 @@ export interface components {
             rate: string;
             gstPct: string;
             discountPct: string;
-            turnaroundHours: number[];
+            turnaroundHours: number | null;
             narrative: boolean;
             parameters: {
                 key: string;
@@ -3724,9 +4534,9 @@ export interface components {
             rate: string;
             gstPct: string;
             discountPct: string;
-            turnaroundHours: number[];
+            turnaroundHours: number | null;
             reportRequired: boolean;
-            reportTemplate: string[];
+            reportTemplate: string | null;
             active: boolean;
             /** Format: date-time */
             createdAt: string;
@@ -3755,6 +4565,74 @@ export interface components {
             turnaroundHours?: number | null;
             reportRequired?: boolean;
             reportTemplate?: string | null;
+        };
+        ExpenseCategoryPageDto_Output: {
+            data: {
+                id: string;
+                name: string;
+                active: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            meta: {
+                page: number;
+                perPage: number;
+                total: number;
+                totalPages: number;
+            };
+        };
+        ExpenseCategoryResponseDto_Output: {
+            id: string;
+            name: string;
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateExpenseCategoryDto: {
+            name: string;
+        };
+        UpdateExpenseCategoryDto: {
+            name: string;
+        };
+        BankAccountPageDto_Output: {
+            data: {
+                id: string;
+                bankName: string;
+                accountTitle: string;
+                accountNo: string;
+                branch: string | null;
+                active: boolean;
+                /** Format: date-time */
+                createdAt: string;
+            }[];
+            meta: {
+                page: number;
+                perPage: number;
+                total: number;
+                totalPages: number;
+            };
+        };
+        BankAccountResponseDto_Output: {
+            id: string;
+            bankName: string;
+            accountTitle: string;
+            accountNo: string;
+            branch: string | null;
+            active: boolean;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        CreateBankAccountDto: {
+            bankName: string;
+            accountTitle: string;
+            accountNo: string;
+            branch?: string;
+        };
+        UpdateBankAccountDto: {
+            bankName?: string;
+            accountTitle?: string;
+            accountNo?: string;
+            branch?: string | null;
         };
         PatientPageDto_Output: {
             data: {
@@ -3813,15 +4691,15 @@ export interface components {
             id: string;
             mrNo: string;
             name: string;
-            fatherName: string[];
+            fatherName: string | null;
             /** @enum {string} */
             gender: "male" | "female" | "other";
             /** Format: date */
             dob: string;
             dobEstimated: boolean;
             phone: string;
-            cnic: string[];
-            city: string[];
+            cnic: string | null;
+            city: string | null;
             /** Format: date */
             registrationDate: string;
             admitted: boolean;
@@ -3830,22 +4708,22 @@ export interface components {
             /** Format: date */
             deceasedOn: string | null;
             archived: boolean;
-            medicalRecordNo: string[];
-            emergencyContact: string[];
-            email: string[];
-            address: string[];
-            area: string[];
-            country: string[];
+            medicalRecordNo: string | null;
+            emergencyContact: string | null;
+            email: string | null;
+            address: string | null;
+            area: string | null;
+            country: string | null;
             /** @enum {string|null} */
             bloodGroup: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | null;
             guardianRelation: {
                 id: string | null;
                 name: string;
             } | null;
-            guardianName: string[];
-            referredBy: string[];
-            remarks: string[];
-            photoUrl: string[];
+            guardianName: string | null;
+            referredBy: string | null;
+            remarks: string | null;
+            photoUrl: string | null;
             coverages: {
                 panel: {
                     id: string;
@@ -3938,11 +4816,11 @@ export interface components {
             cnic?: string | null;
             phone?: string;
             emergencyContact?: string | null;
-            email?: string[];
+            email?: string | null;
             address?: string | null;
             area?: string | null;
             city?: string | null;
-            country?: string[];
+            country?: string | null;
             /** @enum {string|null} */
             bloodGroup?: "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-" | "O+" | "O-" | null;
             guardianRelationId?: string | null;
@@ -3970,6 +4848,42 @@ export interface components {
             /** Format: date */
             deceasedOn: string;
         };
+        DemographicsReportDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            /** Format: date */
+            asOf: string;
+            patients: number;
+            byGender: {
+                male: number;
+                female: number;
+                other: number;
+            };
+            byAgeBand: {
+                /** @enum {string} */
+                band: "0–12" | "13–18" | "19–30" | "31–45" | "46–60" | "60+";
+                patients: number;
+            }[];
+            byCoverage: {
+                panel: {
+                    id: string;
+                    name: string;
+                } | null;
+                patients: number;
+            }[];
+            byArea: {
+                area: string;
+                patients: number;
+            }[];
+            registrationsByMonth: {
+                month: string;
+                patients: number;
+            }[];
+        };
         InvoiceDetailDto_Output: {
             id: string;
             invoiceNo: string;
@@ -3982,7 +4896,7 @@ export interface components {
                 mrNo: string;
                 name: string;
             } | null;
-            counterCustomer: string[];
+            counterCustomer: string | null;
             encounter: {
                 id: string;
                 encId: string;
@@ -4035,7 +4949,7 @@ export interface components {
             }[];
             /** Format: date-time */
             voidedAt: string | null;
-            voidedReason: string[];
+            voidedReason: string | null;
         };
         CreateInvoiceDto: {
             patientId: string;
@@ -4083,7 +4997,7 @@ export interface components {
             };
             reason: string;
         };
-        VoidDto: {
+        BillingVoidDto: {
             reason: string;
         };
         PaymentPageDto_Output: {
@@ -4167,8 +5081,8 @@ export interface components {
                 id: string;
                 name: string;
             };
-            reference: string[];
-            notes: string[];
+            reference: string | null;
+            notes: string | null;
             hospital: {
                 name: string;
                 nameUr: string | null;
@@ -4360,6 +5274,21 @@ export interface components {
                 charges: number;
                 revenue: string;
                 commission: string;
+            }[];
+        };
+        DailyRevenueDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            /** @enum {string|null} */
+            sourceType: "consultation" | "service" | "diagnostic" | "pharmacy" | "room" | null;
+            days: {
+                /** Format: date */
+                date: string;
+                revenue: string;
             }[];
         };
         CollectionsReportDto_Output: {
@@ -4639,21 +5568,21 @@ export interface components {
                 bedNo: string;
                 wardName: string;
             } | null;
-            primaryDiagnosis: string[];
+            primaryDiagnosis: string | null;
             pending: boolean;
             archived: boolean;
             /** @enum {string|null} */
             admissionType: "emergency" | "planned" | null;
-            advisedBy: string[];
-            referredBy: string[];
-            reason: string[];
+            advisedBy: string | null;
+            referredBy: string | null;
+            reason: string | null;
             /** Format: date-time */
             closedAt: string | null;
             /** Format: date-time */
             dischargedAt: string | null;
             /** Format: date-time */
             cancelledAt: string | null;
-            cancelReason: string[];
+            cancelReason: string | null;
             /** Format: date-time */
             archivedAt: string | null;
             bedHistory: {
@@ -4879,12 +5808,12 @@ export interface components {
             bpSystolic: number | null;
             bpDiastolic: number | null;
             pulse: number | null;
-            temperatureF: number[];
-            weightKg: number[];
-            heightCm: number[];
+            temperatureF: number | null;
+            weightKg: number | null;
+            heightCm: number | null;
             spo2: number | null;
             rbs: number | null;
-            bmi: number[];
+            bmi: number | null;
         };
         ProgressNoteDto: {
             note: string;
@@ -4921,62 +5850,64 @@ export interface components {
         ReasonDto: {
             reason: string;
         };
-        AppointmentPageDto_Output: {
-            data: {
-                id: string;
-                appointmentNo: string;
-                /** @enum {string} */
-                status: "requested" | "confirmed" | "completed" | "cancelled" | "no_show";
+        OpdReportDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            visits: number;
+            newPatients: number;
+            returningPatients: number;
+            visitsPerDay: {
                 /** Format: date */
                 date: string;
-                time: string;
-                /** Format: date-time */
-                startsAt: string;
-                /** Format: date-time */
-                endsAt: string;
-                durationMinutes: number;
+                visits: number;
+            }[];
+            topDiagnoses: {
+                code: string | null;
+                name: string;
+                visits: number;
+            }[];
+            byDoctor: {
+                doctor: {
+                    id: string;
+                    name: string;
+                };
+                visits: number;
+                revenue: string;
+                averageFee: string;
+            }[];
+        };
+        PrescriptionPageDto_Output: {
+            data: {
+                id: string;
+                /** Format: date */
+                date: string;
+                encounter: {
+                    id: string;
+                    encId: string;
+                };
                 patient: {
                     id: string;
                     mrNo: string;
                     name: string;
-                    phone: string;
                 };
                 doctor: {
                     id: string;
                     name: string;
                 };
-                notes: string | null;
-                outsideSchedule: boolean;
-                encounter: {
-                    id: string;
-                    encId: string;
-                } | null;
-                /** Format: date-time */
-                bookedAt: string;
-                bookedBy: {
-                    id: string;
+                medicine: {
+                    id: string | null;
                     name: string;
                 };
-                /** Format: date-time */
-                confirmedAt: string | null;
-                confirmedBy: {
-                    id: string;
-                    name: string;
-                } | null;
-                /** Format: date-time */
-                cancelledAt: string | null;
-                cancelledBy: {
-                    id: string;
-                    name: string;
-                } | null;
-                cancelReason: string | null;
-                /** Format: date-time */
-                noShowAt: string | null;
-                noShowBy: {
-                    id: string;
-                    name: string;
-                } | null;
-                allowedActions: ("confirm" | "reschedule" | "cancel" | "no_show" | "check_in")[];
+                dose: string | null;
+                route: string | null;
+                frequency: string | null;
+                duration: string | null;
+                quantity: number | null;
+                instructions: string | null;
             }[];
             meta: {
                 page: number;
@@ -4984,108 +5915,6 @@ export interface components {
                 total: number;
                 totalPages: number;
             };
-        };
-        AppointmentResponseDto_Output: {
-            id: string;
-            appointmentNo: string;
-            /** @enum {string} */
-            status: "requested" | "confirmed" | "completed" | "cancelled" | "no_show";
-            /** Format: date */
-            date: string;
-            time: string;
-            /** Format: date-time */
-            startsAt: string;
-            /** Format: date-time */
-            endsAt: string;
-            durationMinutes: number;
-            patient: {
-                id: string;
-                mrNo: string;
-                name: string;
-                phone: string;
-            };
-            doctor: {
-                id: string;
-                name: string;
-            };
-            notes: string[];
-            outsideSchedule: boolean;
-            encounter: {
-                id: string;
-                encId: string;
-            } | null;
-            /** Format: date-time */
-            bookedAt: string;
-            bookedBy: {
-                id: string;
-                name: string;
-            };
-            /** Format: date-time */
-            confirmedAt: string | null;
-            confirmedBy: {
-                id: string;
-                name: string;
-            } | null;
-            /** Format: date-time */
-            cancelledAt: string | null;
-            cancelledBy: {
-                id: string;
-                name: string;
-            } | null;
-            cancelReason: string[];
-            /** Format: date-time */
-            noShowAt: string | null;
-            noShowBy: {
-                id: string;
-                name: string;
-            } | null;
-            allowedActions: ("confirm" | "reschedule" | "cancel" | "no_show" | "check_in")[];
-        };
-        BookAppointmentDto: {
-            patientId: string;
-            doctorId: string;
-            /** Format: date */
-            date: string;
-            time: string;
-            notes?: string;
-            /** @default false */
-            confirmed?: boolean;
-        };
-        RescheduleAppointmentDto: {
-            doctorId?: string;
-            /** Format: date */
-            date?: string;
-            time?: string;
-            notes?: string | null;
-        };
-        CancelAppointmentDto: {
-            reason: string;
-        };
-        ScheduleResponseDto_Output: {
-            doctorId: string;
-            days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
-            from: string[];
-            to: string[];
-            slotMinutes: number;
-        };
-        SetScheduleDto: {
-            days: ("mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun")[];
-            from: string;
-            to: string;
-            slotMinutes: number;
-        };
-        SlotsResponseDto_Output: {
-            doctorId: string;
-            /** Format: date */
-            date: string;
-            slotMinutes: number;
-            slots: {
-                time: string;
-                /** Format: date-time */
-                startsAt: string;
-                /** @enum {string} */
-                state: "free" | "booked" | "passed";
-            }[];
         };
         CreateLabOrderDto: {
             patientId: string;
@@ -5121,7 +5950,7 @@ export interface components {
             priority: "routine" | "urgent";
             /** @enum {string} */
             fulfillment: "internal" | "external_referral";
-            referredTo: string[];
+            referredTo: string | null;
             patient: {
                 id: string;
                 mrNo: string;
@@ -5137,9 +5966,9 @@ export interface components {
                 id: string;
                 name: string;
             } | null;
-            referringDoctorText: string[];
-            clinicalNotes: string[];
-            pathologistRemarks: string[];
+            referringDoctorText: string | null;
+            clinicalNotes: string | null;
+            pathologistRemarks: string | null;
             /** Format: date-time */
             orderedAt: string;
             /** Format: date-time */
@@ -5298,10 +6127,10 @@ export interface components {
                 dateOfBirth: string;
                 dateOfBirthEstimated: boolean;
             };
-            encounterNo: string[];
+            encounterNo: string | null;
             referringDoctor: string;
-            clinicalNotes: string[];
-            pathologistRemarks: string[];
+            clinicalNotes: string | null;
+            pathologistRemarks: string | null;
             specimens: {
                 specimenNo: string;
                 /** @enum {string} */
@@ -5421,7 +6250,7 @@ export interface components {
             priority: "routine" | "urgent";
             /** @enum {string} */
             fulfillment: "internal" | "external_referral";
-            referredTo: string[];
+            referredTo: string | null;
             patient: {
                 id: string;
                 mrNo: string;
@@ -5437,8 +6266,8 @@ export interface components {
                 id: string;
                 name: string;
             } | null;
-            referringDoctorText: string[];
-            clinicalNotes: string[];
+            referringDoctorText: string | null;
+            clinicalNotes: string | null;
             /** Format: date-time */
             orderedAt: string;
             /** Format: date-time */
@@ -5570,9 +6399,9 @@ export interface components {
                 dateOfBirth: string;
                 dateOfBirthEstimated: boolean;
             };
-            encounterNo: string[];
+            encounterNo: string | null;
             referringDoctor: string;
-            clinicalNotes: string[];
+            clinicalNotes: string | null;
             reports: {
                 name: string;
                 /** @enum {string} */
@@ -5631,6 +6460,51 @@ export interface components {
         ArchiveImagingOrderDto: {
             reason: string;
         };
+        LaboratoryReportDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            orders: number;
+            tests: number;
+            byCategory: {
+                category: string;
+                tests: number;
+            }[];
+            topTests: {
+                test: {
+                    id: string;
+                    name: string;
+                };
+                tests: number;
+                revenue: string;
+            }[];
+            turnaround: {
+                category: string;
+                verified: number;
+                averageHours: number | null;
+                targetHours: number | null;
+                onTime: boolean | null;
+            }[];
+            overdue: {
+                olderThanHours: number;
+                count: number;
+                orders: {
+                    id: string;
+                    orderNo: string;
+                    status: string;
+                    /** Format: date-time */
+                    orderedAt: string;
+                    patient: {
+                        id: string;
+                        mrNo: string;
+                        name: string;
+                    };
+                }[];
+            };
+        };
         MedicinePageDto_Output: {
             data: {
                 id: string;
@@ -5667,9 +6541,9 @@ export interface components {
         MedicineDetailDto_Output: {
             id: string;
             name: string;
-            generic: string[];
-            category: string[];
-            unit: string[];
+            generic: string | null;
+            category: string | null;
+            unit: string | null;
             saleRate: string;
             gstPct: string;
             discountPct: string;
@@ -5743,7 +6617,7 @@ export interface components {
             quantityReceived: number;
             quantityRemaining: number;
             purchaseRate: string;
-            supplier: string[];
+            supplier: string | null;
             expired: boolean;
             medicine: {
                 id: string;
@@ -5820,7 +6694,7 @@ export interface components {
                 mrNo: string;
                 name: string;
             } | null;
-            counterCustomer: string[];
+            counterCustomer: string | null;
             encounter: {
                 id: string;
                 encId: string;
@@ -5829,7 +6703,7 @@ export interface components {
                 id: string;
                 name: string;
             } | null;
-            remarks: string[];
+            remarks: string | null;
             /** Format: date-time */
             dispensedAt: string;
             dispensedBy: {
@@ -5928,9 +6802,9 @@ export interface components {
             /** Format: date-time */
             dispensedAt: string;
             customer: string;
-            mrNo: string[];
-            encounterNo: string[];
-            doctor: string[];
+            mrNo: string | null;
+            encounterNo: string | null;
+            doctor: string | null;
             dispensedBy: string;
             lines: {
                 name: string;
@@ -5945,7 +6819,7 @@ export interface components {
             }[];
             total: string;
             received: string;
-            remarks: string[];
+            remarks: string | null;
         };
         ReturnDispenseLineDto: {
             quantity: number;
@@ -5985,6 +6859,510 @@ export interface components {
                 dispensed: number;
                 remaining: number | null;
             }[];
+        };
+        PharmacyReportDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            dispenses: number;
+            units: number;
+            revenue: string;
+            topMedicines: {
+                medicine: {
+                    id: string;
+                    name: string;
+                };
+                units: number;
+                revenue: string;
+            }[];
+            belowReorder: {
+                medicine: {
+                    id: string;
+                    name: string;
+                };
+                onHand: number;
+                reorderLevel: number;
+                shortfall: number;
+                /** @enum {string} */
+                level: "low" | "out_of_stock";
+            }[];
+            expiring: {
+                withinDays: number;
+                batches: {
+                    batchId: string;
+                    batchNo: string;
+                    medicine: {
+                        id: string;
+                        name: string;
+                    };
+                    /** Format: date */
+                    expiryDate: string;
+                    daysLeft: number;
+                    quantity: number;
+                }[];
+            };
+        };
+        ExpensePageDto_Output: {
+            data: {
+                id: string;
+                expenseNo: string;
+                /** Format: date */
+                date: string;
+                category: {
+                    id: string;
+                    name: string;
+                };
+                description: string | null;
+                amount: string;
+                /** @enum {string} */
+                mode: "cash" | "bank_transfer" | "cheque" | "card";
+                bankAccount: {
+                    id: string;
+                    bankName: string;
+                    accountNo: string;
+                } | null;
+                referenceNo: string | null;
+                bankTransactionId: string | null;
+                enteredBy: {
+                    id: string;
+                    name: string;
+                };
+                /** Format: date-time */
+                createdAt: string;
+                voided: {
+                    /** Format: date-time */
+                    at: string;
+                    by: {
+                        id: string;
+                        name: string;
+                    };
+                    reason: string;
+                } | null;
+            }[];
+            meta: {
+                page: number;
+                perPage: number;
+                total: number;
+                totalPages: number;
+            };
+            totalAmount: string;
+        };
+        ExpenseResponseDto_Output: {
+            id: string;
+            expenseNo: string;
+            /** Format: date */
+            date: string;
+            category: {
+                id: string;
+                name: string;
+            };
+            description: string | null;
+            amount: string;
+            /** @enum {string} */
+            mode: "cash" | "bank_transfer" | "cheque" | "card";
+            bankAccount: {
+                id: string;
+                bankName: string;
+                accountNo: string;
+            } | null;
+            referenceNo: string | null;
+            bankTransactionId: string | null;
+            enteredBy: {
+                id: string;
+                name: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            voided: {
+                /** Format: date-time */
+                at: string;
+                by: {
+                    id: string;
+                    name: string;
+                };
+                reason: string;
+            } | null;
+        };
+        RecordExpenseDto: {
+            /** Format: date */
+            date: string;
+            categoryId: string;
+            description: string;
+            amount: string | number;
+            /**
+             * @default cash
+             * @enum {string}
+             */
+            mode?: "cash" | "bank_transfer" | "cheque" | "card";
+            bankAccountId?: string;
+            referenceNo?: string;
+        };
+        CorrectExpenseDto: {
+            /** Format: date */
+            date?: string;
+            categoryId?: string;
+            description?: string;
+            amount?: string | number;
+            referenceNo?: string | null;
+        };
+        AccountsVoidDto: {
+            reason: string;
+        };
+        BankBalancesResponseDto_Output: {
+            data: {
+                id: string;
+                bankName: string;
+                accountTitle: string;
+                accountNo: string;
+                active: boolean;
+                balance: string;
+            }[];
+            total: string;
+        };
+        StatementResponseDto_Output: {
+            account: {
+                id: string;
+                bankName: string;
+                accountTitle: string;
+                accountNo: string;
+                active: boolean;
+            };
+            /** Format: date */
+            dateFrom: string | null;
+            /** Format: date */
+            dateTo: string;
+            openingBalance: string;
+            entries: {
+                id: string;
+                bankAccountId: string;
+                /** @enum {string} */
+                kind: "opening_balance" | "deposit" | "withdrawal" | "expense" | "other_credit" | "other_debit";
+                /** Format: date */
+                date: string;
+                description: string | null;
+                debit: string;
+                credit: string;
+                referenceNo: string | null;
+                expense: {
+                    id: string;
+                    expenseNo: string;
+                } | null;
+                enteredBy: {
+                    id: string;
+                    name: string;
+                };
+                /** Format: date-time */
+                createdAt: string;
+                voided: {
+                    /** Format: date-time */
+                    at: string;
+                    by: {
+                        id: string;
+                        name: string;
+                    };
+                    reason: string;
+                } | null;
+                balance: string;
+            }[];
+            closingBalance: string;
+        };
+        BankTransactionResponseDto_Output: {
+            id: string;
+            bankAccountId: string;
+            /** @enum {string} */
+            kind: "opening_balance" | "deposit" | "withdrawal" | "expense" | "other_credit" | "other_debit";
+            /** Format: date */
+            date: string;
+            description: string | null;
+            debit: string;
+            credit: string;
+            referenceNo: string | null;
+            expense: {
+                id: string;
+                expenseNo: string;
+            } | null;
+            enteredBy: {
+                id: string;
+                name: string;
+            };
+            /** Format: date-time */
+            createdAt: string;
+            voided: {
+                /** Format: date-time */
+                at: string;
+                by: {
+                    id: string;
+                    name: string;
+                };
+                reason: string;
+            } | null;
+        };
+        RecordBankTransactionDto: {
+            bankAccountId: string;
+            /** Format: date */
+            date: string;
+            /** @enum {string} */
+            kind: "opening_balance" | "deposit" | "withdrawal" | "other_credit" | "other_debit";
+            amount: string | number;
+            description: string;
+            referenceNo?: string;
+        };
+        ExpenseReportDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            total: string;
+            count: number;
+            byCategory: {
+                category: {
+                    id: string;
+                    name: string;
+                };
+                amount: string;
+                count: number;
+                share: string;
+            }[];
+            byMode: {
+                /** @enum {string} */
+                mode: "cash" | "bank_transfer" | "cheque" | "card";
+                amount: string;
+            }[];
+        };
+        CashFlowDto_Output: {
+            /** Format: date */
+            dateFrom: string;
+            /** Format: date */
+            dateTo: string;
+            openingSet: boolean;
+            opening: string;
+            in: {
+                received: string;
+                drawnFromBank: string;
+                total: string;
+            };
+            out: {
+                refunded: string;
+                expenses: string;
+                depositedInBank: string;
+                total: string;
+            };
+            closing: string;
+        };
+        CashOpeningDto_Output: {
+            amount: string | null;
+            /** Format: date */
+            date: string | null;
+        };
+        SetCashOpeningDto: {
+            amount: string | number;
+            /** Format: date */
+            date: string;
+        };
+        DailySummaryDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            newPatients: number;
+            opdVisits: number;
+            admissions: number;
+            discharges: number;
+            revenue: {
+                consultation: string;
+                services: string;
+                lab: string;
+                imaging: string;
+                pharmacy: string;
+                room: string;
+                total: string;
+            };
+            byDoctor: {
+                doctor: {
+                    id: string;
+                    name: string;
+                };
+                visits: number;
+                revenue: string;
+            }[];
+            paymentMix: {
+                /** @enum {string} */
+                mode: "cash" | "card" | "bank_transfer" | "cheque" | "insurance" | "on_account";
+                received: string;
+                share: string;
+            }[];
+        };
+        FinancialSummaryDto_Output: {
+            period: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+            };
+            sales: {
+                rows: {
+                    count: number;
+                    billed: string;
+                    revenue: string;
+                    settled: string;
+                    outstanding: string;
+                    opd: string;
+                    ipd: string;
+                    other: string;
+                    /** @enum {string} */
+                    kind: "consultation" | "service" | "lab" | "imaging" | "pharmacy" | "room";
+                    modality: string | null;
+                    label: string;
+                }[];
+                total: {
+                    count: number;
+                    billed: string;
+                    revenue: string;
+                    settled: string;
+                    outstanding: string;
+                    opd: string;
+                    ipd: string;
+                    other: string;
+                };
+            };
+            money: {
+                payments: {
+                    count: number;
+                    amount: string;
+                };
+                advances: {
+                    count: number;
+                    amount: string;
+                };
+                refunds: {
+                    count: number;
+                    amount: string;
+                };
+                creditNotes: {
+                    count: number;
+                    amount: string;
+                };
+            };
+            expenses: {
+                count: number;
+                amount: string;
+            } | null;
+            bank: {
+                entries: number;
+                credits: string;
+                debits: string;
+                net: string;
+            } | null;
+            cashFlow: {
+                /** Format: date */
+                dateFrom: string;
+                /** Format: date */
+                dateTo: string;
+                openingSet: boolean;
+                opening: string;
+                in: {
+                    received: string;
+                    drawnFromBank: string;
+                    total: string;
+                };
+                out: {
+                    refunded: string;
+                    expenses: string;
+                    depositedInBank: string;
+                    total: string;
+                };
+                closing: string;
+            } | null;
+        };
+        DashboardDto_Output: {
+            /** Format: date */
+            today: string;
+            visits: {
+                today: number;
+                yesterday: number;
+                mine: {
+                    today: number;
+                    open: number;
+                } | null;
+            } | null;
+            admitted: {
+                total: number;
+                male: number;
+                female: number;
+                other: number;
+            } | null;
+            lab: {
+                pending: number;
+                doneToday: number;
+            } | null;
+            imaging: {
+                pending: number;
+                doneToday: number;
+            } | null;
+            pharmacy: {
+                dispensedToday: number;
+                dispensedYesterday: number;
+                lowStock: {
+                    count: number;
+                    outOfStock: number;
+                    first: {
+                        medicine: {
+                            id: string;
+                            name: string;
+                        };
+                        onHand: number;
+                        reorderLevel: number;
+                    }[];
+                };
+            } | null;
+            revenue: {
+                today: string;
+                yesterday: string;
+                last7Days: {
+                    /** Format: date */
+                    date: string;
+                    revenue: string;
+                }[];
+            } | null;
+            patientFlow: {
+                last7Days: {
+                    /** Format: date */
+                    date: string;
+                    visits: number;
+                }[];
+                total: number;
+            } | null;
+        };
+        AuditEntryPageDto_Output: {
+            data: {
+                id: string;
+                /** Format: date-time */
+                occurredAt: string;
+                action: string;
+                actor: {
+                    id: string;
+                    name: string;
+                } | null;
+                changes: {
+                    [key: string]: {
+                        from: unknown;
+                        to: unknown;
+                    };
+                } | null;
+            }[];
+            meta: {
+                page: number;
+                perPage: number;
+                total: number;
+                totalPages: number;
+            };
         };
         ErrorResponse: {
             /** @example 403 */
@@ -7594,6 +8972,862 @@ export interface operations {
             };
             /** @description `MODULE_IN_USE` — e.g. patients are still admitted; `details` says how many. */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                sort?: string;
+                date?: string;
+                dateFrom?: string;
+                dateTo?: string;
+                doctorId?: string;
+                patientId?: string;
+                status?: "requested" | "confirmed" | "completed" | "cancelled" | "no_show";
+                search?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentPageDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_book: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookAppointmentDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The patient or doctor does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `SLOT_TAKEN` — another appointment holds that time; `PATIENT_ALREADY_BOOKED` — the patient already has an open appointment with this doctor that day. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `NOT_A_SLOT` (not a slot start in the doctor’s schedule), `SLOT_PASSED`, `DOCTOR_UNAVAILABLE`, `PATIENT_ARCHIVED`, `PATIENT_DECEASED`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The appointment does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_reschedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RescheduleAppointmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The appointment or doctor does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `SLOT_TAKEN` — another appointment holds that time; `PATIENT_ALREADY_BOOKED` — the patient already has an open appointment with this doctor that day. `APPOINTMENT_CHANGED` — changed by someone else since it was read. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_NOT_OPEN`, `NOT_A_SLOT` (not a slot start in the doctor’s schedule), `SLOT_PASSED`, `DOCTOR_UNAVAILABLE`, `PATIENT_ARCHIVED`, `PATIENT_DECEASED`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The appointment does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_CHANGED`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_NOT_OPEN`, `APPOINTMENT_ALREADY_CONFIRMED`, `APPOINTMENT_DAY_PASSED`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelAppointmentDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The appointment does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_CHANGED`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_NOT_OPEN`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AppointmentsController_noShow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The appointment does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_CHANGED`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `APPOINTMENT_NOT_OPEN`, `APPOINTMENT_NOT_DUE` — its time has not come. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DoctorScheduleController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The doctor does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DoctorScheduleController_set: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetScheduleDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ScheduleResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The doctor does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DoctorScheduleController_slots: {
+        parameters: {
+            query: {
+                date: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlotsResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The doctor does not exist here. */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9983,6 +12217,926 @@ export interface operations {
             };
         };
     };
+    ExpenseCategoriesController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                sort?: string;
+                search?: string;
+                active?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryPageDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpenseCategoriesController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExpenseCategoryDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `EXPENSE_CATEGORY_TAKEN` — names are unique ignoring case. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpenseCategoriesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The category does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpenseCategoriesController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateExpenseCategoryDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The category does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `EXPENSE_CATEGORY_TAKEN`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpenseCategoriesController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The category does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpenseCategoriesController_reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseCategoryResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The category does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankAccountsController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                sort?: string;
+                search?: string;
+                active?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountPageDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankAccountsController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateBankAccountDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BANK_ACCOUNT_TAKEN` — an account with this number already exists here. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankAccountsController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankAccountsController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateBankAccountDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BANK_ACCOUNT_TAKEN`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankAccountsController_deactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankAccountsController_reactivate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     PatientsController_list: {
         parameters: {
             query?: {
@@ -10000,6 +13154,8 @@ export interface operations {
                 registeredFrom?: string;
                 registeredTo?: string;
                 includeArchived?: "true" | "false";
+                /** @description `true`: archived patients only (the Inactive tab); `false`: live patients only. */
+                archived?: "true" | "false";
             };
             header?: never;
             path?: never;
@@ -10718,6 +13874,73 @@ export interface operations {
             };
         };
     };
+    PatientReportsController_demographics: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DemographicsReportDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     InvoicesController_get: {
         parameters: {
             query?: never;
@@ -10888,6 +14111,7 @@ export interface operations {
                 encounterId?: string;
                 status?: "unpaid" | "partial" | "paid" | "voided";
                 sourceType?: "consultation" | "service" | "diagnostic" | "pharmacy" | "room";
+                encounterType?: "opd" | "ipd";
                 dateFrom?: string;
                 dateTo?: string;
             };
@@ -11216,7 +14440,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VoidDto"];
+                "application/json": components["schemas"]["BillingVoidDto"];
             };
         };
         responses: {
@@ -11304,7 +14528,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VoidDto"];
+                "application/json": components["schemas"]["BillingVoidDto"];
             };
         };
         responses: {
@@ -12083,6 +15307,8 @@ export interface operations {
                 includeVoided?: "true" | "false";
                 dateFrom?: string;
                 dateTo?: string;
+                diagnosticType?: "lab" | "imaging";
+                modality?: "X-Ray" | "Ultrasound" | "Doppler" | "Echocardiography" | "ECG" | "CT" | "MRI" | "Other";
             };
             header?: never;
             path?: never;
@@ -12163,6 +15389,74 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RevenueReportDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BillingReportsController_daily: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+                sourceType?: "consultation" | "service" | "diagnostic" | "pharmacy" | "room";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyRevenueDto_Output"];
                 };
             };
             /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
@@ -14987,18 +18281,84 @@ export interface operations {
             };
         };
     };
-    AppointmentsController_list: {
+    EncounterReportsController_opd: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpdReportDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    EncounterReportsController_prescriptions: {
         parameters: {
             query?: {
                 page?: number;
                 perPage?: number;
                 sort?: string;
-                date?: string;
                 dateFrom?: string;
                 dateTo?: string;
-                doctorId?: string;
                 patientId?: string;
-                status?: "requested" | "confirmed" | "completed" | "cancelled" | "no_show";
+                doctorId?: string;
+                medicineId?: string;
                 search?: string;
             };
             header?: never;
@@ -15012,7 +18372,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AppointmentPageDto_Output"];
+                    "application/json": components["schemas"]["PrescriptionPageDto_Output"];
                 };
             };
             /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
@@ -15035,787 +18395,6 @@ export interface operations {
             };
             /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
             403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    AppointmentsController_book: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BookAppointmentDto"];
-            };
-        };
-        responses: {
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The patient or doctor does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `SLOT_TAKEN` — another appointment holds that time; `PATIENT_ALREADY_BOOKED` — the patient already has an open appointment with this doctor that day. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `NOT_A_SLOT` (not a slot start in the doctor’s schedule), `SLOT_PASSED`, `DOCTOR_UNAVAILABLE`, `PATIENT_ARCHIVED`, `PATIENT_DECEASED`. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    AppointmentsController_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The appointment does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    AppointmentsController_reschedule: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RescheduleAppointmentDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The appointment or doctor does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `SLOT_TAKEN` — another appointment holds that time; `PATIENT_ALREADY_BOOKED` — the patient already has an open appointment with this doctor that day. `APPOINTMENT_CHANGED` — changed by someone else since it was read. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_NOT_OPEN`, `NOT_A_SLOT` (not a slot start in the doctor’s schedule), `SLOT_PASSED`, `DOCTOR_UNAVAILABLE`, `PATIENT_ARCHIVED`, `PATIENT_DECEASED`. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    AppointmentsController_confirm: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The appointment does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_CHANGED`. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_NOT_OPEN`, `APPOINTMENT_ALREADY_CONFIRMED`, `APPOINTMENT_DAY_PASSED`. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    AppointmentsController_cancel: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CancelAppointmentDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The appointment does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_CHANGED`. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_NOT_OPEN`. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    AppointmentsController_noShow: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AppointmentResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The appointment does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_CHANGED`. */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `APPOINTMENT_NOT_OPEN`, `APPOINTMENT_NOT_DUE` — its time has not come. */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    DoctorScheduleController_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScheduleResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The doctor does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    DoctorScheduleController_set: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SetScheduleDto"];
-            };
-        };
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ScheduleResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The doctor does not exist here. */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-        };
-    };
-    DoctorScheduleController_slots: {
-        parameters: {
-            query: {
-                date: string;
-            };
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SlotsResponseDto_Output"];
-                };
-            };
-            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorResponse"];
-                };
-            };
-            /** @description The doctor does not exist here. */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -18232,6 +20811,73 @@ export interface operations {
             };
         };
     };
+    DiagnosticsReportsController_lab: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LaboratoryReportDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     MedicinesController_list: {
         parameters: {
             query?: {
@@ -19479,6 +22125,1448 @@ export interface operations {
                 };
             };
             /** @description The encounter does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    PharmacyReportsController_pharmacy: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+                expiringWithinDays?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PharmacyReportDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpensesController_list: {
+        parameters: {
+            query?: {
+                page?: number;
+                perPage?: number;
+                sort?: string;
+                dateFrom?: string;
+                dateTo?: string;
+                categoryId?: string;
+                mode?: "cash" | "bank_transfer" | "cheque" | "card";
+                bankAccountId?: string;
+                search?: string;
+                includeVoided?: "true" | "false";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpensePageDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpensesController_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordExpenseDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The category or bank account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `DATE_IN_FUTURE`, `CATEGORY_INACTIVE`, `BANK_ACCOUNT_INACTIVE`, `BEFORE_OPENING_BALANCE`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpensesController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The expense does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpensesController_correct: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectExpenseDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The expense or category does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `EXPENSE_CHANGED` — changed by someone else since it was read. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `EXPENSE_VOIDED`, `DATE_IN_FUTURE`, `CATEGORY_INACTIVE`, `BEFORE_OPENING_BALANCE`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ExpensesController_void: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountsVoidDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The expense does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `EXPENSE_CHANGED`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `EXPENSE_VOIDED`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankController_balances: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankBalancesResponseDto_Output"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankController_statement: {
+        parameters: {
+            query?: {
+                dateFrom?: string;
+                dateTo?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatementResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankTransactionResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The entry does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankController_record: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordBankTransactionDto"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankTransactionResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The account does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `OPENING_BALANCE_EXISTS` — void the old one first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `DATE_IN_FUTURE`, `BANK_ACCOUNT_INACTIVE`, `BEFORE_OPENING_BALANCE`, `OPENING_BALANCE_NOT_FIRST`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    BankController_void: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountsVoidDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankTransactionResponseDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The entry does not exist here. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BANK_TRANSACTION_CHANGED`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BANK_TRANSACTION_VOIDED`, `VOID_THROUGH_EXPENSE` — void the expense instead. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AccountsReportsController_expenses: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExpenseReportDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AccountsReportsController_cashFlow: {
+        parameters: {
+            query?: {
+                date?: string;
+                dateFrom?: string;
+                dateTo?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashFlowDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `BEFORE_CASH_OPENING` — the day is before the drawer’s opening cash. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AccountsReportsController_opening: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashOpeningDto_Output"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AccountsReportsController_setOpening: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCashOpeningDto"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CashOpeningDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `DATE_IN_FUTURE`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ReportsController_summary: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailySummaryDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    ReportsController_financial: {
+        parameters: {
+            query: {
+                dateFrom: string;
+                dateTo: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinancialSummaryDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    DashboardController_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardDto_Output"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `TOO_MANY_REQUESTS` — rate limit reached; retry after a minute. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `INTERNAL_ERROR` — quote `requestId` when reporting it. */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    AuditLogController_list: {
+        parameters: {
+            query: {
+                page?: number;
+                perPage?: number;
+                sort?: string;
+                entityType: "service_catalog_item" | "lab_test" | "imaging_test" | "medicine" | "panel" | "guardian_relation" | "expense_category" | "bank_account" | "ward" | "bed" | "user" | "doctor" | "clinic_settings";
+                entityId: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditEntryPageDto_Output"];
+                };
+            };
+            /** @description `VALIDATION_FAILED` — `details` lists each invalid field. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Not signed in or Session over: `AUTHENTICATION_REQUIRED`, `TOKEN_EXPIRED` (refresh and retry), `INVALID_TOKEN`, `SESSION_ENDED`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description `FORBIDDEN` (role lacks the permission) or `PASSWORD_CHANGE_REQUIRED`. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description The item does not exist here. */
             404: {
                 headers: {
                     [name: string]: unknown;
